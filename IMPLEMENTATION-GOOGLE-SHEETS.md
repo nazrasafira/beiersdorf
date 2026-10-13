@@ -3,7 +3,7 @@
 Replace the browser-only demo storage with a shared backend built on **Google Sheets + Google Apps Script**, so every SPG, Team Leader and Supervisor works on the same data.
 The pages stay as they are (static HTML on GitHub Pages). Only the data layer changes.
 
-> Status: plan. No code yet. Plan B (web backend with a real database) comes after this one is reviewed.
+> Status: **v1 built** (branch `google-sheets`): backend in `apps-script/`, setup steps in [`SETUP-GOOGLE-SHEETS.md`](SETUP-GOOGLE-SHEETS.md). See section 14 for what differs from this plan.
 
 ---
 
@@ -189,7 +189,7 @@ docs/SETUP-GOOGLE-SHEETS.md → step-by-step deployment for the client
 
 ## 10. Setup (done once by the owner of the Google account)
 
-1. Create a Google Sheet "Laporan SPG – NIVEA" and a Drive folder "Laporan SPG – Foto".
+1. Create a Google Sheet "Laporan SPG" and a Drive folder "Laporan SPG – Foto".
 2. In the Sheet: **Extensions → Apps Script**, paste the files from `server/`.
 3. Project settings: timezone **Asia/Jakarta**. Script Properties: `SECRET` (random), `PHOTO_FOLDER_ID`.
 4. Run `setupSheet()` once (creates tabs, headers, validation and protection), then `createAdmin("08xxxxxxxxxx", "<temporary password>")`.
@@ -237,3 +237,24 @@ Each phase is a separate commit; demo mode keeps working throughout.
 | 8 | Stores | Shared list managed by Admin, Supervisors and Team Leaders (same edit rules) |
 | 9 | Store per shift | SPG picks **any** store when starting a shift and **can switch** during the shift |
 | 10 | Targets | Stay **per SPG** (not per store) |
+
+---
+
+## 14. v1 build (branch `google-sheets`)
+
+**Built**
+- `apps-script/`: `Code.gs` (router), `Actions.gs`, `Access.gs` (permission rules), `State.gs` (bootstrap), `Auth.gs` (hashing, signed tokens, rate limit), `Db.gs` (tabs as tables), `Setup.gs` (menu, `setupSheet`, `createAdmin`, demo import, `onEdit` checks for Products), `appsscript.json`.
+- Front end: `assets/js/config.js` → `{ backend: 'sheets', url }`; `data.js` keeps the demo's data shape, writes go through an offline queue (outbox) and the page's data is cached on the phone so pages open at once.
+- Tests without Google: `tools/gas-mock.js` runs the real `.gs` files in Node; `node tools/test-apps-script.js` (14 backend tests: login, tokens, roles, edit window, idempotent sales, catalog rules, photos, hand edits) and `tools/test-sheets-browser.js` against `tools/sheets-dev-server.js` (also with 1.2 s latency).
+
+- **Notes photo at shift end**: SPGs still write their sales on paper; ending a shift requires 1–4 photos of those notes (`shift.end {photos}`), saved in Drive and listed in the `ShiftPhotos` tab. The SPG, their Team Leader and Supervisor see them; teammates don't.
+
+**Different from the plan**
+- No separate **Daily** tab: day totals come from the Sales rows; a **DayReports** tab holds "no sales" and "unlocked". Simpler and always consistent; fine for < 50 users.
+- `sales.list` is not needed: the bootstrap already carries the current and previous month's sales of the people the user may see.
+- Phone numbers are stored as `08…` (text), not `62…`.
+- No server-side CacheService for tables yet (each request reads the tabs it needs); add it if requests get slow.
+- Demo import uses one password hash per role (demo accounts only); real accounts get their own salt.
+
+**Not yet**: nightly backup trigger, yearly archive of old Sales rows, CSV export from the server (the pages' CSV download works).
+

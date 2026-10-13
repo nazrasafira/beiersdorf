@@ -5,4 +5,4 @@
  *     window.APP_CONFIG = { backend: 'sheets', url: 'https://script.google.com/macros/s/…/exec' };
  *   Optional: demoAccounts: true lists the demo logins on the login page (Sheet filled with importDemoData).
  */
-window.APP_CONFIG = { backend: 'demo' };
+window.APP_CONFIG = { backend: 'sheets', url: 'https://script.google.com/macros/s/AKfycbxbREMnvsr5PlEUJgQ2A0JFwGqBagaq5MLspQmjrClmZupS-ZJ1UzvXQ4EsmTJWMuK58A/exec', demoAccounts: true };

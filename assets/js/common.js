@@ -232,7 +232,7 @@
     top.className = 'topbar';
     top.innerHTML = `
       <div class="topbar-inner">
-        <a class="brand" href="${root + HOME[user.role]}">${BRAND_LOGO ? logoImg() : `<span class="brand-mark">${icon('chart')}</span>`}<span>Laporan SPG</span></a>
+        <a class="brand" href="${root + HOME[user.role]}">${BRAND_LOGO ? logoImg() : `<span class="brand-mark">${icon('chart')}</span>`}</a>
         ${user.role === 'spg' ? '' : `<nav class="mainnav" id="mainnav" aria-label="Menu utama">${NAV[user.role].map(([href, ic, label, folder]) =>
           `<a href="${root + href}" class="${isOn(href, folder) ? 'on' : ''}" ${isOn(href, folder) ? 'aria-current="page"' : ''}>${icon(ic)}<span>${label}</span></a>`).join('')}</nav>`}
         <div class="user">

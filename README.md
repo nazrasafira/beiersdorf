@@ -1,4 +1,4 @@
-# Laporan SPG — Laporan Penjualan Harian (NIVEA)
+# Laporan Penjualan Harian (NIVEA)
 
 Prototype of a daily sales report app for SPGs, Team Leaders and Supervisors. Static HTML/CSS/JS with demo data; no server needed.
 
@@ -41,6 +41,10 @@ The passwords are hardcoded in `assets/js/data.js` and visible to anyone — dem
 
 See [`PLAN.md`](PLAN.md) for the product plan, [`IMPLEMENTATION.md`](IMPLEMENTATION.md) for how the prototype is built, [`IMPLEMENTATION-GOOGLE-SHEETS.md`](IMPLEMENTATION-GOOGLE-SHEETS.md) for the plan to run it on Google Sheets, and [`IMPLEMENTATION-WEB.md`](IMPLEMENTATION-WEB.md) for the Laravel + MySQL web version.
 
+## Google Sheets backend
+
+`apps-script/` holds the Google Apps Script backend: the Google Sheet is the database, photos go to Google Drive. Set `assets/js/config.js` to `{ backend: 'sheets', url: '<web app URL>' }` to use it; setup steps: [`SETUP-GOOGLE-SHEETS.md`](SETUP-GOOGLE-SHEETS.md). Local development without Google: `node tools/sheets-dev-server.js`. After changing `assets/js/data.js`'s demo data, run `node tools/export-demo-data.js`.
+
 ## Publishing changes
 
 After editing any page, run `python3 tools/bump-version.py` before committing. It stamps a new version on every page and in `assets/version.json`; pages that a browser still has cached detect the newer version and reload themselves, so nobody sees a mix of old and new pages.
@@ -50,5 +54,4 @@ After editing any page, run `python3 tools/bump-version.py` before committing. I
 - **Profile photos**: SPGs tap their photo on Beranda to take or choose a new one; Team Leaders can set an SPG's photo in Kelola Tim. Demo users start with illustrated portraits in `assets/avatars/` (DiceBear "Lorelei" by Lisa Wischofsky, CC0 1.0, generated with `tools/generate-avatars.js`).
 - **Product photos**: Admin can upload a photo per product. Demo products start with simple illustrations in `assets/products/` — replace them with the official packshots from the client.
 - Uploaded photos are resized in the browser and stored with the demo data.
-- **Notes photo at shift end**: SPGs still write their sales on paper. Ending a shift requires 1–4 photos of those notes (camera); the SPG, their Team Leader and Supervisor see them on the Penjualan page and in the Laporan detail.
-- **Logo**: Beiersdorf, see `assets/brand/README.md`.
+- **Logo**: see `assets/brand/README.md`.
