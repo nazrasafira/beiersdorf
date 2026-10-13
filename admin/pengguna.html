@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Pengguna · Laporan SPG</title>
+<link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+<link rel="stylesheet" href="../assets/css/style.css?v=20261008073012">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261008073012","../")</script>
+</head>
+<body data-root="../">
+<main>
+  <div class="page-head"><div><h1>Pengguna</h1><p class="sub" id="count"></p></div><button type="button" class="btn" id="openAdd"><span data-icon="plus"></span>Tambah pengguna</button></div>
+  <p class="note" style="margin:-12px 0 20px">Admin mengelola Supervisor dan Team Leader. SPG ditambahkan oleh Team Leader atau Supervisor.</p>
+  <section><div class="table-wrap"><table id="table"></table></div></section>
+  <dialog class="modal" id="dlg" aria-labelledby="dlgTitle">
+    <form id="form" autocomplete="off">
+      <div class="modal-head"><h3 id="dlgTitle">Tambah pengguna</h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
+      <div class="modal-body">
+        <p class="error" id="err" hidden></p>
+        <div class="field"><label for="f-role">Peran</label>
+          <select id="f-role" name="role"><option value="leader">Team Leader</option><option value="supervisor">Supervisor</option></select>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label for="f-name">Nama</label><input class="input" id="f-name" name="name" required></div>
+        </div>
+        <div class="field"><label for="f-phone">No. HP (untuk login)</label><input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" placeholder="0812 3456 7890" required></div>
+        <div id="teamFields">
+          <div class="field"><label for="f-team">Tim</label><select id="f-team" name="team"></select></div>
+          <div class="field" id="newTeamField" hidden><label for="f-newteam">Nama tim baru</label><input class="input" id="f-newteam" name="newteam" placeholder="mis. Jakarta Timur"></div>
+        </div>
+        <div class="field" id="areaField" hidden><label for="f-area">Area</label><select id="f-area" name="area"></select></div>
+        <p class="note" style="margin:0" id="pwNote"></p>
+      </div>
+      <div class="modal-foot"><button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit">Tambah</button></div>
+    </form>
+  </dialog>
+</main>
+<script src="../assets/js/config.js?v=20261008073012"></script>
+<script src="../assets/js/data.js?v=20261008073012"></script>
+<script src="../assets/js/common.js?v=20261008073012"></script>
+<script src="../assets/js/pages/admin-pengguna.js?v=20261008073012"></script>
+</body>
+</html>

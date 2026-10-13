@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Lip Care">
+<rect width="240" height="240" rx="28" fill="#ECEFF8"/>
+<ellipse cx="120" cy="206" rx="70" ry="9" fill="#000" opacity=".08"/>
+<rect x="100" y="48" width="40" height="52" rx="10" fill="#1F3A9E"/>
+<rect x="100" y="96" width="40" height="104" rx="10" fill="#00136F"/>
+<rect x="100" y="96" width="40" height="6" fill="#0B1C7A"/>
+<text x="120" y="156" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle" transform="rotate(-90 120 152)">Lip Care</text>
+</svg>

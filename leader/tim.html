@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Tim · Laporan SPG</title>
+<link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+<link rel="stylesheet" href="../assets/css/style.css?v=20261008073012">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261008073012","../")</script>
+</head>
+<body data-root="../">
+<main>
+  <div class="page-head"><div><h1>SPG</h1><p class="sub" id="sub"></p></div><div class="actions"><span class="muted" id="count"></span><button type="button" class="btn" id="openAdd"><span data-icon="plus"></span>Tambah SPG</button></div></div>
+  <section><div class="table-wrap"><table id="table"></table></div></section>
+  <dialog class="modal" id="dlg" aria-labelledby="dlgTitle">
+    <form id="form" autocomplete="off">
+      <div class="modal-head"><h3 id="dlgTitle">Tambah SPG</h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
+      <div class="modal-body">
+        <p class="error" id="err" hidden></p>
+        <div class="form-grid">
+          <div class="field"><label for="f-name">Nama</label><input class="input" id="f-name" name="name" required></div>
+          <div class="field"><label for="f-phone">No. HP (untuk login)</label><input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" placeholder="0812 3456 7890" required></div>
+        </div>
+        <p class="note" style="margin:0">Password awal: spg123. Toko dipilih SPG sendiri saat mulai shift.</p>
+      </div>
+      <div class="modal-foot"><button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit">Tambah</button></div>
+    </form>
+  </dialog>
+</main>
+<script src="../assets/js/config.js?v=20261008073012"></script>
+<script src="../assets/js/data.js?v=20261008073012"></script>
+<script src="../assets/js/common.js?v=20261008073012"></script>
+<script src="../assets/js/pages/leader-tim.js?v=20261008073012"></script>
+</body>
+</html>

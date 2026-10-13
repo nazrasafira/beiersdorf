@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Laporan · Laporan SPG</title>
+<link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+<link rel="stylesheet" href="../assets/css/style.css?v=20261008073012">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261008073012","../")</script>
+</head>
+<body data-root="../">
+<main>
+  <div class="page-head"><div><h1>Laporan</h1><p class="sub" id="sub"></p></div></div>
+  <section>
+  <div class="form-grid">
+    <div class="field"><label for="spg">SPG</label><select class="input" id="spg"></select></div>
+    <div class="field"><label for="store">Toko</label><select class="input" id="store"></select></div>
+    <div class="field"><label for="from">Dari</label><input class="input" type="date" id="from"></div>
+    <div class="field"><label for="to">Sampai</label><input class="input" type="date" id="to"></div>
+  </div>
+  </section>
+  <section>
+    <h2>Tren penjualan</h2>
+    <div id="trend"></div>
+    <div class="legend"><span><i></i>Penjualan</span><span><i class="dash"></i>Target</span></div>
+  </section>
+  <section>
+    <p class="small muted" id="summary" style="margin-top:0"></p>
+    <div class="table-wrap"><table id="table"></table></div>
+  </section>
+</main>
+<script src="../assets/js/config.js?v=20261008073012"></script>
+<script src="../assets/js/data.js?v=20261008073012"></script>
+<script src="../assets/js/common.js?v=20261008073012"></script>
+<script src="../assets/js/pages/leader-laporan.js?v=20261008073012"></script>
+</body>
+</html>

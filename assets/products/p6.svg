@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Creme Tin">
+<rect width="240" height="240" rx="28" fill="#E6EDF9"/>
+<ellipse cx="120" cy="206" rx="70" ry="9" fill="#000" opacity=".08"/>
+<ellipse cx="120" cy="150" rx="78" ry="36" fill="#00136F"/>
+<rect x="42" y="118" width="156" height="32" fill="#00136F"/>
+<ellipse cx="120" cy="118" rx="78" ry="36" fill="#1F3A9E"/>
+<ellipse cx="120" cy="118" rx="62" ry="27" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+<text x="120" y="124" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#FFFFFF" text-anchor="middle">Creme</text>
+</svg>
