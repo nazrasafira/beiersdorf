@@ -40,7 +40,6 @@ const salesOf = async (uid, date) => (await rows('Sales')).filter(s => s.user_id
   // Login page
   await p.goto(B + 'index.html');
   ok(await p.isVisible('#rememberRow'), 'remember-me shown');
-  ok(await p.isHidden('#reset'), 'demo reset link hidden');
   await p.fill('#phone', '0813 0000 0001'); await p.fill('#password', 'salah'); await p.click('#form button[type=submit]');
   await p.waitForSelector('#err:not([hidden])');
   ok((await p.textContent('#err')).includes('salah'), 'wrong password message from the server');

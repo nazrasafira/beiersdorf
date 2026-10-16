@@ -81,16 +81,15 @@
     `<button type="button" class="icon-btn${cls ? ' ' + cls : ''}" aria-label="${esc(label)}" title="${esc(label)}" ${attrs || ''}>${icon(name)}</button>`;
   const iconLink = (href, name, label, attrs, cls) =>
     `<a class="icon-btn${cls ? ' ' + cls : ''}" href="${href}" aria-label="${esc(label)}" title="${esc(label)}" ${attrs || ''}>${icon(name)}</a>`;
-  const initials = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
   // Images are stored as a site-relative path or as an uploaded data URL
   const imgSrc = v => (/^(data:|https?:)/.test(v) ? v : root + v);
-  // Avatar: the user's photo, or initials when there is none. Accepts a user object or a name.
+  // Avatar: the user's photo, or the default profile picture when there is none or it fails to load.
+  // Accepts a user object or a name.
+  const DEFAULT_AVATAR = 'assets/avatars/default.svg';
   function avatar(u, cls) {
-    const name = typeof u === 'string' ? u : u && u.name;
-    const photo = u && typeof u === 'object' && u.photo;
-    return photo
-      ? `<img class="avatar${cls ? ' ' + cls : ''}" src="${esc(imgSrc(photo))}" alt="" loading="lazy">`
-      : `<span class="avatar${cls ? ' ' + cls : ''}" aria-hidden="true">${esc(initials(name))}</span>`;
+    const photo = (u && typeof u === 'object' && u.photo) || DEFAULT_AVATAR;
+    const fallback = esc(imgSrc(DEFAULT_AVATAR));
+    return `<img class="avatar${cls ? ' ' + cls : ''}" src="${esc(imgSrc(photo))}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'">`;
   }
   // Name with avatar and an optional second line
   const person = (u, sub, label) => `<div class="person">${avatar(u)}<div><b>${esc(label || (typeof u === 'string' ? u : u.name))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
@@ -494,6 +493,35 @@
     try { return await fn(); } finally { if (btn) btn.disabled = false; }
   }
 
+  /**
+   * "Rekap harian (Excel)" form (markup: dailyExportHtml). getTeam() gives the team id, or '' for all teams.
+   * The server sends the numbers; assets/js/recap-export.js turns them into the .xlsx.
+   */
+  const dailyExportHtml = (teamSelect = '') => `
+    <form class="actions" id="dxForm" style="align-items:flex-end">
+      ${teamSelect}
+      <div class="field" style="margin:0"><label for="dxFrom">Dari</label><input class="input" type="date" id="dxFrom" required></div>
+      <div class="field" style="margin:0"><label for="dxTo">Sampai</label><input class="input" type="date" id="dxTo" required></div>
+      <button class="btn" type="submit">${icon('download')}Export Excel</button>
+    </form>`;
+  function dailyExport(getTeam) {
+    const form = document.getElementById('dxForm'), from = document.getElementById('dxFrom'), to = document.getElementById('dxTo');
+    from.value = Data.monthStart(Data.TODAY);
+    to.value = Data.TODAY;
+    to.max = from.max = Data.TODAY;
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (from.value > to.value) { toast('Tanggal mulai harus sebelum tanggal selesai.'); return; }
+      const error = await busy(form, async () => {
+        const res = await Data.dailyRecap({ from: from.value, to: to.value, teamId: getTeam() });
+        if (res.error) return res.error;
+        try { await RecapExport.download(res); } catch (err) { return 'Export gagal. Periksa koneksi internet lalu coba lagi.'; }
+        return null;
+      });
+      if (error) toast(error);
+    });
+  }
+
   /* ---------- Big progress ring (SVG) ---------- */
   // Single-color ring: blue until the target is reached, then green.
   function ring(p, centerHtml, label) {
@@ -590,7 +618,7 @@
   }
 
   window.App = {
-    root, HOME, ROLE_LABEL, page, init, teamId, toast, busy, modal, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
+    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
     esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,

@@ -4,21 +4,20 @@ Prototype of a daily sales report app for SPGs, Team Leaders and Supervisors. St
 
 **Live demo:** https://muhghifari.github.io/sales-daily-report/
 
-## Demo accounts
+## Starting data
 
-Log in with **phone number + password** (any format works: `0813 0000 0001`, `62813…`, `+62 813-…`). The eye button shows the password.
+The app starts with the **Admin** account, the product catalog and the stores; there are no other people, teams or sales.
 
 | Role | Phone | Password | Lands on |
 |------|-------|----------|----------|
-| SPG | `0813 0000 0001` (Sari) · `0813 0000 0002`–`0008` (other SPGs of Tim Jakarta Selatan) | `spg123` | Beranda |
-| Team Leader | `0812 0000 0001` (Rina) | `leader123` | Dashboard Tim |
-| Supervisor | `0811 0000 0002` (Budi) | `super123` | Dashboard Area |
 | Admin | `0811 0000 0001` | `admin123` | Pengguna |
 
-Try `0813 0000 0004` (Rani) to start a shift from scratch; Sari already has a shift running with sales.
+Log in with **phone number + password** (any format works: `0811 0000 0001`, `62811…`, `+62 811-…`). The Admin adds Supervisors and Team Leaders (Pengguna); Team Leaders add their SPGs (Tim) and set targets. New accounts start with `super123`, `leader123` or `spg123` and must choose their own password at the first login.
 
-"Today" in the demo is **Kamis, 22 Oktober 2026**. Changes (reports, targets, settings) are saved in your browser; use **Reset data demo** on the login page to start over.
-The passwords are hardcoded in `assets/js/data.js` and visible to anyone — demo only.
+- **Products**: the 199 SKUs of the client's file *SOH OFFTAKE YCA & LSI PJR AGUST'26 FILE BARU 199 SKU* (KODE SKU, Nama SKU di HO, Subbrand, price, barcode), kept in `assets/js/data.js`.
+- **Stores**: the 16 NMA stores (Yogya Cimanggu, LSI Pajajaran, AEON Sentul City, … Yogya Ciranjang).
+
+In demo mode (`backend: 'demo'`) changes are saved in your browser; clear the site's data in the browser to start over. The Admin password is in `assets/js/data.js` and visible to anyone: change it after the first login on a real server.
 
 ## Pages
 
@@ -29,7 +28,7 @@ The passwords are hardcoded in `assets/js/data.js` and visible to anyone — dem
 | `spg/laporan.html` — Penjualan: start shift at a chosen store, switch store, record each sale, end shift | SPG (Leader/Supervisor can edit too) |
 | `spg/peringkat.html` — team leaderboard by % of target | SPG |
 | `spg/riwayat.html` — report history per month | SPG |
-| `leader/dashboard.html` — team summary, SPG ranking, missing reports, products, CSV export | Leader, Supervisor |
+| `leader/dashboard.html` — team summary, SPG ranking, missing reports, products, CSV export, monthly Excel in the client's SOH / offtake format | Leader, Supervisor |
 | `leader/laporan.html` — team reports, detail, unlock | Leader, Supervisor |
 | `leader/target.html` — monthly targets, auto weekly/daily, overrides | Leader, Supervisor |
 | `leader/tim.html` — add / deactivate / reset SPGs | Leader, Supervisor |
@@ -43,7 +42,7 @@ See [`PLAN.md`](PLAN.md) for the product plan, [`IMPLEMENTATION.md`](IMPLEMENTAT
 
 ## Google Sheets backend
 
-`apps-script/` holds the Google Apps Script backend: the Google Sheet is the database, photos go to Google Drive. Set `assets/js/config.js` to `{ backend: 'sheets', url: '<web app URL>' }` to use it; setup steps: [`SETUP-GOOGLE-SHEETS.md`](SETUP-GOOGLE-SHEETS.md). Local development without Google: `node tools/sheets-dev-server.js`. After changing `assets/js/data.js`'s demo data, run `node tools/export-demo-data.js`.
+`apps-script/` holds the Google Apps Script backend: the Google Sheet is the database, photos go to Google Drive. Set `assets/js/config.js` to `{ backend: 'sheets', url: '<web app URL>' }` to use it; setup steps: [`SETUP-GOOGLE-SHEETS.md`](SETUP-GOOGLE-SHEETS.md). Local development without Google: `node tools/sheets-dev-server.js` (with made-up teams, SPGs and sales from `tools/fixtures/demo-data.json`, also used by the tests). After changing the starting data in `assets/js/data.js`, run `node tools/export-demo-data.js` (writes `apps-script/demo-data.json` and `apps-script/products.csv`).
 
 ## Publishing changes
 
@@ -51,7 +50,11 @@ After editing any page, run `python3 tools/bump-version.py` before committing. I
 
 ## Photos
 
-- **Profile photos**: SPGs tap their photo on Beranda to take or choose a new one; Team Leaders can set an SPG's photo in Kelola Tim. Demo users start with illustrated portraits in `assets/avatars/` (DiceBear "Lorelei" by Lisa Wischofsky, CC0 1.0, generated with `tools/generate-avatars.js`).
-- **Product photos**: Admin can upload a photo per product. Demo products start with simple illustrations in `assets/products/` — replace them with the official packshots from the client.
+- **Profile photos**: SPGs tap their photo on Beranda to take or choose a new one; Team Leaders can set an SPG's photo in Kelola Tim. Users without a photo (or whose photo can't be loaded) get `assets/avatars/default.svg`. The Admin starts with an illustrated portrait in `assets/avatars/` (DiceBear "Lorelei" by Lisa Wischofsky, CC0 1.0, generated with `tools/generate-avatars.js`).
+- **Product photos**: Admin can upload a photo per product. Products start with a placeholder image (`assets/products/placeholder.svg`) until a packshot is uploaded.
 - Uploaded photos are resized in the browser and stored with the demo data.
 - **Logo**: see `assets/brand/README.md`.
+
+## SOH / offtake Excel
+
+Dashboard Tim → **Laporan SOH & offtake** → pick a month → **Export Excel** (`assets/js/soh-export.js`, ExcelJS loaded from cdnjs on first use). Same layout as the client's monthly file: one row per SKU (NO, KODE SKU, Nama SKU di HO, Subbrand, price, barcode), then for each store the team sold at that month a block with the SPGs' names, the store name and Qty / Val / SOH / Val SOH, then the totals (all, and per focus brand) with target and achievement. Qty comes from the recorded sales; Val, Val SOH and the totals are Excel formulas. SOH is not recorded in the app, so those columns are left empty to fill in. An SPG's monthly target is counted under the store where she sold the most that month.

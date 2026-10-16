@@ -221,9 +221,6 @@ tr.detail td { background: var(--soft); white-space: normal; padding: 12px; }
 .login-box { max-width: 360px; margin: 0 auto; padding: 72px 20px 40px; }
 .login-box .brand { display: block; font-size: 22px; margin-bottom: 4px; }
 .login-box form { margin: 32px 0 40px; }
-.demo { font-size: 14px; }
-.demo .rows > * { padding: 10px 0; cursor: pointer; }
-.demo .rows > *:hover { background: var(--soft); }
 
 /* ---------- Toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 40px); text-align: center; }
@@ -414,7 +411,6 @@ body.login { background: #fff; }
 .login-box .head .brand { color: var(--blue); }
 .login-box .head .sub { color: var(--muted); }
 .login-box form.card { border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
-.login-box .demo.card { margin-top: 8px; }
 
 /* Table search + pagination */
 .tt-bar { margin-bottom: 12px; }
@@ -494,9 +490,6 @@ dialog.modal .modal-body { overflow: visible; }
 .pw { position: relative; }
 .pw .input { padding-right: 48px; }
 .pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
-.demo .rows small { margin-left: 6px; }
-.demo .rows > * { flex-wrap: wrap; row-gap: 2px; }
-.demo .rows > * > span:last-child { white-space: nowrap; }
 .login-box .remember { display: flex; margin: 4px 0 16px; font-size: 14px; }
 .login-box #pwForm .sub { margin: 0 0 16px; }
 

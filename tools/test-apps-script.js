@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /*
  * Tests for the Apps Script backend (apps-script/*.gs), run in Node with tools/gas-mock.js.
- * Uses the demo data (DEMO_TODAY 2026-10-22). Usage: node tools/test-apps-script.js
+ * Uses the test data in tools/fixtures/demo-data.json (made-up people and sales, DEMO_TODAY 2026-10-22). Usage: node tools/test-apps-script.js
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');
 const { load } = require('./gas-mock');
 
-const DEMO = 'file://' + path.join(__dirname, '..', 'apps-script', 'demo-data.json');
+const DEMO = 'file://' + path.join(__dirname, 'fixtures', 'demo-data.json');
 const PHONE = { admin: '081100000001', budi: '081100000002', rina: '081200000001', andi: '081200000002', sari: '081300000001', dewi: '081300000002', rani: '081300000004' };
 const PW = { admin: 'admin123', budi: 'super123', rina: 'leader123', andi: 'leader123', sari: 'spg123', dewi: 'spg123', rani: 'spg123' };
 
@@ -223,4 +223,55 @@ test('notes photos at shift end: required, max 4, only for the SPG and their lea
   assert.equal(g.as('rina', 'bootstrap').data.shifts[key].photos.length, 2);
   assert.equal(g.as('budi', 'bootstrap').data.shifts[key].photos.length, 2);
   assert.equal(g.as('dewi', 'bootstrap').data.shifts[key].photos.length, 0, 'teammate');
+});
+
+test('starting data: Admin, 199 products with subbrand and barcode, 16 stores', () => {
+  const g = load({ DEMO_TODAY: '2026-10-22' }, { quiet: true });
+  g.ctx.setupSheet();
+  g.ctx.importDemoData('file://' + path.join(__dirname, '..', 'apps-script', 'demo-data.json'));
+  const login = g.call({ action: 'login', phone: '081100000001', password: 'admin123' });
+  assert.ok(login.ok);
+  const s = login.data.state;
+  assert.deepEqual([s.users.length, s.products.length, s.stores.length], [1, 199, 16]);
+  const a1 = s.products.find(p => p.sku === 'A1');
+  assert.deepEqual([a1.name, a1.brand, a1.barcode, a1.price], ['NCRM CREME TIN 60ML', 'NIVEA ALL PURPOSE CREAMS', '8850029801025', 22470]);
+  const saved = g.call({ action: 'product.save', token: login.data.token, id: a1.id, name: a1.name, sku: 'A1', brand: 'NIVEA BODY', barcode: '123', price: 23000 });
+  assert.deepEqual([saved.data.product.brand, saved.data.product.barcode, saved.data.product.price], ['NIVEA BODY', '123', 23000]);
+});
+
+test('daily recap: days, totals, OFF and missing days, sorted by achievement', () => {
+  const g = app();
+  const r = g.as('rina', 'report.dailyRecap', { from: '2026-10-01', to: '2026-10-11' });
+  assert.ok(r.ok, r.error);
+  const d = r.data;
+  assert.deepEqual([d.days.length, d.days[0], d.rows.length, d.teams[0].name], [11, '2026-10-01', 8, 'Jakarta Selatan']);
+  // 4 Oct 2026 is a Sunday: day off for Tim Jakarta Selatan (Mon–Sat)
+  assert.equal(d.offDays[3], true);
+  d.rows.forEach(x => assert.equal(x.cells[3], 'OFF'));
+  // Totals match the Sales tab, targets are the October targets, rows sorted by achievement
+  const sales = g.rows('Sales'), users = g.rows('Users'), targets = g.rows('Targets');
+  let prev = Infinity;
+  d.rows.forEach(x => {
+    const u = users.find(y => y.name === x.name);
+    const total = sales.filter(s => s.user_id === u.id && !s.deleted && s.date >= '2026-10-01' && s.date <= '2026-10-11').reduce((a, s) => a + s.subtotal, 0);
+    assert.deepEqual([x.total, x.target], [total, targets.find(t => t.user_id === u.id && t.month === '2026-10').monthly]);
+    assert.equal(x.total, x.cells.filter(c => typeof c === 'number').reduce((a, c) => a + c, 0));
+    assert.ok(x.ach <= prev);
+    prev = x.ach;
+  });
+  // Sari skipped 13 Oct (a Tuesday, working day): MISSING
+  const sari = g.as('rina', 'report.dailyRecap', { from: '2026-10-13', to: '2026-10-13' }).data.rows.find(x => x.name === 'Sari Wulandari');
+  assert.deepEqual(sari.cells, ['MISSING']);
+});
+
+test('daily recap: who may see what', () => {
+  const g = app();
+  assert.equal(g.as('sari', 'report.dailyRecap', { from: '2026-10-01', to: '2026-10-11' }).status, 403);
+  assert.equal(g.as('rina', 'report.dailyRecap', { from: '2026-10-01', to: '2026-10-11', teamId: 't2' }).status, 403);
+  assert.equal(g.as('rina', 'report.dailyRecap', { from: '2026-10-11', to: '2026-10-01' }).status, 422);
+  assert.equal(g.as('rina', 'report.dailyRecap', { from: '2026-08-01', to: '2026-10-11' }).status, 422);
+  const all = g.as('admin', 'report.dailyRecap', { from: '2026-10-20', to: '2026-10-22' }).data;
+  assert.deepEqual([all.teams.length, all.rows.length], [g.rows('Teams').length, g.rows('Users').filter(u => u.role === 'spg' && u.active).length]);
+  const one = g.as('admin', 'report.dailyRecap', { from: '2026-10-20', to: '2026-10-22', teamId: 't3' }).data;
+  assert.equal(one.rows.length, g.rows('Users').filter(u => u.role === 'spg' && u.active && u.team_id === 't3').length);
 });

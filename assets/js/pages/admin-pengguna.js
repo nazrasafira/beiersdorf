@@ -96,4 +96,7 @@ Data.ready(function () {
   });
 
   render();
+  // Daily recap for a date range (one team or all), as an Excel file
+  $('dxWrap').innerHTML = App.dailyExportHtml(`<div class="field" style="margin:0"><label for="dxTeam">Tim</label><select class="input" id="dxTeam"><option value="">Semua tim</option>${D.teams().map(t => `<option value="${t.id}">Tim ${App.esc(t.name)}</option>`).join('')}</select></div>`);
+  App.dailyExport(() => $('dxTeam').value);
 });

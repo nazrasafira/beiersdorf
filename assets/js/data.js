@@ -13,9 +13,9 @@
   const LIVE = CONFIG.backend === 'sheets';
   const STORE_KEY = 'lspg-data-v1';
   const USER_KEY = 'lspg-user';
-  // Demo: fixed dates. Live: set from the server (today, and the first day of data sent to the page).
-  let DATA_START = '2026-09-01';
-  let TODAY = '2026-10-22';
+  // Demo: the phone's date, data kept from the start of last month. Live: set from the server (today, and the first day of data sent to the page).
+  let DATA_START = '';
+  let TODAY = '';
 
   /* ---------- Date helpers (dates are 'YYYY-MM-DD' strings) ---------- */
   const pad = n => String(n).padStart(2, '0');
@@ -31,6 +31,12 @@
   const monthEnd = s => { const d = parse(monthStart(s)); d.setMonth(d.getMonth() + 1); d.setDate(0); return toStr(d); };
   const eachDay = (from, to) => { const out = []; for (let d = from; d <= to; d = addDays(d, 1)) out.push(d); return out; };
 
+  {
+    const now = new Date();
+    TODAY = toStr(now);
+    DATA_START = toStr(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  }
+
   function range(period, date) {
     if (period === 'day') return [date, date];
     if (period === 'week') return [weekStart(date), weekEnd(date)];
@@ -38,46 +44,229 @@
   }
 
   /* ---------- Seed data ---------- */
-  function mulberry32(a) {
-    return function () {
-      a |= 0; a = a + 0x6D2B79F5 | 0;
-      let t = Math.imul(a ^ a >>> 15, 1 | a);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-  }
-
+  // Product catalog: KODE SKU, Nama SKU di HO, Subbrand, price (Rp), barcode.
+  // From "SOH OFFTAKE YCA & LSI PJR AGUST'26 FILE BARU 199 SKU" (199 SKUs); the Excel export uses the same order.
   const PRODUCTS = [
-    { id: 'p1', name: 'Soft Moisturizing Creme 100ml', sku: 'SOFT-100', price: 65000 },
-    { id: 'p2', name: 'Men Deep Facial Foam 100g', sku: 'MEN-DFF-100', price: 55000 },
-    { id: 'p3', name: 'Body Lotion Extra White 400ml', sku: 'BL-EW-400', price: 85000 },
-    { id: 'p4', name: 'Deodorant Roll-on 50ml', sku: 'DEO-RO-50', price: 25000 },
-    { id: 'p5', name: 'Micellar Water 400ml', sku: 'MIC-400', price: 95000 },
-    { id: 'p6', name: 'Creme Tin 150ml', sku: 'CREME-150', price: 60000 },
-    { id: 'p7', name: 'Lip Care Original 4.8g', sku: 'LIP-OR', price: 30000 },
-  ];
+    ['A1', 'NCRM CREME TIN 60ML', 'NIVEA ALL PURPOSE CREAMS', 22470, '8850029801025'],
+    ['A2', 'NCRM CREME TIN 30ML', 'NIVEA ALL PURPOSE CREAMS', 9444, '40058153'],
+    ['A7', 'NSFT SOFT 50ML', 'NIVEA ALL PURPOSE CREAMS', 14800, '8999777890544'],
+    ['A8', 'NSFT SOFT 100ML', 'NIVEA ALL PURPOSE CREAMS', 24000, '8999777890551'],
+    ['B1', 'NBO ANTI AGE SERUM 180ML', 'NIVEA BODY', 44000, '8999777007058'],
+    ['B2', 'NBO REPAIR & PROTECT LOTION 100ML', 'NIVEA BODY', 17000, '8999777000165'],
+    ['B3', 'NBO REPAIR & PROTECT LOTION 200ML', 'NIVEA BODY', 27000, '8999777000318'],
+    ['B4', 'NBO REPAIR & PROTECT LOTION 400ML', 'NIVEA BODY', 56000, '4005808668069'],
+    ['B5', 'NBO CARE & PROTECT SERUM 180ML', 'NIVEA BODY', 25225, '4005808713257'],
+    ['B6', 'NBO CARE & PROTECT SERUM 70ML', 'NIVEA BODY', 12364, '4005808713226'],
+    ['B8', 'NBO INSTANT GLOW LOTION 200ML', 'NIVEA BODY', 27000, '8999777008543'],
+    ['B10', 'NBO INSTANT GLOW SERUM 180ML', 'NIVEA BODY', 25225, '8999777006990'],
+    ['B12', 'NBO NIGHT NOURISH LOTION 200ML', 'NIVEA BODY', 33500, '8999777000110'],
+    ['B13', 'NBO NIGHT NOURISH SERUM 180ML', 'NIVEA BODY', 25225, '8999777005320'],
+    ['B14', 'NBO RADIANT & SMOOTH CREAM 100ML', 'NIVEA BODY', 29000, '8999777818586'],
+    ['B16', 'NBO RADIANT & SMOOTH CREAM 50ML', 'NIVEA BODY', 15750, '8999777818579'],
+    ['B17', 'NBO RADIANT & SMOOTH LOTION 100ML', 'NIVEA BODY', 17000, '8999777000042'],
+    ['B18', 'NBO RADIANT & SMOOTH LOTION 200ML', 'NIVEA BODY', 27000, '8999777000059'],
+    ['B19', 'NBO RADIANT & SMOOTH LOTION 400ML', 'NIVEA BODY', 53350, '8999777000271'],
+    ['B20', 'NBO INTENSIVE MOISTURE LOTION 100ML', 'NIVEA BODY', 17000, '8999777000004'],
+    ['B21', 'NBO INTENSIVE MOISTURE LOTION 200ML', 'NIVEA BODY', 20203, '8999777000011'],
+    ['B22', 'NBO INTENSIVE MOISTURE LOTION 400ML', 'NIVEA BODY', 60000, '4005808232512'],
+    ['B23', 'NBO INTENSIVE MOISTURE SERUM 180ML', 'NIVEA BODY', 29144, '8999777000448'],
+    ['B24', 'NBO FIRM & SMOOTH LOTION 100ML', 'NIVEA BODY', 10100, '8999777009625'],
+    ['B25', 'NBO FIRM & SMOOTH LOTION 200ML', 'NIVEA BODY', 25170, '8999777009564'],
+    ['B26', 'NBO FIRM & SMOOTH LOTION 400ML', 'NIVEA BODY', 35910, '8999777009649'],
+    ['B27', 'NBO DAILY PROTECTION SUN LOTION 100ML', 'NIVEA BODY', 35175, '8999777005351'],
+    ['B35', 'NBO WHITENING COOLING HIJAB SERUM 180ML', 'NIVEA BODY', 28500, '8999777015725'],
+    ['B36', 'NBO RADIANT & SMOOTH SERUM 180ML', 'NIVEA BODY', 25225, '8999777009588'],
+    ['B37', 'NBO EXTRA BRIGHT 10 SUPER VITAMINS & SKIN FOODS SERUM 180ML', 'NIVEA BODY', 34800, '8999777017859'],
+    ['B38', 'NBO EXTRA BRIGHT MIRACLE SWEET SERUM 180ML', 'NIVEA BODY', 41000, '8850029040516'],
+    ['B39', 'NBO EXTRA BRIGHT VELVET ROMANCE SERUM 180ML', 'NIVEA BODY', 41000, '8850029040530'],
+    ['B40', 'NBO EXTRA BRIGHT REPAIR & PROTECT LOTION 525ML', 'NIVEA BODY', 140000, '8999777018863'],
+    ['B41', 'NBO EXTRA BRIGHT REPAIR & PROTECT SERUM 320ML', 'NIVEA BODY', 125000, '8999777018832'],
+    ['B42', 'NBO EXTRA BRIGHT C & E VITAMIN LOTION 320ML', 'NIVEA BODY', 60538, '8999777018719'],
+    ['B43', 'NBO EXTRA BRIGHT C & E VITAMIN LOTION 180ML', 'NIVEA BODY', 29144, '8999777001292'],
+    ['B44', 'NBO SUPER 10 YOUTH PROTECT BODY SERUM 180ML', 'NIVEA BODY', 46500, '8850029040646'],
+    ['B45', 'NBO SUPER 10 YOUTH PROTECT BODY SERUM 320ML', 'NIVEA BODY', 72072, '8850029040639'],
+    ['B46', 'NBO C&AHA VITAMIN BODY SERUM 170ML', 'NIVEA BODY', 29144, '8999777023508'],
+    ['B47', 'NBO SUPER C+ VITAMIN BODY SERUM 70ML', 'NIVEA BODY', 25852, '8999777023539'],
+    ['B48', 'NBO SUPER C+ VITAMIN BODY SERUM 170ML', 'NIVEA BODY', 58363, '8999777023560'],
+    ['C26', 'NSUN TRIPLE PROTECT ACNE OIL CONTROL SPF50+ PA+++ 40ML', 'NIVEA SUN', 75000, '8999777002527'],
+    ['C7', 'NSUN KIDS ULTRA SENSISTIVE SPF50+ SPRAY 200ML', 'NIVEA SUN', 232146, '8999777015398'],
+    ['C10', 'NSUN TANNING OIL LOTION 200ML', 'NIVEA SUN', 65500, '4005900114082'],
+    ['C11', 'NSUN PROTECT & BRONZE SPF20 LOTION 200ML', 'NIVEA SUN', 188633, '4005808432394'],
+    ['C12', 'NSUN PROTECT & MOISTURE SPF30 LOTION 100ML', 'NIVEA SUN', 110000, '8999777857837'],
+    ['C13', 'NSUN PROTECT & MOISTURE SPF50 LOTION 100ML', 'NIVEA SUN', 152300, '8999777857844'],
+    ['C14', 'NSUN PROTECT & MOISTURE SPF50+ LOTION 200ML', 'NIVEA SUN', 244745, '4005808430208'],
+    ['C16', 'NSUN MOISTURISING AFTER SUN SPRAY 200ML', 'NIVEA SUN', 177135, '4005808804344'],
+    ['C18', 'NSUN PROTECT & REFRESH SPF50 AEROSOL 200ML', 'NIVEA SUN', 193330, '4005808260706'],
+    ['C27', 'NSUN BODY SUN SERUM TRIPLE PROTECT EXTRA RADIANCE & SMOOTH SPF50 PA+++ 180ML', 'NIVEA SUN', 93240, '8999777017880'],
+    ['C22', 'NSUN PROTECT & WHITE INSTANT AURA SPF50+ PA+++ FACE SERUM 30ML', 'NIVEA SUN', 53560, '8999777015268'],
+    ['C23', 'NSUN PROTECT & WHITE OIL CONTROL SPF50+ PA+++ FACE SERUM 30ML', 'NIVEA SUN', 53560, '8999777014230'],
+    ['C24', 'NSUN EXTRA PROTECT C & E VITAMIN SUN CARE SPF50 PA+++ 30ML', 'NIVEA SUN', 53560, '8999777000837'],
+    ['C25', 'NSUN TRIPLE PROTECT HOKKAIDO ROSE SPF50+ PA+++ FACE SERUM 40ML', 'NIVEA SUN', 75000, '8999777017644'],
+    ['C28', 'NSUN TRIPLE PROTECT ANTI WRINKLE SPF50+ PA+++ 40ML', 'NIVEA SUN', 80625, '8999777003241'],
+    ['C29', 'NSUN EXTRA PROTECT AURA SUN FACE SERUM SPF50+ PA+++ 7ML', 'NIVEA SUN', 12924, '42397793'],
+    ['C30', 'NSUN EXTRA PROTECT OIL CONTROL SUN FACE SERUM SPF50+ PA+++ 7ML', 'NIVEA SUN', 12924, '42417507'],
+    ['C31', 'NSUN PROTECT & MOISTURE SPF30 LOTION 75ML', 'NIVEA SUN', 70271, '8999777001513'],
+    ['C32', 'NSUN PROTECT & MOISTURE SPF50 LOTION 75ML', 'NIVEA SUN', 100487, '8999777001575'],
+    ['C33', 'NSUN PROTECT & LIGHT FEEL SPF 50+ LOTION 90ML', 'NIVEA SUN', 89081, '4005808984763'],
+    ['D1', 'NM ACNE OIL CLEAR ACNE DEFENSE FACIAL FOAM 50ML', 'NIVEA MEN FACE CARE', 20900, '8999777888374'],
+    ['D2', 'NM ACNE DEFENSE + PURIFY SCRUB 100ML', 'NIVEA MEN FACE CARE', 29920, '8999777813499'],
+    ['D3', 'NM ACNE OIL CLEAR ACNE DEFENSE FACIAL FOAM 100ML', 'NIVEA MEN FACE CARE', 30600, '8999777888381'],
+    ['D4', 'NM EXTRA WHITE DARK SPOT MINIMIZER FACIAL FOAM 100ML', 'NIVEA MEN FACE CARE', 30600, '8999777888367'],
+    ['D5', 'NM EXTRA WHITE DARK SPOT MINIMIZER FACIAL FOAM 50ML', 'NIVEA MEN FACE CARE', 20900, '8999777888350'],
+    ['D6', 'NM CREME TIN 30ML', 'NIVEA MEN FACE CARE', 25000, '40061191'],
+    ['D7', 'NM CREME TIN 75ML', 'NIVEA MEN FACE CARE', 50000, '8999777012373'],
+    ['D10', 'NM WHITE OIL CLEAR ANTI SHINE + PURIFY COOLING FACIAL FOAM 50ML', 'NIVEA MEN FACE CARE', 25500, '8999777002602'],
+    ['D11', 'NM WHITE OIL CLEAR ANTI SHINE + PURIFY COOLING FACIAL FOAM 100ML', 'NIVEA MEN FACE CARE', 31200, '4005808694822'],
+    ['D12', 'NM WHITE OIL CLEAR ANTI SHINE FACIAL FOAM 100ML', 'NIVEA MEN FACE CARE', 30600, '8999777000189'],
+    ['D13', 'NM WHITE OIL CLEAR ANTI SHINE FACIAL FOAM 50ML', 'NIVEA MEN FACE CARE', 20900, '8999777000172'],
+    ['D14', 'NM WHITE OIL CLEAR PORE MINIMIZING SCRUB 100ML', 'NIVEA MEN FACE CARE', 30600, '8999777002954'],
+    ['D15', 'NM EXTRA WHITE ANTI-DARK SPOT SERUM 15ML', 'NIVEA MEN FACE CARE', 28900, '8999777015350'],
+    ['D16', 'NM DEEP ACNE ATTACK SCRUB MUD FACIAL FOAM 100ML', 'NIVEA MEN FACE CARE', 30600, '8999777017293'],
+    ['D17', 'NM EXTRA BRIGHT C&HYA VITAMIN SCRUB 100ML', 'NIVEA MEN FACE CARE', 31200, '8999777004316'],
+    ['D18', 'NM EXTRA BRIGHT MUD FOAM 100ML', 'NIVEA MEN FACE CARE', 31200, '8999777001711'],
+    ['E1', 'NFC EYE MAKE UP REMOVER DOUBLE EFFECT 125ML', 'NIVEA FEMALE FACE CARE', 61690, '4005900102300'],
+    ['E3', 'NFC MICELLAIR BLACK XPERT 125ML', 'NIVEA FEMALE FACE CARE', 33870, '8999777012083'],
+    ['E4', 'NFC MICELLAIR HYDRATION 125ML', 'NIVEA FEMALE FACE CARE', 25730, '8999777014711'],
+    ['E5', 'NFC MICELLAIR PEARL WHITE 125ML', 'NIVEA FEMALE FACE CARE', 29025, '8999777011826'],
+    ['E6', 'NFC MICELLAIR PEARL WHITE 200ML', 'NIVEA FEMALE FACE CARE', 45070, '8999777010522'],
+    ['E19', 'NFC MICELLAIR PEARL BRIGHT 400ML', 'NIVEA FEMALE FACE CARE', 75000, '8999777017910'],
+    ['E13', 'NFC HOKKAIDO ROSE WHIP FACIAL FOAM 100ML', 'NIVEA FEMALE FACE CARE', 49500, '4005900691255'],
+    ['E14', 'NFC HOKKAIDO ROSE OIL-INFUSED MICELLAR WATER 125ML', 'NIVEA FEMALE FACE CARE', 45830, '8850029031781'],
+    ['E16', 'NFC SPARKLING BRIGHT FACIAL FOAM 100ML', 'NIVEA FEMALE FACE CARE', 27300, '8999777867249'],
+    ['E17', 'NFC SPARKLING BRIGHT FACIAL FOAM 50ML', 'NIVEA FEMALE FACE CARE', 15330, '8999777003968'],
+    ['E18', 'NFC MICELLAIR OIL & ACNE CARE 125ML', 'NIVEA FEMALE FACE CARE', 29025, '8999777017507'],
+    ['E20', 'NFC MICELLAIR OIL & ACNE CARE 400ML', 'NIVEA FEMALE FACE CARE', 75000, '8999777017941'],
+    ['E21', 'NFC MICELLAR WATER DERMA ACNE CARE 125ML', 'NIVEA FEMALE FACE CARE', 29025, '8999777022945'],
+    ['E22', 'NFC MICELLAR WATER DERMA ACNE CARE 400ML', 'NIVEA FEMALE FACE CARE', 75000, '8999777023003'],
+    ['E23', 'NFC MICELLAR WATER SOOTHING 125ML', 'NIVEA FEMALE FACE CARE', 29025, '8999777023034'],
+    ['E24', 'NFC MICELLAR WATER SOOTHING 400ML', 'NIVEA FEMALE FACE CARE', 75000, '8999777022976'],
+    ['G2', 'NLC LIP BALM ORIGINAL ESSENTIAL', 'NIVEA LIP CARE', 27427, '8999777850616'],
+    ['G6', 'NLC LIP BALM STRAWBERRY SHINE', 'NIVEA LIP CARE', 27427, '8999777850838'],
+    ['G7', 'NLC LIP BALM OVERNIGHT CARE LIP BALM', 'NIVEA LIP CARE', 34000, '8850029039749'],
+    ['G8', 'NLC LIP CARING COLOR CORAL', 'NIVEA LIP CARE', 29655, '8850029041957'],
+    ['G9', 'NLC LIP CARING COLOR ROSE', 'NIVEA LIP CARE', 29655, '8850029041940'],
+    ['H1', 'HP ROLL KAIN 1.25CM X 5M', 'Hansaplast WOUND PLASTER', 12828, '8999777012267'],
+    ['H2', 'HP ROLL KAIN 1.25CM X 1M', 'Hansaplast WOUND PLASTER', 4549, '8999777019891'],
+    ['H3', 'HP ANTISEPTIK PEMBERSIH LUKA SPRAY 40ML', 'Hansaplast WOUND PLASTER', 24673, '8999777010768'],
+    ['H40', 'HP ANTISEPTIK PEMBERSIH LUKA 20ML', 'Hansaplast WOUND PLASTER', 13112, '42428954'],
+    ['H34', 'HP SALEP LUKA 3.5G', 'Hansaplast WOUND PLASTER', 14545, '8999777015510'],
+    ['H4', 'HP SALEP LUKA 20G', 'Hansaplast WOUND PLASTER', 37500, '8999777010782'],
+    ['H49', 'HP Salep Luka 50g', 'Hansaplast WOUND PLASTER', 75000, '8999777018924'],
+    ['H48', 'HANSAPLAST PLESTER BEKAS LUKA 21 LEMBAR', 'Hansaplast WOUND PLASTER', 284552, '8999777017675'],
+    ['H52', 'Hansaplast 123 Siap Rawat Luka + Mainan Anak', 'Hansaplast WOUND PLASTER', 34234, '8999777024253'],
+    ['H53', 'Hansaplast 123 Siap Rawat Luka + Mangkok', 'Hansaplast WOUND PLASTER', 61950, '8999777024260'],
+    ['H5', 'HP AQUA PROTECT 6S', 'Hansaplast WOUND PLASTER', 12531, '8999777007690'],
+    ['H44', 'HP AQUA PROTECT KIDS 20S', 'Hansaplast WOUND PLASTER', 28469, '8999777022631'],
+    ['H45', 'HANSAPLAST AQUA PROTECT STERIL XL 6 X 7CM 5PCS', 'Hansaplast WOUND PLASTER', 37297, '8999777018436'],
+    ['H46', 'HANSAPLAST AQUA PROTECT STERIL XXL 8 X 10CM 5PCS', 'Hansaplast WOUND PLASTER', 51892, '8999777018450'],
+    ['H6', 'HP KAIN ELASTIS MIX 20S', 'Hansaplast WOUND PLASTER', 11018, '8999777016142'],
+    ['H7', 'HANSAPLAST KAIN ELASTIS 100 LEMBAR', 'Hansaplast WOUND PLASTER', 27999, '8999777026370'],
+    ['H8', 'HP KAIN ELASTIS MIX 10S', 'Hansaplast WOUND PLASTER', 5755, '8999777761097'],
+    ['H9', 'HP 2638 KAIN ELASTIS JUMBO 50S', 'Hansaplast WOUND PLASTER', 27999, '8999777015596'],
+    ['H10', 'HP KAIN ELASTIS FINGER STRIPS 6S', 'Hansaplast WOUND PLASTER', 11668, '8999777016203'],
+    ['H12', 'HP MICKEY 10S', 'Hansaplast WOUND PLASTER', 10713, '4005800034473'],
+    ['H13', 'HP FROZEN 10S', 'Hansaplast WOUND PLASTER', 10713, '8999777009014'],
+    ['H14', 'HP DISNEY MARVEL AVENGERS 10S', 'Hansaplast WOUND PLASTER', 10713, '8999777016173'],
+    ['H15', 'HP JUNIOR FUN 10S', 'Hansaplast WOUND PLASTER', 6358, '8999777016425'],
+    ['H16', 'HP SENSITIVE 6S', 'Hansaplast WOUND PLASTER', 7141, '8999777013165'],
+    ['H17', 'HP TRANSPARENT 10S', 'Hansaplast WOUND PLASTER', 9269, '8999777012151'],
+    ['H20', 'HP KOYO HANGAT RENCENG', 'Hansaplast PAIN', 29272, '8999777001186'],
+    ['H21', 'HP KOYO PANAS RENCENG', 'Hansaplast PAIN', 29272, '8999777000776'],
+    ['H22', 'HP FOOT PLASTER 6S', 'Hansaplast FOOT', 9384, '8999777008895'],
+    ['H23', 'HP KOYO PANAS RESEALABLE 10S', 'Hansaplast PAIN', 7720, '8999777090579'],
+    ['H24', 'HP KOYO HANGAT RESEALABLE 10S', 'Hansaplast PAIN', 7720, '8999777765392'],
+    ['H41', 'HP JUNIOR FUN 100S', 'Hansaplast WOUND PLASTER', 27999, '8999777017804'],
+    ['H28', 'HP KASA ROL ELASTIS 4M X 6CM', 'Hansaplast WOUND PLASTER', 6694, '8999777015015'],
+    ['H30', 'HP KASA STERIL 7.5 X 7.5CM 2PCS', 'Hansaplast WOUND PLASTER', 2547, '8999777016043'],
+    ['H47', 'HANSAPLAST SENSITIVE STERIL XL 6 X 7CM 5PCS', 'Hansaplast WOUND PLASTER', 33153, '8999777018511'],
+    ['H50', 'HP Sensitive Steril XXL 8 x 10cm 5pcs', 'Hansaplast WOUND PLASTER', 43243, '8999777018535'],
+    ['H36', 'HP ROLL KAIN 1.25CM X 4.5M', 'Hansaplast WOUND PLASTER', 12193, '8999777016845'],
+    ['H39', 'HP ROL KERTAS 2.5CM X 5M', 'Hansaplast WOUND PLASTER', 18182, '8999777017767'],
+    ['H38', 'HP KAIN ELASTIS TOPLES 40X10S', 'Hansaplast WOUND PLASTER', 127802, '8999777012526'],
+    ['H42', 'HP SECOND SKIN PROTECTION REGULAR 6S', 'Hansaplast WOUND PLASTER', 54054, '4006000135175'],
+    ['H43', 'HP SECOND SKIN PROTECTION XL 3S', 'Hansaplast WOUND PLASTER', 54054, '8999777001353'],
+    ['H51', 'HP Soft Compress Steril 7.5 x 7.5cm 10pcs', 'Hansaplast WOUND PLASTER', 18018, '8999777000738'],
+    ['I1', 'NDEO ROLL ON DRY COMFORT 25ML', 'NIVEA DEO', 11100, '8999777004255'],
+    ['I2', 'NDEO ROLL ON DRY COMFORT 50ML', 'NIVEA DEO', 18500, '8999777004194'],
+    ['I4', 'NDEO ROLL ON EXTRA WHITENING 25ML', 'NIVEA DEO', 11100, '8999777004224'],
+    ['I5', 'NDEO ROLL ON EXTRA WHITENING 50ML', 'NIVEA DEO', 19000, '8999777004163'],
+    ['I6', 'NDEO SPRAY EXTRA BRIGHTENING 150ML', 'NIVEA DEO', 47500, '8999777004828'],
+    ['I60', 'NDEO LOTION EXTRA BRIGHTENING 9ML', 'NIVEA DEO', 1350, '8999777018160'],
+    ['I7', 'NDEO ROLL ON BLACK & WHITE FEMALE 25ML', 'NIVEA DEO', 11100, '8999777004293'],
+    ['I8', 'NDEO ROLL ON BLACK & WHITE FEMALE 50ML', 'NIVEA DEO', 18500, '8999777004354'],
+    ['I9', 'NDEO SPRAY BLACK & WHITE FEMALE 150ML', 'NIVEA DEO', 47500, '8999777004880'],
+    ['I69', 'NDEO ROLL ON BLACK & WHITE AUTHENTIC FEMALE 50ML', 'NIVEA DEO', 18500, '8999777023645'],
+    ['I70', 'NDEO SPRAY BLACK & WHITE AUTHENTIC FEMALE 150ML', 'NIVEA DEO', 47500, '8850029045191'],
+    ['I10', 'NDEO ROLL ON HAPPY SHAVE 50ML', 'NIVEA DEO', 19000, '8999777007430'],
+    ['I11', 'NDEO ROLL ON HAPPY SHAVE 25ML', 'NIVEA DEO', 11100, '8999777007478'],
+    ['I12', 'NDEO SPRAY HAPPY SHAVE 150ML', 'NIVEA DEO', 44920, '8999777007553'],
+    ['I13', 'NDEO ROLL ON PEARL & BEAUTY 25ML', 'NIVEA DEO', 11100, '8999777011000'],
+    ['I14', 'NDEO ROLL ON PEARL & BEAUTY 50ML', 'NIVEA DEO', 19000, '8999777010973'],
+    ['I15', 'NDEO SPRAY PEARL & BEAUTY 150ML', 'NIVEA DEO', 47500, '8999777011031'],
+    ['I17', 'NDEO ROLL ON RADIANT & SMOOTH 50ML', 'NIVEA DEO', 18500, '8999777011383'],
+    ['I18', 'NDEO SPRAY RADIANT & SMOOTH 150ML', 'NIVEA DEO', 41400, '8999777011406'],
+    ['I19', 'NDEO ROLL ON BLACK & WHITE FEMALE FRESH 25ML', 'NIVEA DEO', 7665, '8999777006228'],
+    ['I20', 'NDEO ROLL ON BLACK & WHITE FEMALE FRESH 50ML', 'NIVEA DEO', 18500, '8999777006259'],
+    ['I21', 'NDEO SPRAY BLACK & WHITE FEMALE FRESH 150ML', 'NIVEA DEO', 27991, '8999777006334'],
+    ['I22', 'NDEO ROLL ON SILK TOUCH 25ML', 'NIVEA DEO', 11100, '8999777009267'],
+    ['I23', 'NDEO ROLL ON SILK TOUCH 50ML', 'NIVEA DEO', 19000, '8999777009281'],
+    ['I24', 'NDEO ROLL ON WHITENING ANTI BACTERIAL 50ML', 'NIVEA DEO', 19350, '8999777014209'],
+    ['I25', 'NDEO ROLL ON COOL KICK COOL BLUE 25ML', 'NIVEA DEO', 11100, '8999777004514'],
+    ['I26', 'NDEO ROLL ON COOL KICK COOL BLUE 50ML', 'NIVEA DEO', 17300, '8999777004484'],
+    ['I28', 'NDEO SPRAY COOL KICK COOL BLUE 150ML', 'NIVEA DEO', 44000, '8999777004910'],
+    ['I52', 'NDEO ROLL ON COOL KICK FREEZY GREEN 50ML', 'NIVEA DEO', 17300, '8999777016784'],
+    ['I58', 'NDEO LOTION COOL KICK COOL BLUE 9ML', 'NIVEA DEO', 1350, '8999777018351'],
+    ['I29', 'NDEO ROLL ON BLACK & WHITE MALE 25ML', 'NIVEA DEO', 11100, '8999777004583'],
+    ['I30', 'NDEO ROLL ON BLACK & WHITE MALE 50ML', 'NIVEA DEO', 17300, '8999777004552'],
+    ['I32', 'NDEO SPRAY BLACK & WHITE MALE 150ML', 'NIVEA DEO', 44000, '4005808073870'],
+    ['I71', 'NDEO ROLL ON BLACK & WHITE EPIC NIGHT MALE 50ML', 'NIVEA DEO', 17300, '8999777023669'],
+    ['I72', 'NDEO SPRAY BLACK & WHITE EPIC NIGHT MALE 150ML', 'NIVEA DEO', 44000, '8850029045214'],
+    ['I33', 'NDEO ROLL ON SILVER PROTECT 25ML', 'NIVEA DEO', 9850, '8999777004644'],
+    ['I34', 'NDEO ROLL ON SILVER PROTECT 50ML', 'NIVEA DEO', 17300, '8999777004613'],
+    ['I57', 'NDEO SPRAY SILVER PROTECT 150ML', 'NIVEA DEO', 27991, '8999777004941'],
+    ['I36', 'NDEO ROLL ON FRESH ACTIVE 50ML', 'NIVEA DEO', 17300, '8999777007355'],
+    ['I39', 'NDEO ROLL ON BLACK & WHITE MALE FRESH 50ML', 'NIVEA DEO', 17300, '8999777010881'],
+    ['I40', 'NDEO SPRAY BLACK & WHITE MALE FRESH 150ML', 'NIVEA DEO', 44000, '4005900371713'],
+    ['I41', 'NDEO ROLL ON DEEP 25ML', 'NIVEA DEO', 11100, '8999777010591'],
+    ['I42', 'NDEO ROLL ON DEEP 50ML', 'NIVEA DEO', 17300, '8999777010638'],
+    ['I43', 'NDEO ROLL ON DEEP ESPRESSO 50ML', 'NIVEA DEO', 17300, '8999777014315'],
+    ['I45', 'NDEO SPRAY DEEP 150ML', 'NIVEA DEO', 44000, '8850029025315'],
+    ['I47', 'NDEO ROLL ON DRY IMPACT 50ML', 'NIVEA DEO', 17300, '8999777007270'],
+    ['I48', 'NDEO ROLL ON WHITENING HIJAB FRESH 25ML', 'NIVEA DEO', 11100, '42397625'],
+    ['I49', 'NDEO ROLL ON WHITENING HIJAB FRESH 50ML', 'NIVEA DEO', 19350, '8999777015893'],
+    ['I50', 'NDEO SPRAY BRIGHTENING HIJAB FRESH 150ML', 'NIVEA DEO', 47500, '8999777015923'],
+    ['I59', 'NDEO LOTION BRIGHTENING HIJAB FRESH 9ML', 'NIVEA DEO', 1350, '8999777018191'],
+    ['I53', 'NDEO ROLL ON BRIGHTENING HIJAB SOFT 50ML', 'NIVEA DEO', 19350, '8999777017620'],
+    ['I54', 'NDEO ROLL ON BRIGHTENING HIJAB COOL 50ML', 'NIVEA DEO', 19350, '8999777017873'],
+    ['I61', 'NDEO SPRAY EXTRA BRIGHT VELVET ROMANCE 150ML', 'NIVEA DEO', 53400, '8850029040196'],
+    ['I62', 'NDEO SPRAY EXTRA BRIGHT FRESH LAVIER 150ML', 'NIVEA DEO', 53400, '8850029040172'],
+    ['I63', 'NDEO SPRAY EXTRA BRIGHT MIRACLE SWEET 150ML', 'NIVEA DEO', 53400, '8850029040189'],
+    ['I64', 'NDEO DERMA CONTROL DEFEND ANTI-PERSPIRANT MALE 50ML', 'NIVEA DEO', 18000, '8999777003159'],
+    ['I65', 'NDEO DERMA CONTROL DEFEND ANTI-PERSPIRANT FEMALE 50ML', 'NIVEA DEO', 19350, '8999777002749'],
+    ['I66', 'NDEO SPRAY DERMA CONTROL DEFEND ANTI-PERSPIRANT MALE 150ML', 'NIVEA DEO', 46500, '8999777003395'],
+    ['I67', 'NDEO DERMA CONTROL BRIGHT REPAIR ANTI-PERSPIRANT 50ML', 'NIVEA DEO', 19350, '8999777002763'],
+    ['I68', 'NDEO DERMA CONTROL RESTORE ANTI-PERSPIRANT 50ML', 'NIVEA DEO', 19350, '8999777002787'],
+  ].map(([sku, name, brand, price, barcode]) => ({ id: 'p-' + sku.toLowerCase(), sku, name, brand, price, barcode }));
 
-  // username, name, store, monthly target (jt), skill factor
-  const T1_SPGS = [
-    ['sari', 'Sari Wulandari', 'Kemang', 50, 0.95],
-    ['dewi', 'Dewi Lestari', 'Pondok Indah', 50, 1.17],
-    ['putri', 'Putri Ayu', 'Cilandak', 45, 0.94],
-    ['rani', 'Rani Kusuma', 'Blok M', 40, 0.66],
-    ['maya', 'Maya Sari', 'Fatmawati', 45, 1.16],
-    ['indah', 'Indah Permata', 'Tebet', 40, 0.81],
-    ['fitri', 'Fitri Handayani', 'Pancoran', 45, 1.0],
-    ['lina', 'Lina Marlina', 'Mampang', 40, 0.97],
-  ];
-  const OTHER_TEAMS = [
-    ['t2', 'Jakarta Pusat', ['andi', 'Andi Pratama'], 1.06, ['Senen', 'Tanah Abang', 'Menteng', 'Cempaka Putih', 'Gambir', 'Kemayoran', 'Sawah Besar', 'Johar Baru', 'Cikini']],
-    ['t3', 'Jakarta Barat', ['yuni', 'Yuni Rahmawati'], 0.88, ['Grogol', 'Kebon Jeruk', 'Cengkareng', 'Kalideres', 'Palmerah', 'Tambora', 'Taman Sari']],
-    ['t4', 'Tangerang', ['hendra', 'Hendra Wijaya'], 0.9, ['Karawaci', 'Ciledug', 'BSD', 'Cipondoh', 'Tangerang Kota', 'Alam Sutera']],
-    ['t5', 'Bekasi', ['siti', 'Siti Rahma'], 1.02, ['Bekasi Barat', 'Bekasi Timur', 'Summarecon', 'Harapan Indah', 'Jatiasih', 'Pondok Gede', 'Tambun', 'Cikarang']],
-  ];
-  const NAMES = ['Nur Aini', 'Wulan Sari', 'Tika Pratiwi', 'Ayu Rahmawati', 'Rina Safitri', 'Dian Puspita', 'Novi Andriani', 'Eka Susanti',
-    'Mega Utami', 'Yuli Astuti', 'Ratna Dewi', 'Sri Wahyuni', 'Fera Oktaviani', 'Lia Amelia', 'Vina Melati', 'Siska Anggraini',
-    'Tari Kurnia', 'Ani Suryani', 'Rika Febriani', 'Winda Sari', 'Ika Nuraini', 'Hana Pertiwi', 'Mira Yulianti', 'Nia Kurniasih',
-    'Dina Maharani', 'Lusi Handayani', 'Okta Ramadhani', 'Ella Marlina', 'Gita Purnama', 'Yanti Susilo'];
+  // The NMA stores (id, name, chain, city); city left empty where the client's list doesn't say
+  const STORES = [
+    ['st1', 'Yogya Cimanggu', 'Yogya', 'Bogor'],
+    ['st2', 'LSI Pajajaran', 'LSI', 'Bogor'],
+    ['st3', 'AEON Sentul City', 'AEON', ''],
+    ['st4', 'Yogya Sukabumi', 'Yogya', 'Sukabumi'],
+    ['st5', 'Indogrosir Sukabumi', 'Indogrosir', 'Sukabumi'],
+    ['st6', 'Yogya Junction Bogor', 'Yogya', 'Bogor'],
+    ['st7', 'Toko Ailin', '', ''],
+    ['st8', 'AEON Mall Kota Wisata', 'AEON', ''],
+    ['st9', 'Indogrosir Ciputat', 'Indogrosir', ''],
+    ['st10', 'LSI Metland', 'LSI', ''],
+    ['st11', 'Indogrosir Cibinong', 'Indogrosir', ''],
+    ['st12', 'LSI Cikaret', 'LSI', ''],
+    ['st13', 'Beauty Lovers', '', ''],
+    ['st14', 'Yogya Cianjur', 'Yogya', 'Cianjur'],
+    ['st15', 'Guardian Citimall', 'Guardian', ''],
+    ['st16', 'Yogya Ciranjang', 'Yogya', ''],
+  ].map(([id, name, chain, city]) => ({ id, name, chain, city, address: '' }));
 
   const defaultSettings = () => ({
     workingDays: [1, 2, 3, 4, 5, 6], // Mon–Sat
@@ -89,103 +278,22 @@
     reminder: '20:00',
   });
 
+  // Starting data: the Admin account, one area, the product catalog and the stores.
+  // Supervisors, Team Leaders, teams and SPGs are added in the app.
   function seed() {
-    const rng = mulberry32(20261022);
-    // Demo accounts get easy numbers (they log in with them); everyone else a random, unique one
-    const DEMO_PHONE = {
-      admin: '081100000001', budi: '081100000002',
-      rina: '081200000001', andi: '081200000002', yuni: '081200000003', hendra: '081200000004', siti: '081200000005',
-      sari: '081300000001', dewi: '081300000002', putri: '081300000003', rani: '081300000004',
-      maya: '081300000005', indah: '081300000006', fitri: '081300000007', lina: '081300000008',
-    };
-    const used = new Set(Object.values(DEMO_PHONE));
-    const randomPhone = () => { let n; do { n = '0815' + String(Math.floor(rng() * 1e8)).padStart(8, '0'); } while (used.has(n)); used.add(n); return n; };
-    const phoneFor = username => DEMO_PHONE[username] || randomPhone();
-    const s = {
-      version: 5,
-      products: PRODUCTS.map(p => ({ ...p, active: true, image: 'assets/products/' + p.id + '.svg', createdBy: 'u-admin', updatedBy: 'u-admin', updatedAt: '2026-09-01' })),
-      stores: [], activity: [],
+    const stamp = { createdBy: 'u-admin', updatedBy: 'u-admin', updatedAt: '2026-10-16' };
+    state = {
+      version: 6,
+      products: PRODUCTS.map(p => ({ ...p, active: true, image: 'assets/products/placeholder.svg', ...stamp })),
+      stores: STORES.map(st => ({ ...st, areaId: 'a1', active: true, ...stamp })),
+      activity: [],
       areas: [{ id: 'a1', name: 'Jabodetabek' }],
-      teams: [], users: [], targets: {}, reports: {}, settings: {}, shifts: {},
+      teams: [],
+      users: [{ id: 'u-admin', username: 'admin', password: 'admin123', name: 'Admin', role: 'admin', phone: '081100000001', photo: 'assets/avatars/admin.svg', active: true }],
+      targets: {}, reports: {}, settings: {}, shifts: {},
     };
-    const skill = {};
-    const CITY = { t1: 'Jakarta Selatan', t2: 'Jakarta Pusat', t3: 'Jakarta Barat', t4: 'Tangerang', t5: 'Bekasi' };
-    const CHAINS = ['Supermarket', 'Hypermarket', 'Department Store', 'Minimarket', 'Drugstore'];
-    // Shared store list; each seeded SPG has a usual store (pre-selected when starting a shift)
-    function addStore(name, teamId, by) {
-      const st = { id: 'st' + (s.stores.length + 1), name: 'Toko ' + name, chain: CHAINS[Math.floor(rng() * CHAINS.length)], city: CITY[teamId],
-        address: 'Jl. ' + name + ' No. ' + (1 + Math.floor(rng() * 120)), areaId: 'a1', active: true, createdBy: by, updatedBy: by, updatedAt: '2026-09-01' };
-      s.stores.push(st);
-      return st.id;
-    }
-
-    function setTargets(uid, monthly, by) {
-      s.targets[uid + '|2026-09'] = { monthly, weekly: null, daily: null, setBy: by, setAt: '2026-08-28' };
-      s.targets[uid + '|2026-10'] = { monthly, weekly: null, daily: null, setBy: by, setAt: '2026-09-28' };
-    }
-    function addTeam(id, name, [username, leaderName]) {
-      s.teams.push({ id, name, areaId: 'a1', leaderId: 'u-' + username });
-      s.users.push({ id: 'u-' + username, username, password: 'leader123', name: leaderName, role: 'leader', teamId: id, phone: phoneFor(username), active: true });
-      s.settings[id] = defaultSettings();
-    }
-
-    s.users.push({ id: 'u-budi', username: 'budi', password: 'super123', name: 'Budi Santoso', role: 'supervisor', areaId: 'a1', phone: phoneFor('budi'), active: true });
-    s.users.push({ id: 'u-admin', username: 'admin', password: 'admin123', name: 'Admin', role: 'admin', phone: phoneFor('admin'), active: true });
-
-    addTeam('t1', 'Jakarta Selatan', ['rina', 'Rina Agustina']);
-    T1_SPGS.forEach(([username, name, store, target, k]) => {
-      const id = 'u-' + username;
-      s.users.push({ id, username, password: 'spg123', name, role: 'spg', teamId: 't1', homeStoreId: addStore(store, 't1', 'u-rina'), phone: phoneFor(username), active: true });
-      skill[id] = k;
-      setTargets(id, target * 1e6, 'u-rina');
-    });
-
-    let ni = 0;
-    OTHER_TEAMS.forEach(([teamId, teamName, leader, k, stores]) => {
-      addTeam(teamId, teamName, leader);
-      stores.forEach(store => {
-        const name = NAMES[ni++];
-        const username = name.split(' ')[0].toLowerCase() + ni;
-        const id = 'u-' + username;
-        s.users.push({ id, username, password: 'spg123', name, role: 'spg', teamId, homeStoreId: addStore(store, teamId, 'u-' + leader[0]), phone: phoneFor(username), active: true });
-        skill[id] = k * (0.8 + rng() * 0.4);
-        setTargets(id, [35, 40, 45, 50][Math.floor(rng() * 4)] * 1e6, 'u-' + leader[0]);
-      });
-    });
-
-    // Default portraits (generated by tools/generate-avatars.js); uploaded photos replace them
-    s.users.forEach(u => { u.photo = 'assets/avatars/' + u.username + '.svg'; });
-    state = s;
     memo = {};
-
-    const price = pid => PRODUCTS.find(p => p.id === pid).price;
-    const missingToday = new Set(['u-rani', 'u-indah']);
-    s.users.filter(u => u.role === 'spg').forEach(u => {
-      const missRate = u.id === 'u-rani' ? 0.08 : u.id === 'u-indah' ? 0.06 : u.id === 'u-sari' ? 0 : 0.02;
-      for (const d of eachDay(DATA_START, TODAY)) {
-        if (!isWorkingDay(u.teamId, d)) continue;
-        if (d === TODAY && (missingToday.has(u.id) || (u.teamId !== 't1' && rng() < 0.13))) continue;
-        if (u.id === 'u-sari' && d === '2026-10-13') continue;
-        if (d !== TODAY && rng() < missRate) continue;
-        const items = (u.id === 'u-sari' && d === TODAY)
-          ? [['p1', 5], ['p2', 6], ['p3', 4], ['p4', 10]].map(([productId, qty]) => ({ productId, qty, price: price(productId) }))
-          : makeItems(dailyTarget(u.id, d) * skill[u.id] * (0.7 + rng() * 0.6), rng);
-        const rep = buildReport(u.id, d, items, false, '', u.id, null);
-        const startMin = 9 * 60 + Math.floor(rng() * 16);
-        // Loginable team (t1) gets individual timestamped transactions; other teams keep daily totals only.
-        const home = u.homeStoreId;
-        const shift = { start: hhmm(startMin), end: d === TODAY ? null : hhmm(21 * 60 + Math.floor(rng() * 15)), storeId: home, visits: [{ storeId: home, from: hhmm(startMin) }] };
-        // Demo of a store switch: Sari covers Toko Pondok Indah from 12:00 today
-        if (u.id === 'u-sari' && d === TODAY) { shift.visits.push({ storeId: s.users.find(x => x.id === 'u-dewi').homeStoreId, from: '12:00' }); shift.storeId = shift.visits[1].storeId; }
-        if (u.teamId === 't1') {
-          rep.transactions = splitIntoTransactions(items, rng, startMin, d === TODAY ? 13 * 60 + 40 : 20 * 60 + 50)
-            .map(t => ({ ...t, storeId: visitAt(shift, t.time) }));
-        }
-        s.reports[u.id + '|' + d] = rep;
-        s.shifts[u.id + '|' + d] = shift;
-      }
-    });
-    return s;
+    return state;
   }
 
   // Store the shift was at, at a given time (last visit that started at or before it)
@@ -193,33 +301,6 @@
     let id = shift.storeId;
     (shift.visits || []).forEach(v => { if (!time || v.from <= time) id = v.storeId; });
     return id;
-  }
-  const hhmm = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
-  function splitIntoTransactions(items, rng, fromMin, toMin) {
-    const tx = [];
-    items.forEach(i => {
-      let left = i.qty;
-      while (left > 0) {
-        const q = Math.min(left, 1 + Math.floor(rng() * 3));
-        tx.push({ productId: i.productId, qty: q, price: i.price });
-        left -= q;
-      }
-    });
-    const times = tx.map(() => fromMin + 10 + Math.floor(rng() * (toMin - fromMin - 10))).sort((a, b) => a - b);
-    tx.sort(() => rng() - 0.5);
-    return tx.map((t, n) => ({ id: 's' + n, time: hhmm(times[n]), ...t }));
-  }
-
-  function makeItems(goal, rng) {
-    const pool = PRODUCTS.slice().sort(() => rng() - 0.5).slice(0, 2 + Math.floor(rng() * 4));
-    const qty = {};
-    let total = 0;
-    while (total < goal) {
-      const p = pool[Math.floor(rng() * pool.length)];
-      qty[p.id] = (qty[p.id] || 0) + 1;
-      total += p.price;
-    }
-    return pool.filter(p => qty[p.id]).map(p => ({ productId: p.id, qty: qty[p.id], price: p.price }));
   }
 
   function buildReport(userId, date, items, noSales, notes, by, prev) {
@@ -937,11 +1018,16 @@
       return res.data.password;
     },
     async saveProduct(p) {
-      const res = await call('product.save', { id: p.id || null, name: p.name, sku: p.sku || '', price: p.price, active: p.active !== false, image: p.image || null });
+      const res = await call('product.save', { id: p.id || null, name: p.name, sku: p.sku || '', brand: p.brand || '', barcode: p.barcode || '', price: p.price, active: p.active !== false, image: p.image || null });
       if (!res.ok) return res.data.message;
       upsert(state.products, res.data.product);
       changed();
       return null;
+    },
+    // Daily recap numbers for the Excel export (apps-script/Export.gs): { teams, days, offDays, rows } or { error }
+    async dailyRecap({ from, to, teamId }) {
+      const res = await call('report.dailyRecap', { from, to, teamId: teamId || null });
+      return res.ok ? res.data : { error: res.data.message };
     },
     async saveStore(st) {
       const res = await call('store.save', { id: st.id || null, name: st.name, chain: st.chain || '', city: st.city, address: st.address || '', active: st.active !== false });
@@ -963,7 +1049,7 @@
     if (LIVE) { state = emptyState(); return; }
     const raw = lsGet(STORE_KEY);
     if (raw) {
-      try { const s = JSON.parse(raw); if (s && s.version === 5) { state = s; return; } } catch (e) { /* reseed */ }
+      try { const s = JSON.parse(raw); if (s && s.version === 6) { state = s; return; } } catch (e) { /* reseed */ }
     }
     seed();
     persist();
@@ -990,5 +1076,6 @@
     getShift, startShift, endShift, switchStore, lastStoreId, storeLabel, storeFor, getTransactions, addSale, removeSale,
     addUser, resetPassword, canManageUser, canAddCatalog, canEditCatalog, saveStore, stores, store, activity, storeTotals,
     allUsers, setUserPhoto, normalizePhone, exportState, areas,
+    dailyRecap: async () => ({ error: 'Rekap harian hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
   }, LIVE ? LIVE_API : {});
 })();

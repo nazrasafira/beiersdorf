@@ -54,7 +54,7 @@ const userOut_ = (u, withPhone) => ({
 });
 const teamOut_ = t => ({ id: t.id, name: t.name, areaId: t.area_id, leaderId: t.leader_id || null });
 const productOut_ = p => ({
-  id: p.id, name: p.name, sku: p.sku, price: p.price || 0, image: p.photo || 'assets/products/placeholder.svg', active: p.active,
+  id: p.id, name: p.name, sku: p.sku, brand: p.brand || '', barcode: p.barcode || '', price: p.price || 0, image: p.photo || 'assets/products/placeholder.svg', active: p.active,
   createdBy: p.created_by || null, updatedBy: p.updated_by || null, updatedAt: p.updated_at,
 });
 const storeOut_ = s => ({

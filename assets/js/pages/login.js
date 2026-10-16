@@ -5,10 +5,8 @@ Data.ready(function () {
   const existing = Data.currentUser();
 
   // After a password reset the server asks for a new password before anything else
-  const demo = $('demo'), reset = $('reset'); // demo accounts box (not on every server)
   function askNewPassword(u) {
     form.hidden = true;
-    if (demo) demo.hidden = true;
     $('pwName').textContent = u.name.split(' ')[0];
     pwForm.hidden = false;
     $('newPw').focus();
@@ -19,8 +17,6 @@ Data.ready(function () {
   if (App.BRAND_LOGO) $('mark').outerHTML = App.logoImg();
   if (Data.LIVE) {
     $('rememberRow').hidden = false;
-    if (reset) reset.closest('p').hidden = true;
-    if (demo && !Data.CONFIG.demoAccounts) demo.hidden = true;
   }
 
   // Show / hide password
@@ -62,21 +58,6 @@ Data.ready(function () {
   $('pwCancel').addEventListener('click', async e => {
     e.preventDefault();
     await Data.logout();
-    location.reload();
-  });
-
-  // Demo accounts: click to fill the form
-  document.querySelectorAll('[data-user]').forEach(row => row.addEventListener('click', () => {
-    form.phone.value = row.dataset.user;
-    form.password.value = row.dataset.pass;
-    err.hidden = true;
-    form.querySelector('button[type=submit]').focus();
-  }));
-
-  if (reset) reset.addEventListener('click', e => {
-    e.preventDefault();
-    if (!confirm('Kembalikan semua data demo ke awal? Laporan, target, dan pengaturan yang diubah akan hilang.')) return;
-    Data.reset();
     location.reload();
   });
 });

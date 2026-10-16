@@ -314,12 +314,12 @@ function catalogItem_(table, req, me, kind) {
 
 function actProductSave_(req, me) {
   const cur = catalogItem_('Products', req, me, 'produk');
-  const name = str_(req.name, 150), sku = str_(req.sku, 50);
+  const name = str_(req.name, 150), sku = str_(req.sku, 50), brand = str_(req.brand, 100), barcode = str_(req.barcode, 50);
   if (!name) fail_('Isi nama produk.');
   const price = int_(req.price, 1, 1e9, 'Isi harga yang benar.');
   if (sku && find_('Products', p => p.sku === sku && (!cur || p.id !== cur.id))) fail_('SKU sudah dipakai produk lain.');
   const p = cur || { id: newId_('p'), created_by: me.id, photo: '' };
-  Object.assign(p, { name, sku, price, active: req.active !== false, updated_by: me.id, updated_at: today_() });
+  Object.assign(p, { name, sku, brand, barcode, price, active: req.active !== false, updated_by: me.id, updated_at: today_() });
   if (/^data:image\//.test(String(req.image || ''))) p.photo = savePhoto_(req.image, 'produk-' + p.id);
   if (cur) save_('Products', p);
   else append_('Products', [p]);

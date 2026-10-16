@@ -7,7 +7,7 @@ const TABLES = {
   Users: ['id', 'phone', 'name', 'role', 'area_id', 'team_id', 'home_store_id', 'photo', 'password_hash', 'salt', 'token_version', 'must_change_password', 'active', 'created_at'],
   Areas: ['id', 'name'],
   Teams: ['id', 'name', 'area_id', 'leader_id'],
-  Products: ['id', 'name', 'sku', 'price', 'photo', 'active', 'created_by', 'updated_by', 'updated_at'],
+  Products: ['id', 'name', 'sku', 'price', 'photo', 'active', 'created_by', 'updated_by', 'updated_at', 'brand', 'barcode'],
   Stores: ['id', 'name', 'chain', 'city', 'address', 'area_id', 'active', 'created_by', 'updated_by', 'updated_at'],
   Targets: ['user_id', 'month', 'monthly', 'weekly', 'daily', 'set_by', 'set_at'],
   Shifts: ['id', 'user_id', 'date', 'start', 'end', 'store_id'],

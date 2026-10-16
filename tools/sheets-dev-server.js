@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /*
  * Local stand-in for the Google deployment: serves the pages and answers POST /exec by running the real
- * apps-script/*.gs code against an in-memory Sheet (tools/gas-mock.js) filled with the demo data.
+ * apps-script/*.gs code against an in-memory Sheet (tools/gas-mock.js) filled with the test data (tools/fixtures/demo-data.json:
+ * made-up teams, SPGs and sales, so every page has something to show).
  * For development and the browser tests; nothing is saved when it stops.
  *
  *   node tools/sheets-dev-server.js [--port 8790] [--latency 800] [--today 2026-10-22|real]
@@ -20,10 +21,10 @@ const ROOT = path.join(__dirname, '..');
 
 const gas = load(TODAY === 'real' ? {} : { DEMO_TODAY: TODAY }, { quiet: !process.argv.includes('--verbose') });
 gas.ctx.setupSheet();
-console.log(gas.ctx.importDemoData('file://' + path.join(ROOT, 'apps-script', 'demo-data.json')));
+console.log(gas.ctx.importDemoData('file://' + path.join(__dirname, 'fixtures', 'demo-data.json')));
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
-const CONFIG = "window.APP_CONFIG = { backend: 'sheets', url: '/exec', demoAccounts: true };\n";
+const CONFIG = "window.APP_CONFIG = { backend: 'sheets', url: '/exec' };\n";
 
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
