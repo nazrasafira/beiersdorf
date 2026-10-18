@@ -4,6 +4,7 @@ Data.ready(function () {
   if (!user) return;
   const D = Data, $ = id => document.getElementById(id);
   const form = $('form');
+  App.moneyInput(form.price); // "Rp 22.275" while typing
 
   function render() {
     const list = D.products(true);
@@ -45,7 +46,7 @@ Data.ready(function () {
     form.sku.value = p ? p.sku : '';
     form.brand.value = p ? p.brand || '' : '';
     form.barcode.value = p ? p.barcode || '' : '';
-    form.price.value = p ? p.price : '';
+    App.setMoney(form.price, p ? p.price : 0);
     image = p ? p.image || '' : '';
     showImage();
     form.active.checked = p ? p.active : true;
@@ -64,7 +65,7 @@ Data.ready(function () {
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const price = Math.round(+form.price.value);
+    const price = App.parseNum(form.price.value);
     if (!form.name.value.trim() || !(price > 0)) { App.toast('Isi nama produk dan harga yang benar.'); return; }
     const error = await App.busy(form, () => D.saveProduct({ id: form.id.value || undefined, name: form.name.value.trim(), sku: form.sku.value.trim(), brand: form.brand.value.trim(), barcode: form.barcode.value.trim(), price, active: form.active.checked, image: image || 'assets/products/placeholder.svg' }, user.id));
     if (error) { App.toast(error); return; }
