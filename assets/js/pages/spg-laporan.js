@@ -29,16 +29,15 @@ Data.ready(function () {
   const updateSubtotal = () => { $('subtotal').textContent = App.rp(qty() * App.parseNum($('price').value)); };
   $('product').addEventListener('change', () => {
     const p = D.product($('product').value);
-    $('price').value = p ? App.num(p.price) : '';
+    App.setMoney($('price'), p ? p.price : 0);
     $('preview').innerHTML = p ? App.productImg(p, 'lg') : '';
     $('preview').hidden = !p;
     updateSubtotal();
   });
   $('minus').addEventListener('click', () => { $('qty').value = Math.max(1, qty() - 1); updateSubtotal(); });
   $('plus').addEventListener('click', () => { $('qty').value = qty() + 1; updateSubtotal(); });
+  App.moneyInput($('price')); // "Rp 22.275" while typing
   ['qty', 'price'].forEach(id => $(id).addEventListener('input', updateSubtotal));
-  // Rupiah with dots (22.275); typed as 22275, 22.275 or 22,275
-  $('price').addEventListener('focusout', () => { const n = App.parseNum($('price').value); $('price').value = n ? App.num(n) : ''; });
 
   $('entry').addEventListener('submit', e => {
     e.preventDefault();

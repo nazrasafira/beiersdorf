@@ -204,6 +204,42 @@
   const param = name => new URLSearchParams(location.search).get(name);
   const parseNum = s => +String(s || '').replace(/\D/g, '') || 0;
 
+  /* ---------- Rupiah field: shown as "Rp 22.275" while typing; read it with parseNum ----------
+   * Only digits count (22275, 22.275 and 22,275 are the same); the cursor keeps its place among the digits. */
+  const MONEY_MAX_DIGITS = 12;
+  const moneyText = n => (n ? 'Rp ' + num(n) : '');
+  function setMoney(input, n) { input.value = moneyText(n); }
+  function moneyInput(input) {
+    if (!input || input._money) return;
+    input._money = true;
+    input.setAttribute('inputmode', 'numeric');
+    if (!input.placeholder) input.placeholder = 'Rp 0';
+    const digitsBefore = (s, end) => s.slice(0, end).replace(/\D/g, '').length;
+    const caretAfterDigits = (s, n) => {
+      if (!n) return s.search(/\d/) < 0 ? s.length : s.search(/\d/);
+      for (let i = 0, seen = 0; i < s.length; i++) if (/\d/.test(s[i]) && ++seen === n) return i + 1;
+      return s.length;
+    };
+    input.addEventListener('input', () => {
+      const keep = digitsBefore(input.value, input.selectionStart == null ? input.value.length : input.selectionStart);
+      const digits = input.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, MONEY_MAX_DIGITS);
+      input.value = moneyText(+digits);
+      const at = caretAfterDigits(input.value, Math.min(keep, digits.length));
+      if (document.activeElement === input) input.setSelectionRange(at, at);
+    });
+    // Backspace/Delete next to "Rp " or a dot removes the nearest digit instead of the separator
+    input.addEventListener('keydown', e => {
+      if ((e.key !== 'Backspace' && e.key !== 'Delete') || input.selectionStart !== input.selectionEnd) return;
+      const s = input.value;
+      let i = input.selectionStart;
+      if (e.key === 'Backspace') { while (i > 0 && /\D/.test(s[i - 1])) i--; }
+      else { while (i < s.length && /\D/.test(s[i])) i++; }
+      input.setSelectionRange(i, i);
+    });
+    input.addEventListener('focus', () => { const end = input.value.length; setTimeout(() => input.setSelectionRange(end, end)); });
+    setMoney(input, parseNum(input.value));
+  }
+
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
 
@@ -619,7 +655,7 @@
 
   window.App = {
     root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
-    esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum,
+    esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum, moneyInput, setMoney,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,
   };
