@@ -508,3 +508,34 @@ tr.detail .note-photos { max-width: 480px; }
   body:not(.spg) .topbar .brand-logo { height: 20px; }
   body:not(.spg) .mainnav { margin-left: 12px; }
 }
+
+/* Target page: one card per store (mobile first), two columns on wide screens */
+.tgt-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 10px; }
+.tgt-head h2 { margin: 0; }
+.tgt-search { max-width: none; margin-bottom: 12px; }
+.tgt-list { display: grid; gap: 12px; }
+.tcard { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fff; min-width: 0; }
+.tcard.dirty { border-color: var(--blue); }
+.tcard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.tcard-head > div { min-width: 0; }
+.tcard-head b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tcard-head small, .tcard-head .by { display: block; color: var(--muted); font-size: 12px; }
+.tcard-head .by { text-align: right; white-space: nowrap; flex: none; }
+.tcard .field { margin-bottom: 10px; }
+.tcard .field:last-child { margin-bottom: 0; }
+.tcard .field label { font-size: 12px; margin-bottom: 4px; }
+.tcard .t-input { width: 100%; }
+.tcard .t-input::placeholder { font-size: 13px; }
+.tcard-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tcard-nums .monthly-f { grid-column: 1 / -1; }
+.tcard-nums .field { margin-bottom: 0; }
+.tcard .field label small { color: var(--muted); font-weight: 400; }
+.tgt-taken { margin-top: 16px; }
+.tgt-taken summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 8px 0; }
+.tgt-taken .rows > * { padding: 10px 0; }
+#spgRows .val b { color: var(--ink); }
+.save-bar { position: sticky; bottom: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 -20px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .96); border-top: 1px solid var(--line); }
+@media (min-width: 760px) {
+  .tgt-list { grid-template-columns: 1fr 1fr; }
+  .tgt-search { max-width: 360px; }
+}

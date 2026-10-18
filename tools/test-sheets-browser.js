@@ -89,8 +89,8 @@ const salesOf = async (uid, date) => (await rows('Sales')).filter(s => s.user_id
   ok(p.url().includes('leader/dashboard.html'), 'Rina lands on dashboard');
   for (const pg of ['laporan', 'target', 'tim', 'pengaturan']) { await p.goto(B + `leader/${pg}.html`); await settle(); }
   await p.goto(B + 'leader/target.html'); await settle();
-  await p.selectOption('tr[data-store="st2"] .spg', 'u-sari');
-  await p.fill('tr[data-store="st1"] .monthly', '30000000'); await p.click('#save'); await settle();
+  await p.locator('.tcard[data-store="st2"] .spg').evaluate(s => { s.value = 'u-sari'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+  await p.fill('.tcard[data-store="st1"] .monthly', '30000000'); await p.click('#save'); await settle();
   ok(await until(async () => (await rows('StoreTargets')).find(t => t.store_id === 'st1' && t.month === '2026-10').monthly === 30000000), 'store target saved in the Sheet');
   ok(await until(async () => (await rows('StoreTargets')).find(t => t.store_id === 'st2' && t.month === '2026-10').user_id === 'u-sari'), 'store moved to another SPG');
 

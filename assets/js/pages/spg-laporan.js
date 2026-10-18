@@ -26,10 +26,10 @@ Data.ready(function () {
   App.combobox($('product'));
 
   const qty = () => Math.max(1, Math.floor(+$('qty').value || 1));
-  const updateSubtotal = () => { $('subtotal').textContent = App.rp(qty() * Math.max(0, +$('price').value || 0)); };
+  const updateSubtotal = () => { $('subtotal').textContent = App.rp(qty() * App.parseNum($('price').value)); };
   $('product').addEventListener('change', () => {
     const p = D.product($('product').value);
-    $('price').value = p ? p.price : '';
+    $('price').value = p ? App.num(p.price) : '';
     $('preview').innerHTML = p ? App.productImg(p, 'lg') : '';
     $('preview').hidden = !p;
     updateSubtotal();
@@ -37,12 +37,14 @@ Data.ready(function () {
   $('minus').addEventListener('click', () => { $('qty').value = Math.max(1, qty() - 1); updateSubtotal(); });
   $('plus').addEventListener('click', () => { $('qty').value = qty() + 1; updateSubtotal(); });
   ['qty', 'price'].forEach(id => $(id).addEventListener('input', updateSubtotal));
+  // Rupiah with dots (22.275); typed as 22275, 22.275 or 22,275
+  $('price').addEventListener('focusout', () => { const n = App.parseNum($('price').value); $('price').value = n ? App.num(n) : ''; });
 
   $('entry').addEventListener('submit', e => {
     e.preventDefault();
     const productId = $('product').value;
     if (!productId) { App.toast('Pilih produk dulu.'); $('product')._combo.focus(); return; }
-    const price = Math.round(+$('price').value);
+    const price = App.parseNum($('price').value);
     if (!(price > 0)) { App.toast('Isi harga yang benar.'); $('price').focus(); return; }
 
     const before = isSpg && isToday ? D.level(D.progress(owner.id, 'day', date).pct) : null;
