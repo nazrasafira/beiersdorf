@@ -9,75 +9,91 @@ Data.ready(function () {
 
   $('title').textContent = 'Tim ' + team.name;
 
+  const SHOW = 5; // rows shown before "Lihat semua"
+  let allSpgs = false, allSplit = false, split = 'stores';
+
   function shiftStatus(id, working) {
     const sh = D.getShift(id, D.TODAY);
-    if (sh) return sh.end ? `<span class="pill">Selesai ${sh.end}</span>` : `<span class="pill ok">Aktif sejak ${sh.start}</span>`;
+    if (sh) return sh.end ? `<span class="pill">Selesai ${sh.end}</span>` : `<span class="pill ok">Aktif ${sh.start}</span>`;
     if (D.getReport(id, D.TODAY)) return '<span class="pill">Sudah lapor</span>';
     return working ? '<span class="pill bad">Belum mulai</span>' : '<span class="pill">Libur</span>';
   }
+  const moreBtn = (el, n, open, label) => {
+    el.hidden = n <= SHOW;
+    el.textContent = open ? 'Tampilkan lebih sedikit' : `Lihat semua ${n} ${label}`;
+  };
 
   function render() {
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.p === period));
     const s = D.teamSummary(teamId, period, D.TODAY);
+    const [from, to] = D.range(period, D.TODAY);
+    const end = to < D.TODAY ? to : D.TODAY;
     $('sub').textContent = `${s.size} SPG · ${App.dateLong(D.TODAY)}`;
 
-    let pace = '';
-    if (s.expected != null) {
-      const diff = s.pct - s.expected;
-      pace = diff >= 0 ? `<span class="ok">${App.pct1(diff)} di atas laju</span>` : `<span class="warn">${App.pct1(-diff)} di bawah laju</span>`;
-    }
-    $('stats').innerHTML = `
-      <div class="stat"><span class="badge">${App.icon('chart')}</span><div><div class="l">Penjualan</div><div class="v">${App.rpShort(s.actual)}</div><div class="s">dari ${App.rpShort(s.target)}</div></div></div>
-      <div class="stat"><span class="badge ${s.pct >= (s.expected || 0) ? 'green' : 'amber'}">${App.icon('target')}</span><div><div class="l">Pencapaian</div><div class="v">${App.pct1(s.pct)}</div><div class="s">${pace}</div></div></div>
-      <div class="stat"><span class="badge">${App.icon('userCheck')}</span><div><div class="l">Mulai shift hari ini</div><div class="v">${s.working ? `${s.reported}/${s.size}` : '-'}</div><div class="s">${s.working ? '' : 'Hari libur'}</div></div></div>`;
+    $('hero').innerHTML = App.dashHero(s, period);
+    App.animateRings();
 
     const [cf, ct] = D.chartRange(period, D.TODAY);
     App.trendChart($('trend'), D.dailySeries(s.lb.map(r => r.user.id), [teamId], cf, ct));
 
+    // SPGs who have not started a shift today, with a WhatsApp reminder
     $('missingWrap').hidden = !s.missing.length;
+    $('missingTitle').textContent = `Belum mulai shift (${s.missing.length})`;
     $('missing').innerHTML = s.missing.map(u => {
       const text = encodeURIComponent(`Halo ${u.name.split(' ')[0]}, jangan lupa mulai shift dan catat setiap penjualan hari ini ya. Terima kasih.`);
       const wa = u.phone ? `https://wa.me/62${u.phone.replace(/\D/g, '').replace(/^0/, '')}?text=${text}` : '';
       return `<div>
         <div class="grow">${App.person(u, D.storeLabel(u))}</div>
-        ${wa ? App.iconLink(wa, 'message', 'Ingatkan via WhatsApp', 'target="_blank" rel="noopener"', 'primary') : ''}
+        ${wa ? `<a class="btn small ghost wa" href="${wa}" target="_blank" rel="noopener">${App.icon('message')}Ingatkan</a>` : ''}
       </div>`;
     }).join('');
 
+    // Ranking: podium on wide screens, compact rows everywhere
     $('podium').innerHTML = App.podium(s.lb);
-    $('spgs').innerHTML = s.lb.map(r => `
-      <div class="rank-row click" data-id="${r.user.id}">
+    $('spgs').innerHTML = s.lb.slice(0, allSpgs ? s.lb.length : SHOW).map(r => `
+      <button type="button" class="rk" data-id="${r.user.id}">
         ${App.rankBadge(r.rank)}
-        <div>
-          ${App.person(r.user, `${App.rpShort(r.actual)} dari ${App.rpShort(r.target)}`)}
+        ${App.avatar(r.user)}
+        <span class="grow">
+          <span class="top"><b>${App.esc(r.user.name)}</b><b class="pct">${App.pct(r.pct)}</b></span>
           ${App.bar(r.pct)}
-        </div>
-        <div class="right"><b>${App.pct(r.pct)}</b>${shiftStatus(r.user.id, s.working)}</div>
-      </div>`).join('');
-    $('spgs').querySelectorAll('.rank-row').forEach(el => el.addEventListener('click', () => {
-      location.href = App.page('laporan.html') + '?spg=' + encodeURIComponent(el.dataset.id);
-    }));
+          <span class="meta"><span>${App.rpShort(r.actual)} / ${App.rpShort(r.target)}</span>${shiftStatus(r.user.id, s.working)}</span>
+        </span>
+      </button>`).join('') || '<p class="empty">Belum ada SPG.</p>';
+    moreBtn($('spgsMore'), s.lb.length, allSpgs, 'SPG');
 
-    const [sf, stt] = D.range(period, D.TODAY);
-    const st = D.storeTotals(s.lb.map(r => r.user.id), sf, stt < D.TODAY ? stt : D.TODAY);
-    const maxStore = Math.max(1, ...st.map(x => x.amount));
-    $('stores').innerHTML = st.map(x => `
-      <div>
-        <div class="grow"><b>${App.esc(x.store.name)}</b><span>${App.esc(x.store.city)} · ${x.tx} transaksi · ${x.spgs} SPG</span>${App.bar(x.amount / maxStore * 100)}</div>
-        <div class="val"><b>${App.rpShort(x.amount)}</b></div>
+    // Sales per store or per product
+    document.querySelectorAll('#splitTabs button').forEach(b => b.classList.toggle('on', b.dataset.k === split));
+    let items;
+    if (split === 'stores') {
+      items = D.storeTotals(s.lb.map(r => r.user.id), from, end).map(x => ({
+        img: `<span class="rk-ic">${App.icon('store')}</span>`, name: x.store.name, sub: `${x.tx} transaksi · ${x.spgs} SPG`, amount: x.amount,
+      }));
+    } else {
+      items = s.products.map(p => ({ img: App.productImg(p.product), name: p.product.name, sub: `${App.num(p.qty)} terjual`, amount: p.amount }));
+    }
+    const max = Math.max(1, ...items.map(x => x.amount));
+    $('split').innerHTML = items.slice(0, allSplit ? items.length : SHOW).map(x => `
+      <div class="rk">
+        ${x.img}
+        <span class="grow">
+          <span class="top"><b>${App.esc(x.name)}</b><b class="pct">${App.rpShort(x.amount)}</b></span>
+          ${App.bar(x.amount / max * 100)}
+          <span class="meta"><span>${App.esc(x.sub)}</span></span>
+        </span>
       </div>`).join('') || '<p class="empty">Belum ada penjualan.</p>';
+    moreBtn($('splitMore'), items.length, allSplit, split === 'stores' ? 'toko' : 'produk');
 
-    const maxAmount = Math.max(1, ...s.products.map(p => p.amount));
-    $('products').innerHTML = s.products.map(p => `
-      <div class="pcard">
-        ${App.productImg(p.product, 'lg')}
-        <div>
-          <b>${App.esc(p.product.name)}</b>
-          <div class="small">${App.num(p.qty)} terjual · ${App.rpShort(p.amount)}</div>
-          ${App.bar(p.amount / maxAmount * 100)}
-        </div>
-      </div>`).join('') || '<p class="empty">Belum ada penjualan.</p>';
+    $('exportSub').textContent = `Semua transaksi ${App.PERIOD_LABEL[period]} (${App.dateShort(from)} – ${App.dateShort(end)})`;
   }
+
+  $('spgs').addEventListener('click', e => {
+    const b = e.target.closest('[data-id]');
+    if (b) location.href = App.page('laporan.html') + '?spg=' + encodeURIComponent(b.dataset.id);
+  });
+  $('spgsMore').addEventListener('click', () => { allSpgs = !allSpgs; render(); });
+  $('splitMore').addEventListener('click', () => { allSplit = !allSplit; render(); });
+  $('splitTabs').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) { split = b.dataset.k; allSplit = false; render(); } });
 
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { period = b.dataset.p; render(); } });
 
@@ -94,18 +110,24 @@ Data.ready(function () {
     App.downloadCsv(`laporan-${team.name.toLowerCase().replace(/\s+/g, '-')}-${from}-sd-${end}.csv`, rows);
   });
 
-  // Daily recap for a date range, as an Excel file
+  // Daily recap for a date range, as an Excel file (in a sheet)
   $('dxWrap').innerHTML = App.dailyExportHtml();
   App.dailyExport(() => teamId);
+  const recapDlg = App.modal($('recapDlg'));
+  $('openRecap').addEventListener('click', () => { recapDlg.open(); document.activeElement.blur(); });
 
   // Monthly Excel in the client's SOH / offtake layout (assets/js/soh-export.js)
   const months = [];
   for (let mk = D.monthKey(D.TODAY); mk >= D.monthKey(D.DATA_START); mk = D.addMonths(mk, -1)) months.push(mk);
   $('sohMonth').innerHTML = months.map(mk => `<option value="${mk}">${App.monthName(mk)}</option>`).join('');
-  $('sohExport').addEventListener('click', async () => {
+  App.combobox($('sohMonth'));
+  const sohDlg = App.modal($('sohDlg'));
+  $('openSoh').addEventListener('click', () => { sohDlg.open(); document.activeElement.blur(); });
+  $('sohForm').addEventListener('submit', async e => {
+    e.preventDefault();
     const b = $('sohExport');
     b.disabled = true;
-    try { await SohExport.download(teamId, $('sohMonth').value); } catch (e) { App.toast('Export gagal. Periksa koneksi internet lalu coba lagi.'); }
+    try { await SohExport.download(teamId, $('sohMonth').value); sohDlg.close(); } catch (err) { App.toast('Export gagal. Periksa koneksi internet lalu coba lagi.'); }
     b.disabled = false;
   });
 

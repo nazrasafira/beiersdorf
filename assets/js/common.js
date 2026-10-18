@@ -583,6 +583,33 @@
     });
   }
 
+  /* ---------- Dashboard summary card (team and area dashboards) ----------
+   * s: { pct, expected, actual, target, reported, size, working }; period: day | week | month */
+  const PERIOD_LABEL = { day: 'hari ini', week: 'minggu ini', month: 'bulan ini' };
+  function dashHero(s, period) {
+    const label = PERIOD_LABEL[period];
+    let pace = '';
+    if (s.expected != null) {
+      const diff = s.pct - s.expected;
+      pace = diff >= 0 ? `<span class="pill ok">${pct1(diff)} di atas laju</span>` : `<span class="pill warn">${pct1(-diff)} di bawah laju</span>`;
+    }
+    const left = Math.max(0, s.target - s.actual);
+    return `
+      <div class="dash-main">
+        ${ring(s.pct, `<div class="pct">${pct(s.pct)}</div><div class="lbl">tercapai</div>`, `${pct1(s.pct)} dari target ${label}`)}
+        <div class="dash-figs">
+          <div class="l">Penjualan ${label}</div>
+          <div class="v">${rpShort(s.actual)}</div>
+          <div class="s">dari target ${rpShort(s.target)}</div>
+          ${pace}
+        </div>
+      </div>
+      <div class="dash-mini">
+        <div><span class="l">Mulai shift hari ini</span><b>${s.working === false ? 'Libur' : `${s.reported}/${s.size}`}</b></div>
+        <div><span class="l">${left ? 'Kurang dari target' : 'Target'}</span><b>${left ? rpShort(left) : 'Tercapai'}</b></div>
+      </div>`;
+  }
+
   /* ---------- Big progress ring (SVG) ---------- */
   // Single-color ring: blue until the target is reached, then green.
   function ring(p, centerHtml, label) {
@@ -679,7 +706,7 @@
   }
 
   window.App = {
-    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, confirm: confirmBox, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
+    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
     esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum, moneyInput, setMoney,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,

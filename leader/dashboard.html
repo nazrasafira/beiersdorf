@@ -6,12 +6,12 @@
 <meta name="theme-color" content="#ffffff">
 <title>Dashboard Tim</title>
 <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
-<link rel="stylesheet" href="../assets/css/style.css?v=20261019030318">
-<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261019030318","../")</script>
+<link rel="stylesheet" href="../assets/css/style.css?v=20261019030748">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261019030748","../")</script>
 </head>
 <body data-root="../">
 <main>
-  <div class="page-head">
+  <div class="page-head dash-head">
     <div><h1 id="title"></h1><p class="sub" id="sub"></p></div>
     <div class="tabs" id="tabs" role="tablist">
       <button type="button" data-p="day">Hari ini</button>
@@ -19,45 +19,60 @@
       <button type="button" data-p="month" class="on">Bulan ini</button>
     </div>
   </div>
-  <div class="stats" id="stats"></div>
+  <div class="dash-hero" id="hero"></div>
   <section>
     <h2>Tren penjualan</h2>
     <div id="trend"></div>
     <div class="legend"><span><i></i>Penjualan</span><span><i class="dash"></i>Target</span></div>
   </section>
   <section id="missingWrap" hidden>
-    <h2>Belum mulai shift</h2>
+    <h2 id="missingTitle">Belum mulai shift</h2>
     <div class="rows" id="missing"></div>
   </section>
-  <div class="podium" id="podium"></div>
+  <div class="dash-cols">
+    <section>
+      <h2>Peringkat SPG</h2>
+      <div class="podium dash-podium" id="podium"></div>
+      <div class="rk-list" id="spgs"></div>
+      <button type="button" class="btn ghost block dash-more" id="spgsMore" hidden></button>
+    </section>
+    <section>
+      <div class="dash-split">
+        <h2>Penjualan per</h2>
+        <nav class="tabs" id="splitTabs"><button type="button" data-k="stores" class="on">Toko</button><button type="button" data-k="products">Produk</button></nav>
+      </div>
+      <div class="rk-list" id="split"></div>
+      <button type="button" class="btn ghost block dash-more" id="splitMore" hidden></button>
+    </section>
+  </div>
   <section>
-    <div class="actions" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Peringkat SPG</h2><button type="button" class="icon-btn" id="export" aria-label="Export CSV" title="Export CSV" data-icon="download"></button></div>
-    <div id="spgs"></div>
-  </section>
-  <section>
-    <h2>Rekap harian (Excel)</h2>
-    <p class="muted small">Penjualan per SPG per hari untuk rentang tanggal: OFF di hari libur, merah bila hari kerja belum lapor, lalu total, target, dan pencapaian.</p>
-    <div id="dxWrap"></div>
-  </section>
-  <section>
-    <h2>Laporan SOH &amp; offtake</h2>
-    <p class="muted small">File Excel per bulan dengan format laporan klien: Qty dan Val per SKU untuk setiap toko, total per brand fokus, target dan pencapaian. Kolom SOH dikosongkan untuk diisi.</p>
-    <div class="actions"><select class="input" id="sohMonth" aria-label="Bulan" style="width:auto"></select><button type="button" class="btn" id="sohExport"><span data-icon="download"></span>Export Excel</button></div>
-  </section>
-  <section>
-    <h2>Per toko</h2>
-    <div class="rows" id="stores"></div>
-  </section>
-  <section>
-    <h2>Per produk</h2>
-    <div class="pgrid" id="products"></div>
+    <h2>Unduh laporan</h2>
+    <div class="dl-list">
+      <button type="button" class="dl" id="export"><span class="dl-ic" data-icon="file"></span><span class="grow"><b>Transaksi (CSV)</b><small id="exportSub"></small></span><span data-icon="download"></span></button>
+      <button type="button" class="dl" id="openRecap"><span class="dl-ic" data-icon="calendar"></span><span class="grow"><b>Rekap harian (Excel)</b><small>Per SPG per hari, OFF dan belum lapor, target dan pencapaian</small></span><span data-icon="right"></span></button>
+      <button type="button" class="dl" id="openSoh"><span class="dl-ic" data-icon="box"></span><span class="grow"><b>SOH &amp; offtake (Excel)</b><small>Format laporan klien per bulan: Qty dan Val per SKU per toko</small></span><span data-icon="right"></span></button>
+    </div>
   </section>
 </main>
-<script src="../assets/js/config.js?v=20261019030318"></script>
-<script src="../assets/js/data.js?v=20261019030318"></script>
-<script src="../assets/js/common.js?v=20261019030318"></script>
-<script src="../assets/js/recap-export.js?v=20261019030318"></script>
-<script src="../assets/js/soh-export.js?v=20261019030318"></script>
-<script src="../assets/js/pages/leader-dashboard.js?v=20261019030318"></script>
+<dialog class="modal sheet" id="recapDlg" aria-labelledby="recapTitle">
+  <div class="modal-head"><h3 id="recapTitle">Rekap harian (Excel)</h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
+  <div class="modal-body"><p class="muted small" style="margin-top:0">Penjualan per SPG per hari: OFF di hari libur, merah bila hari kerja belum lapor, lalu total, target dan pencapaian.</p><div id="dxWrap"></div></div>
+</dialog>
+<dialog class="modal sheet" id="sohDlg" aria-labelledby="sohTitle">
+  <form id="sohForm">
+    <div class="modal-head"><h3 id="sohTitle">SOH &amp; offtake (Excel)</h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
+    <div class="modal-body">
+      <p class="muted small" style="margin-top:0">Qty dan Val per SKU untuk setiap toko, total per brand fokus, target dan pencapaian. Kolom SOH dikosongkan untuk diisi.</p>
+      <div class="field"><label for="sohMonth">Bulan</label><select id="sohMonth"></select></div>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit" id="sohExport"><span data-icon="download"></span>Export Excel</button></div>
+  </form>
+</dialog>
+<script src="../assets/js/config.js?v=20261019030748"></script>
+<script src="../assets/js/data.js?v=20261019030748"></script>
+<script src="../assets/js/common.js?v=20261019030748"></script>
+<script src="../assets/js/recap-export.js?v=20261019030748"></script>
+<script src="../assets/js/soh-export.js?v=20261019030748"></script>
+<script src="../assets/js/pages/leader-dashboard.js?v=20261019030748"></script>
 </body>
 </html>

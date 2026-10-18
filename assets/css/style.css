@@ -616,3 +616,65 @@ dialog.modal.confirm p { margin: 0; color: var(--muted); }
   .btn.small { min-height: 40px; padding: 8px 14px; }
   .modal-foot .btn { min-height: 44px; }
 }
+
+/* Team dashboard: hero card, compact ranking rows, per store / product, downloads (phone first) */
+.dash-head .tabs { width: 100%; }
+.dash-head .tabs button { flex: 1; white-space: nowrap; }
+.dash-hero { background: #fff; border: 1px solid var(--card-line); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+.dash-main { display: flex; align-items: center; gap: 16px; }
+.dash-hero .ring { width: 112px; height: 112px; margin: 0; flex: none; }
+.dash-hero .ring .pct { font-size: 26px; letter-spacing: -.5px; }
+.dash-hero .ring .lbl { font-size: 11px; margin-top: 2px; }
+.dash-figs { min-width: 0; }
+.dash-figs .l { font-size: 13px; color: var(--muted); }
+.dash-figs .v { font-size: 26px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.dash-figs .s { font-size: 13px; color: var(--muted); margin: 2px 0 8px; }
+.dash-figs .pill { white-space: normal; }
+.dash-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.dash-mini > div { background: var(--soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.dash-mini .l { display: block; font-size: 12px; color: var(--muted); }
+.dash-mini b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.dash-podium { display: none; }
+.rk-list { display: grid; gap: 8px; }
+.rk { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; color: inherit; text-align: left; min-width: 0; }
+button.rk { cursor: pointer; }
+button.rk:active { background: var(--soft); }
+.rk .avatar, .rk .pimg, .rk-ic { width: 40px; height: 40px; flex: none; }
+.rk-ic { display: grid; place-items: center; border-radius: 10px; background: var(--blue-soft); color: var(--blue); }
+.rk-ic .icon { width: 20px; height: 20px; }
+.rk .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rk .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+.rk .top b:first-child { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk .top .pct { flex: none; font-variant-numeric: tabular-nums; }
+.rk .bar { margin-top: 0; }
+.rk .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); min-width: 0; }
+.rk .meta > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk .meta .pill { flex: none; font-size: 11px; padding: 2px 8px; }
+.dash-more { margin-top: 10px; }
+.dash-split { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.dash-split h2 { margin: 0; }
+#missing .wa .icon { width: 16px; height: 16px; }
+.dl-list { display: grid; gap: 8px; }
+.dl { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.dl:active { background: var(--soft); }
+.dl .grow { flex: 1; min-width: 0; }
+.dl .grow b { display: block; }
+.dl .grow small { display: block; font-size: 12px; color: var(--muted); }
+.dl-ic { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); flex: none; }
+.dl > span:last-child { color: var(--muted); flex: none; }
+.dl .icon { width: 20px; height: 20px; }
+#recapDlg #dxForm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 16px; }
+#recapDlg #dxForm .btn { grid-column: 1 / -1; min-height: 44px; }
+@media (min-width: 760px) {
+  .dash-head .tabs { width: max-content; }
+  .dash-head .tabs button { flex: none; white-space: nowrap; }
+  .dash-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: center; padding: 20px 24px; }
+  .dash-hero .ring { width: 132px; height: 132px; }
+  .dash-mini { margin-top: 0; grid-template-columns: 1fr; }
+  .dash-podium { display: grid; }
+}
+@media (min-width: 1000px) {
+  .dash-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .dl-list { grid-template-columns: repeat(3, 1fr); }
+}
+.dash-cols > section { margin-bottom: 36px; min-width: 0; }
