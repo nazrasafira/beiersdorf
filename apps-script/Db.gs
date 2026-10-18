@@ -8,7 +8,7 @@ const TABLES = {
   Areas: ['id', 'name'],
   Teams: ['id', 'name', 'area_id', 'leader_id'],
   Products: ['id', 'name', 'sku', 'price', 'photo', 'active', 'created_by', 'updated_by', 'updated_at', 'brand', 'barcode'],
-  Stores: ['id', 'name', 'chain', 'city', 'address', 'area_id', 'active', 'created_by', 'updated_by', 'updated_at'],
+  Stores: ['id', 'name', 'chain', 'city', 'address', 'area_id', 'active', 'created_by', 'updated_by', 'updated_at', 'photo'],
   // Targets are per store and month; user_id = the SPG holding the store that month (one SPG per store)
   StoreTargets: ['store_id', 'month', 'user_id', 'monthly', 'weekly', 'daily', 'set_by', 'set_at'],
   Shifts: ['id', 'user_id', 'date', 'start', 'end', 'store_id'],

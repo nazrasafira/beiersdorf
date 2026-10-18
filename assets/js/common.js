@@ -94,6 +94,7 @@
   // Name with avatar and an optional second line
   const person = (u, sub, label) => `<div class="person">${avatar(u)}<div><b>${esc(label || (typeof u === 'string' ? u : u.name))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
   const productSrc = p => imgSrc((p && p.image) || 'assets/products/placeholder.svg');
+  const storeSrc = st => imgSrc((st && st.image) || 'assets/stores/placeholder.svg');
   const productImg = (p, cls) => `<img class="pimg${cls ? ' ' + cls : ''}" src="${esc(productSrc(p))}" alt="" loading="lazy">`;
 
   // Photo of a document (the SPG's handwritten sales notes): opens the camera on phones, keeps the
@@ -142,7 +143,7 @@
 
   // Let the user pick a photo (camera or gallery), then crop/resize it in the browser.
   // mode 'cover' = square crop (profile photos), 'contain' = fit on white (product photos).
-  function pickImage(mode, size) {
+  function pickImage(mode, size, height) { // square unless a height is given (e.g. 640 × 480 for a storefront)
     return new Promise(resolve => {
       const input = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*' });
       input.addEventListener('change', () => {
@@ -151,12 +152,13 @@
         const img = new Image();
         img.onload = () => {
           const c = document.createElement('canvas');
-          c.width = c.height = size;
+          const W = size, H = height || size;
+          c.width = W; c.height = H;
           const g = c.getContext('2d');
-          g.fillStyle = '#fff'; g.fillRect(0, 0, size, size);
-          const k = mode === 'cover' ? Math.max(size / img.width, size / img.height) : Math.min(size / img.width, size / img.height);
+          g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+          const k = mode === 'cover' ? Math.max(W / img.width, H / img.height) : Math.min(W / img.width, H / img.height);
           const w = img.width * k, h = img.height * k;
-          g.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+          g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
           URL.revokeObjectURL(img.src);
           resolve(c.toDataURL('image/jpeg', 0.85));
         };
@@ -280,8 +282,9 @@
     // Static markup can ask for an icon with data-icon="name"
     document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); if (!el.title) el.title = el.getAttribute('aria-label') || ''; });
     top.querySelector('.logout').addEventListener('click', async e => {
-      if (Data.pendingCount() && !confirm('Ada data yang belum terkirim (offline). Keluar sekarang? Data akan dikirim saat kamu login lagi.')) return;
-      e.currentTarget.disabled = true;
+      const btn = e.currentTarget;
+      if (Data.pendingCount() && !await confirmBox('Ada data yang belum terkirim (offline). Data akan dikirim saat kamu login lagi.', { title: 'Keluar sekarang?', ok: 'Keluar' })) return;
+      btn.disabled = true;
       await Data.logout();
       location.href = root + Data.page('index.html');
     });
@@ -476,6 +479,28 @@
     return dlg._modal;
   }
 
+  /* ---------- Confirmation (in place of the browser's confirm(), which some in-app browsers block) ----------
+   * await App.confirm('Hapus transaksi ini?', { ok: 'Hapus', danger: true }) → true / false */
+  function confirmBox(message, opts) {
+    opts = opts || {};
+    return new Promise(resolve => {
+      const dlg = document.createElement('dialog');
+      dlg.className = 'modal sheet confirm';
+      dlg.setAttribute('aria-label', opts.title || 'Konfirmasi');
+      dlg.innerHTML = `<form method="dialog">
+        <div class="modal-body">${opts.title ? `<h3>${esc(opts.title)}</h3>` : ''}<p>${esc(message)}</p></div>
+        <div class="modal-foot"><button type="button" class="btn ghost" data-close>${esc(opts.cancel || 'Batal')}</button><button class="btn${opts.danger ? ' danger' : ''}" type="submit">${esc(opts.ok || 'Ya')}</button></div>
+      </form>`;
+      document.body.append(dlg);
+      let ok = false;
+      dlg.querySelector('form').addEventListener('submit', e => { e.preventDefault(); ok = true; dlg.close(); });
+      dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[data-close]')) dlg.close(); });
+      dlg.addEventListener('close', () => { dlg.remove(); resolve(ok); });
+      dlg.showModal();
+      dlg.querySelector('button[type=submit]').focus();
+    });
+  }
+
   /* ---------- Store picker (start shift / switch store) ----------
    * Resolves with the chosen store id, or null when cancelled. */
   function pickStore(opts) {
@@ -654,7 +679,7 @@
   }
 
   window.App = {
-    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
+    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, confirm: confirmBox, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
     esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum, moneyInput, setMoney,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,

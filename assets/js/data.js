@@ -1065,7 +1065,7 @@
       return res.ok ? res.data : { error: res.data.message };
     },
     async saveStore(st) {
-      const res = await call('store.save', { id: st.id || null, name: st.name, chain: st.chain || '', city: st.city, address: st.address || '', active: st.active !== false });
+      const res = await call('store.save', { id: st.id || null, name: st.name, chain: st.chain || '', city: st.city, address: st.address || '', active: st.active !== false, image: st.image || null });
       if (!res.ok) return res.data.message;
       upsert(state.stores, res.data.store);
       changed();

@@ -5,200 +5,186 @@ Data.ready(function () {
   const D = Data, $ = id => document.getElementById(id);
   const teamId = App.teamId(user);
   const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-  const NONE = '__none'; // "Tanpa SPG" in the picker ('' is the empty search box)
   let mk = App.param('bulan') || D.monthKey(D.TODAY);
   if (!/^\d{4}-\d{2}$/.test(mk)) mk = D.monthKey(D.TODAY);
 
-  const fmtInput = n => n ? App.num(n) : '';
-  const firstName = u => u.name.split(' ')[0];
-  const cards = () => [...document.querySelectorAll('#rows .tcard')];
-  const spgOf = card => { const v = card.querySelector('.spg').value; return v && v !== NONE ? v : null; };
-  const nameOf = card => card.querySelector('.tcard-head b').textContent;
+  const place = st => [st.chain, st.city].filter(Boolean).join(' · ');
+  const photo = u => App.imgSrc((u && u.photo) || 'assets/avatars/default.svg');
 
-  // A store held by an active SPG of another team can't be given out from this page
+  // Who holds a store in a month. "taken" = an active SPG of another team (can't be given out from here).
   function holderOf(storeId, month) {
     const t = D.storeTarget(storeId, month);
-    if (!t) return { t: null, holder: null, taken: false };
-    const holder = t.userId ? D.user(t.userId) : null;
-    const taken = !!t.taken || (!!holder && holder.teamId !== teamId && holder.active);
-    return { t, holder, taken };
+    const holder = t && t.userId ? D.user(t.userId) : null;
+    const taken = !!t && (!!t.taken || (!!holder && holder.teamId !== teamId && holder.active));
+    return { t: t && t.userId ? t : null, holder, taken, mine: !!holder && holder.teamId === teamId };
   }
+  // Stores nobody in this team holds and no other team has taken (the inactive stores are left out)
+  const freeStores = month => D.stores().filter(st => { const h = holderOf(st.id, month); return !h.mine && !h.taken; })
+    .sort((a, b) => a.name.localeCompare(b.name));
+  // Team SPGs to show: the active ones, plus deactivated ones that still hold a store this month
+  const teamSpgs = () => D.spgsOf(teamId, true).filter(u => u.active || D.heldStores(u.id, mk).length)
+    .sort((a, b) => b.active - a.active || a.name.localeCompare(b.name));
 
+  /* ---------- Page ---------- */
   function render() {
-    const spgs = D.spgsOf(teamId);
     const settings = D.getSettings(teamId);
     const wd = D.workingDaysInMonth(teamId, mk);
     const days = [1, 2, 3, 4, 5, 6, 0].filter(d => settings.workingDays.includes(d)).map(d => DAY_NAMES[d]).join(', ');
     $('month').textContent = App.monthName(mk);
     $('sub').textContent = `Tim ${D.team(teamId).name} · ${wd} hari kerja (${days})`;
 
-    // Active stores, plus inactive ones that still have a target this month; own team's first, then free stores
-    const all = D.stores(true).map(st => ({ st, ...holderOf(st.id, mk) })).filter(x => x.st.active || (x.t && !x.taken));
-    const open = all.filter(x => !x.taken)
-      .sort((a, b) => !!b.holder - !!a.holder || (a.holder && b.holder ? a.holder.name.localeCompare(b.holder.name) : 0) || a.st.name.localeCompare(b.st.name));
-    const taken = all.filter(x => x.taken).sort((a, b) => a.st.name.localeCompare(b.st.name));
-    const place = st => App.esc([st.chain, st.city].filter(Boolean).join(' · '));
+    const spgs = teamSpgs();
+    const held = spgs.map(u => ({ u, stores: D.heldStores(u.id, mk).map(t => ({ ...t, st: D.store(t.storeId) || { id: t.storeId, name: t.storeId } })) }));
+    const free = freeStores(mk);
+    const total = held.reduce((a, h) => a + h.stores.reduce((b, t) => b + (t.monthly || 0), 0), 0);
+    const nHeld = held.reduce((a, h) => a + h.stores.length, 0);
+    const noStore = held.filter(h => h.u.active && !h.stores.length).length;
 
-    $('rows').innerHTML = open.map(({ st, t, holder }) => {
-      const opts = spgs.slice();
-      if (holder && !opts.includes(holder)) opts.push(holder); // deactivated SPG who still holds it
-      const by = t && t.setBy && D.user(t.setBy);
-      const v = t || {};
-      return `<div class="tcard" data-store="${st.id}" data-had="${t ? 1 : 0}">
-        <div class="tcard-head">
-          <div><b>${App.esc(st.name)}</b>${place(st) ? `<small>${place(st)}</small>` : ''}</div>
-          ${by ? `<span class="by">${App.esc(firstName(by))}<br>${App.dateMid(t.setAt)}</span>` : ''}
+    $('summary').innerHTML = `
+      <div class="stat-box"><div class="l">Target tim</div><div class="v">${App.rpShort(total)}</div>
+        <div class="s">${wd ? '≈ ' + App.rpShort(total / wd) + ' per hari kerja' : 'Tidak ada hari kerja'}</div></div>
+      <div class="stat-box"><div class="l">Toko dipegang</div><div class="v">${nHeld} <span class="small muted">/ ${nHeld + free.length}</span></div>
+        <div class="s">${noStore ? `${noStore} SPG belum punya toko` : spgs.length ? 'Semua SPG punya toko' : 'Belum ada SPG'}</div></div>`;
+
+    $('spgs').innerHTML = held.map(({ u, stores }) => {
+      const sum = stores.reduce((a, t) => a + (t.monthly || 0), 0);
+      const daily = D.dailyTarget(u.id, firstWorkingDay()) || 0;
+      return `<div class="tg-spg">
+        <div class="tg-spg-head">
+          ${App.person(u, u.active ? `${stores.length} toko` : 'nonaktif · pindahkan tokonya', u.name)}
+          <div class="total"><b>${stores.length ? App.rpShort(sum) : '–'}</b>${stores.length && daily ? `<small>${App.rpShort(daily)}/hari</small>` : ''}</div>
         </div>
-        <div class="field"><label for="spg-${st.id}">SPG</label>
-          <select class="spg" id="spg-${st.id}" data-placeholder="Cari SPG...">
-            <option value=""></option>
-            <option value="${NONE}" data-img="${App.esc(App.imgSrc('assets/avatars/default.svg'))}">Tanpa SPG</option>
-            ${opts.map(u => `<option value="${u.id}" data-img="${App.esc(App.imgSrc(u.photo || 'assets/avatars/default.svg'))}" ${holder && holder.id === u.id ? 'selected' : ''}>${App.esc(u.name)}${u.active ? '' : ' (nonaktif)'}</option>`).join('')}
-          </select>
-        </div>
-        <div class="tcard-nums">
-          <div class="field monthly-f"><label for="m-${st.id}">Target bulanan</label><input class="input t-input monthly" id="m-${st.id}" inputmode="numeric" value="${fmtInput(v.monthly)}" placeholder="0"></div>
-          <div class="field"><label for="w-${st.id}">Mingguan <small>· otomatis</small></label><input class="input t-input weekly ${v.weekly ? 'override' : ''}" id="w-${st.id}" inputmode="numeric" value="${fmtInput(v.weekly)}"></div>
-          <div class="field"><label for="d-${st.id}">Harian <small>· otomatis</small></label><input class="input t-input daily ${v.daily ? 'override' : ''}" id="d-${st.id}" inputmode="numeric" value="${fmtInput(v.daily)}"></div>
-        </div>
+        ${stores.length ? `<div class="tg-stores">${stores.sort((a, b) => a.st.name.localeCompare(b.st.name)).map(t => `
+          <button type="button" class="tg-store" data-store="${t.storeId}">
+            ${App.icon('store')}
+            <span class="grow"><b>${App.esc(t.st.name)}</b>${place(t.st) ? `<small>${App.esc(place(t.st))}</small>` : ''}</span>
+            <span class="amt ${t.monthly ? '' : 'zero'}">${t.monthly ? App.rpShort(t.monthly) : 'Isi target'}</span>
+            ${App.icon('right')}
+          </button>`).join('')}</div>` : '<p class="tg-empty">Belum ada toko.</p>'}
+        ${u.active ? `<div class="tg-foot"><button type="button" class="btn ghost block" data-add="${u.id}">${App.icon('plus')}Tambah toko</button></div>` : ''}
       </div>`;
-    }).join('') || '<p class="empty">Belum ada toko. Tambahkan di Katalog → Toko.</p>';
-    cards().forEach(c => { App.combobox(c.querySelector('.spg')); updatePlaceholders(c); });
+    }).join('') || '<p class="empty">Belum ada SPG di tim ini. Tambahkan di menu Tim.</p>';
 
-    // Stores of other teams: listed apart, read only
+    $('freeTitle').textContent = `Toko tanpa SPG (${free.length})`;
+    $('freeSearchWrap').hidden = free.length < 7;
+    $('free').innerHTML = free.map(st => `
+      <button type="button" class="tg-store" data-store="${st.id}" data-name="${App.esc((st.name + ' ' + place(st)).toLowerCase())}">
+        ${App.icon('store')}
+        <span class="grow"><b>${App.esc(st.name)}</b>${place(st) ? `<small>${App.esc(place(st))}</small>` : ''}</span>
+        <span class="btn small">Pilih SPG</span>
+      </button>`).join('') || '<p class="tg-empty" style="padding:12px 14px">Semua toko sudah punya SPG.</p>';
+    filterFree();
+
+    // Stores of other teams: read only
+    const taken = D.stores().filter(st => holderOf(st.id, mk).taken).sort((a, b) => a.name.localeCompare(b.name));
     $('takenWrap').hidden = !taken.length;
-    $('takenSum').textContent = `Toko yang dipegang tim lain (${taken.length})`;
-    $('taken').innerHTML = taken.map(({ st, holder }) => `<div><div class="grow"><b>${App.esc(st.name)}</b><span>${place(st)}</span></div>
-      <span class="small muted">${holder ? `${App.esc(holder.name)} · Tim ${App.esc((D.team(holder.teamId) || {}).name || '')}` : 'SPG tim lain'}</span></div>`).join('');
+    $('takenSum').textContent = `Dipegang tim lain (${taken.length})`;
+    $('taken').innerHTML = taken.map(st => {
+      const h = holderOf(st.id, mk).holder;
+      return `<div><div class="grow"><b>${App.esc(st.name)}</b><span>${App.esc(place(st))}</span></div>
+        <span class="small muted">${h ? `${App.esc(h.name)} · Tim ${App.esc((D.team(h.teamId) || {}).name || '')}` : 'SPG tim lain'}</span></div>`;
+    }).join('');
+  }
+  const firstWorkingDay = () => D.eachDay(mk + '-01', D.monthEnd(mk + '-01')).find(d => D.isWorkingDay(teamId, d)) || mk + '-01';
 
-    filter();
-    renderSpgs();
-    markDirty();
+  function filterFree() {
+    const q = $('freeSearch').value.trim().toLowerCase();
+    $('free').querySelectorAll('[data-name]').forEach(b => { b.hidden = !!q && !b.dataset.name.includes(q); });
+  }
+  $('freeSearch').addEventListener('input', filterFree);
+
+  $('prev').addEventListener('click', () => { mk = D.addMonths(mk, -1); render(); });
+  $('next').addEventListener('click', () => { mk = D.addMonths(mk, 1); render(); });
+
+  /* ---------- Sheet: give a store to an SPG and set its target ---------- */
+  const dlg = App.modal($('sheet'));
+  const form = $('sheetForm');
+  ['sheetMonthly', 'sheetWeekly', 'sheetDaily'].forEach(id => App.moneyInput($(id)));
+  App.combobox($('sheetStore'));
+  App.combobox($('sheetSpg'));
+  let editing = null; // store id when the sheet opened on one store
+
+  function updateHint() {
+    const monthly = App.parseNum($('sheetMonthly').value);
+    const p = D.targetPreview(teamId, mk, monthly);
+    $('sheetHint').textContent = monthly && p.workDays
+      ? `≈ ${App.rpK(p.daily)} per hari · ${App.rpK(p.weekly)} per minggu (${p.workDays} hari kerja di ${App.monthName(mk)})`
+      : `${p.workDays} hari kerja di ${App.monthName(mk)}.`;
+  }
+  $('sheetMonthly').addEventListener('input', updateHint);
+
+  function openSheet({ storeId, userId }) {
+    editing = storeId || null;
+    const h = storeId ? holderOf(storeId, mk) : { t: null, holder: null, mine: false };
+    const st = storeId && D.store(storeId);
+    $('sheetTitle').textContent = st ? st.name : 'Tambah toko';
+    $('storeField').hidden = !!storeId;
+    $('sheetStore').innerHTML = '<option value=""></option>' + (storeId ? '' : freeStores(mk).map(s =>
+      `<option value="${s.id}">${App.esc(s.name)}${place(s) ? ' · ' + App.esc(place(s)) : ''}</option>`).join(''));
+    $('sheetStore')._combo.sync();
+    const opts = D.spgsOf(teamId);
+    if (h.mine && !opts.includes(h.holder)) opts.push(h.holder);
+    const chosen = userId || (h.mine ? h.holder.id : '');
+    $('sheetSpg').innerHTML = '<option value=""></option>' + opts.map(u =>
+      `<option value="${u.id}" data-img="${App.esc(photo(u))}" ${u.id === chosen ? 'selected' : ''}>${App.esc(u.name)}${u.active ? '' : ' (nonaktif)'}</option>`).join('');
+    $('sheetSpg')._combo.sync();
+    const t = h.mine ? h.t : null;
+    App.setMoney($('sheetMonthly'), t ? t.monthly : 0);
+    App.setMoney($('sheetWeekly'), t ? t.weekly : 0);
+    App.setMoney($('sheetDaily'), t ? t.daily : 0);
+    $('manual').open = !!(t && (t.weekly || t.daily));
+    $('release').hidden = !h.mine;
+    updateHint();
+    dlg.open();
+    // Adding: start in the store search. Editing: no keyboard until a field is tapped.
+    if (storeId) document.activeElement.blur(); else $('sheetStore')._combo.focus();
   }
 
-  // Per SPG: the stores chosen on this page and the sum of their monthly targets (follows the inputs before saving)
-  function renderSpgs() {
-    const by = {};
-    cards().forEach(c => {
-      const id = spgOf(c);
-      if (!id) return;
-      const b = by[id] || (by[id] = { stores: [], monthly: 0 });
-      b.stores.push(nameOf(c));
-      b.monthly += App.parseNum(c.querySelector('.monthly').value);
-    });
-    const spgs = D.spgsOf(teamId).concat(Object.keys(by).map(D.user).filter(u => u && !u.active));
-    $('spgRows').innerHTML = spgs.map(u => {
-      const b = by[u.id];
-      const sub = b ? `${b.stores.length} toko · ${b.stores.join(', ')}` : 'Belum ada toko';
-      return `<div><div class="grow">${App.person(u, sub, u.name + (u.active ? '' : ' (nonaktif)'))}</div>
-        <div class="val">${b ? `<b>${App.rpShort(b.monthly)}</b>` : '<span class="pill warn">0 toko</span>'}</div></div>`;
-    }).join('') || '<p class="empty">Belum ada SPG aktif di tim ini.</p>';
-  }
-
-  function updatePlaceholders(card) {
-    const p = D.targetPreview(teamId, mk, App.parseNum(card.querySelector('.monthly').value));
-    card.querySelector('.weekly').placeholder = App.num(Math.round(p.weekly / 1000) * 1000);
-    card.querySelector('.daily').placeholder = App.num(Math.round(p.daily / 1000) * 1000);
-  }
-
-  // Unsaved changes: the card gets a blue border and the save bar says how many
-  const snapshot = c => [spgOf(c) || '', ...['monthly', 'weekly', 'daily'].map(k => App.parseNum(c.querySelector('.' + k).value))].join('|');
-  function markDirty() {
-    let n = 0;
-    cards().forEach(c => {
-      if (c.dataset.orig === undefined) c.dataset.orig = snapshot(c);
-      const dirty = snapshot(c) !== c.dataset.orig;
-      c.classList.toggle('dirty', dirty);
-      n += dirty;
-    });
-    $('dirty').textContent = n ? `${n} toko berubah` : '';
-  }
-
-  function filter() {
-    const q = $('search').value.trim().toLowerCase();
-    let shown = 0;
-    cards().forEach(c => {
-      const sel = c.querySelector('.spg');
-      const text = (c.querySelector('.tcard-head').textContent + ' ' + (spgOf(c) ? sel.selectedOptions[0].textContent : '')).toLowerCase();
-      c.hidden = !!q && !text.includes(q);
-      shown += !c.hidden;
-    });
-    $('none').hidden = !q || shown > 0;
-  }
-  $('search').addEventListener('input', filter);
-
-  $('rows').addEventListener('input', e => {
-    const c = e.target.closest('.tcard');
-    if (!c || !e.target.classList.contains('t-input')) return;
-    if (e.target.classList.contains('monthly')) { updatePlaceholders(c); renderSpgs(); }
-    else e.target.classList.toggle('override', App.parseNum(e.target.value) > 0);
-    markDirty();
-  });
-  $('rows').addEventListener('change', e => { if (e.target.classList.contains('spg')) { renderSpgs(); markDirty(); } });
-  $('rows').addEventListener('focusout', e => {
-    if (e.target.matches('.t-input')) e.target.value = fmtInput(App.parseNum(e.target.value));
-  });
-
-  const go = n => {
-    if ($('dirty').textContent && !confirm('Perubahan belum disimpan. Pindah bulan?')) return;
-    mk = D.addMonths(mk, n); render();
-  };
-  $('prev').addEventListener('click', () => go(-1));
-  $('next').addEventListener('click', () => go(1));
-
-  $('applyAll').addEventListener('click', () => {
-    const list = cards().filter(spgOf);
-    const first = list.map(c => c.querySelector('.monthly')).find(i => App.parseNum(i.value));
-    if (!first) { App.toast('Pilih SPG dan isi target bulanan di salah satu toko dulu.'); return; }
-    list.forEach(c => { c.querySelector('.monthly').value = first.value; updatePlaceholders(c); });
-    renderSpgs(); markDirty();
-    App.toast('Target ' + first.value + ' diterapkan ke semua toko yang punya SPG. Klik Simpan.');
-  });
-
-  // Last month's SPG and targets, for the stores still free on this page
-  $('copyPrev').addEventListener('click', () => {
-    const prev = D.addMonths(mk, -1);
-    let n = 0;
-    cards().forEach(c => {
-      const { t, holder } = holderOf(c.dataset.store, prev);
-      const sel = c.querySelector('.spg');
-      if (!t || !holder || !holder.active || holder.teamId !== teamId || ![...sel.options].some(o => o.value === holder.id)) return;
-      n++;
-      sel.value = holder.id;
-      sel._combo.sync();
-      c.querySelector('.monthly').value = fmtInput(t.monthly);
-      c.querySelector('.weekly').value = fmtInput(t.weekly);
-      c.querySelector('.daily').value = fmtInput(t.daily);
-      c.querySelector('.weekly').classList.toggle('override', !!t.weekly);
-      c.querySelector('.daily').classList.toggle('override', !!t.daily);
-      updatePlaceholders(c);
-    });
-    renderSpgs(); markDirty();
-    App.toast(n ? `Toko dan target ${App.monthName(prev)} disalin. Klik Simpan.` : `Tidak ada target di ${App.monthName(prev)}.`);
-  });
-
-  $('save').addEventListener('click', () => {
-    const rows = [];
-    let missing = null;
-    cards().forEach(c => {
-      const r = {
-        storeId: c.dataset.store, mk, userId: spgOf(c),
-        monthly: App.parseNum(c.querySelector('.monthly').value),
-        weekly: App.parseNum(c.querySelector('.weekly').value),
-        daily: App.parseNum(c.querySelector('.daily').value),
-      };
-      if (!r.userId && (r.monthly || r.weekly || r.daily)) missing = missing || c;
-      if (r.userId || c.dataset.had === '1') rows.push(r); // a store that had an SPG and now has none is released
-    });
-    if (missing) {
-      App.toast('Pilih SPG untuk ' + nameOf(missing) + ' atau kosongkan targetnya.');
-      missing.hidden = false;
-      missing.scrollIntoView({ block: 'center' });
-      return;
+  $('spgs').addEventListener('click', e => {
+    const s = e.target.closest('[data-store]'), a = e.target.closest('[data-add]');
+    if (s) openSheet({ storeId: s.dataset.store });
+    else if (a) {
+      if (!freeStores(mk).length) { App.toast('Semua toko sudah punya SPG. Pindahkan toko dari SPG lain.'); return; }
+      openSheet({ userId: a.dataset.add });
     }
-    if (!rows.length) { App.toast('Pilih SPG untuk minimal satu toko.'); return; }
+  });
+  $('free').addEventListener('click', e => { const s = e.target.closest('[data-store]'); if (s) openSheet({ storeId: s.dataset.store }); });
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const storeId = editing || $('sheetStore').value;
+    const userId = $('sheetSpg').value;
+    if (!storeId) { App.toast('Pilih toko dulu.'); $('sheetStore')._combo.focus(); return; }
+    if (!userId) { App.toast('Pilih SPG dulu.'); $('sheetSpg')._combo.focus(); return; }
+    const monthly = App.parseNum($('sheetMonthly').value);
+    D.saveTargets([{ storeId, mk, userId, monthly, weekly: App.parseNum($('sheetWeekly').value), daily: App.parseNum($('sheetDaily').value) }], user.id);
+    dlg.close();
+    App.toast(`${D.store(storeId).name} → ${D.user(userId).name.split(' ')[0]}${monthly ? ' · ' + App.rpShort(monthly) : ''}`);
+    render();
+  });
+
+  $('release').addEventListener('click', async () => {
+    const st = D.store(editing);
+    if (!await App.confirm(`${st.name} jadi tanpa SPG untuk ${App.monthName(mk)} dan targetnya dihapus.`, { title: 'Lepas toko?', ok: 'Lepas toko', danger: true })) return;
+    D.saveTargets([{ storeId: editing, mk, userId: null }], user.id);
+    dlg.close();
+    App.toast(st.name + ' sekarang tanpa SPG.');
+    render();
+  });
+
+  /* ---------- Copy last month: SPGs and targets of stores not set yet this month ---------- */
+  $('copyPrev').addEventListener('click', async () => {
+    const prev = D.addMonths(mk, -1);
+    const rows = [];
+    D.stores(true).forEach(st => {
+      const was = holderOf(st.id, prev), now = holderOf(st.id, mk);
+      if (!was.mine || !was.holder.active || now.mine || now.taken) return;
+      rows.push({ storeId: st.id, mk, userId: was.holder.id, monthly: was.t.monthly || 0, weekly: was.t.weekly || 0, daily: was.t.daily || 0 });
+    });
+    if (!rows.length) { App.toast(`Tidak ada yang bisa disalin dari ${App.monthName(prev)}.`); return; }
+    if (!await App.confirm(`${rows.length} toko beserta SPG dan targetnya disalin dari ${App.monthName(prev)}. Toko yang sudah diatur bulan ini tidak diubah.`, { title: 'Salin dari bulan lalu?', ok: 'Salin' })) return;
     D.saveTargets(rows, user.id);
-    App.toast('Target ' + App.monthName(mk) + ' disimpan.');
+    App.toast(`${rows.length} toko disalin dari ${App.monthName(prev)}.`);
     render();
   });
 

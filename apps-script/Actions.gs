@@ -349,8 +349,9 @@ function actStoreSave_(req, me) {
   const name = str_(req.name, 150), city = str_(req.city, 100);
   if (!name || !city) fail_('Isi nama dan kota toko.');
   const area = me.area_id || (byId_('Teams', me.team_id) || {}).area_id || (rows_('Areas')[0] || {}).id || '';
-  const s = cur || { id: newId_('st'), created_by: me.id, area_id: area };
+  const s = cur || { id: newId_('st'), created_by: me.id, area_id: area, photo: '' };
   Object.assign(s, { name, chain: str_(req.chain, 100), city, address: str_(req.address, 255), active: req.active !== false, updated_by: me.id, updated_at: today_() });
+  if (/^data:image\//.test(String(req.image || ''))) s.photo = savePhoto_(req.image, 'toko-' + s.id);
   if (cur) save_('Stores', s);
   else append_('Stores', [s]);
   log_(me, cur ? 'ubah' : 'tambah', 'toko', s.id, s.name);

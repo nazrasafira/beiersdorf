@@ -128,7 +128,7 @@ function importDemoData(source) {
   }));
   const cat = x => ({ active: x.active, created_by: x.createdBy || '', updated_by: x.updatedBy || '', updated_at: x.updatedAt || '' });
   append_('Products', d.products.map(p => Object.assign({ id: p.id, name: p.name, sku: p.sku || '', brand: p.brand || '', barcode: p.barcode || '', price: p.price, photo: p.image || '' }, cat(p))));
-  append_('Stores', d.stores.map(s => Object.assign({ id: s.id, name: s.name, chain: s.chain || '', city: s.city, address: s.address || '', area_id: s.areaId || '' }, cat(s))));
+  append_('Stores', d.stores.map(s => Object.assign({ id: s.id, name: s.name, chain: s.chain || '', city: s.city, address: s.address || '', area_id: s.areaId || '', photo: s.image || '' }, cat(s))));
   append_('Settings', Object.keys(d.settings).map(t => ({ team_id: t, working_days: d.settings[t].workingDays.join(','), edit_days: d.settings[t].editDays, reminder: d.settings[t].reminder })));
   append_('Holidays', [].concat.apply([], Object.keys(d.settings).map(t => d.settings[t].holidays.map(h => ({ team_id: t, date: h.date, name: h.name, working: h.working })))));
 

@@ -89,9 +89,14 @@ const salesOf = async (uid, date) => (await rows('Sales')).filter(s => s.user_id
   ok(p.url().includes('leader/dashboard.html'), 'Rina lands on dashboard');
   for (const pg of ['laporan', 'target', 'tim', 'pengaturan']) { await p.goto(B + `leader/${pg}.html`); await settle(); }
   await p.goto(B + 'leader/target.html'); await settle();
-  await p.locator('.tcard[data-store="st2"] .spg').evaluate(s => { s.value = 'u-sari'; s.dispatchEvent(new Event('change', { bubbles: true })); });
-  await p.fill('.tcard[data-store="st1"] .monthly', '30000000'); await p.click('#save'); await settle();
+  // Tap Sari's store, change its target in the sheet
+  await p.click('#spgs [data-store="st1"]'); await p.waitForSelector('#sheet[open]');
+  await p.fill('#sheetMonthly', '30000000'); await p.click('#sheet button[type=submit]'); await settle();
   ok(await until(async () => (await rows('StoreTargets')).find(t => t.store_id === 'st1' && t.month === '2026-10').monthly === 30000000), 'store target saved in the Sheet');
+  // Move Dewi's store to Sari
+  await p.click('#spgs [data-store="st2"]'); await p.waitForSelector('#sheet[open]');
+  await p.locator('#sheetSpg').evaluate(s => { s.value = 'u-sari'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+  await p.click('#sheet button[type=submit]'); await settle();
   ok(await until(async () => (await rows('StoreTargets')).find(t => t.store_id === 'st2' && t.month === '2026-10').user_id === 'u-sari'), 'store moved to another SPG');
 
   await p.goto(B + 'leader/laporan.html?spg=u-sari'); await settle();

@@ -177,6 +177,9 @@ test('products and stores: leaders edit only what they added', () => {
   assert.equal(g.as('rina', 'store.save', { id: notHers.id, name: 'X', city: 'Y' }).status, 403);
   assert.ok(g.as('rina', 'store.save', { id: 'st1', name: 'Toko Kemang', city: 'Jakarta Selatan' }).ok, 'she added st1');
   assert.ok(g.as('rina', 'store.save', { name: 'Toko Baru', city: 'Depok' }).ok);
+  const withPhoto = g.as('rina', 'store.save', { id: 'st1', name: 'Toko Kemang', city: 'Jakarta Selatan', image: JPG });
+  assert.ok(/^https:\/\/drive\.google\.com\/thumbnail\?id=/.test(withPhoto.data.store.image), 'store photo saved in Drive');
+  assert.equal(g.as('rina', 'store.save', { id: 'st1', name: 'Toko Kemang', city: 'Jakarta Selatan' }).data.store.image, withPhoto.data.store.image, 'photo kept when not sent');
   assert.equal(g.as('sari', 'store.save', { name: 'Toko SPG', city: 'Depok' }).status, 403);
 });
 

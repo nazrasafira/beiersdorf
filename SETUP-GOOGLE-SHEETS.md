@@ -30,7 +30,7 @@ Instead of step 3, on an **empty** Sheet: **Laporan SPG → Isi data demo…** a
 2. **Deploy**, then copy the **Web app URL** (`https://script.google.com/macros/s/…/exec`).
 3. Check it: open the URL in a browser; it shows `{"ok":true,"data":{"app":"Laporan SPG",…}}`.
 
-After changing the code later: paste the new files, run **Laporan SPG → 1. Siapkan tab** again (adds new tabs such as `ShiftPhotos` or `StoreTargets`; existing data stays), then **Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy**. The URL stays the same.
+After changing the code later: paste the new files, run **Laporan SPG → 1. Siapkan tab** again (adds new tabs such as `ShiftPhotos` or `StoreTargets` and new columns such as the stores' `photo`; existing data stays), then **Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy**. The URL stays the same.
 
 ## 4. Point the app to it
 
@@ -52,7 +52,7 @@ Then `python3 tools/bump-version.py`, commit and push; GitHub Pages serves the a
 ## Good to know
 
 - **Products in the Sheet**: the Admin may add or change products directly in the **Products** tab (name, sku, price, active). New rows get an id automatically; rows without a name or with a wrong price turn red with a note. Product photos: upload them in the app (Katalog). All other tabs are changed through the app only (they show a warning when edited by hand).
-- **Photos** (profiles, products, and the photos of the SPGs' handwritten sales notes taken when they end a shift — listed in the `ShiftPhotos` tab) are saved in the Drive folder **Laporan SPG – Foto** (made automatically) and shared "anyone with the link".
+- **Photos** (profiles, products, storefronts, and the photos of the SPGs' handwritten sales notes taken when they end a shift — listed in the `ShiftPhotos` tab) are saved in the Drive folder **Laporan SPG – Foto** (made automatically) and shared "anyone with the link".
 - **Speed**: each request to Apps Script takes about 1–2 seconds. Pages open at once from the data kept on the phone and refresh in the background; sales are saved on the phone first and sent in the background (also when the signal comes back after being offline).
 - **Signing everyone out**: Script Properties → change `SECRET` (all users must log in again).
 - **Backup**: File → Make a copy, or a time-driven trigger; keep the Sheet's version history on.

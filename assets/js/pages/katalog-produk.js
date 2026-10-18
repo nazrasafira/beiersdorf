@@ -6,23 +6,61 @@ Data.ready(function () {
   const form = $('form');
   App.moneyInput(form.price); // "Rp 22.275" while typing
 
-  function render() {
-    const list = D.products(true);
-    $('count').textContent = `${list.filter(p => p.active).length} aktif dari ${list.length}`;
-    $('table').innerHTML = `
-      <thead><tr><th></th><th>Produk</th><th>SKU</th><th>Subbrand</th><th class="num">Harga (Rp)</th><th>Status</th><th>Ditambahkan oleh</th><th></th></tr></thead>
-      <tbody>${list.map(p => `<tr>
-        <td style="width:52px">${App.productImg(p)}</td>
-        <td><b>${App.esc(p.name)}</b></td>
-        <td>${App.esc(p.sku)}</td>
-        <td><small>${App.esc(p.brand || '')}</small></td>
-        <td class="num">${App.num(p.price)}</td>
-        <td>${p.active ? '<span class="pill ok">Aktif</span>' : '<span class="pill">Nonaktif</span>'}</td>
-        <td><small>${App.esc(byName(p.createdBy))}</small>${p.updatedBy && p.updatedBy !== p.createdBy ? `<small class="muted">diubah ${App.esc(byName(p.updatedBy))}</small>` : ''}</td>
-        <td class="num">${D.canEditCatalog(user, p) ? App.iconBtn('pencil', 'Ubah produk', `data-id="${p.id}"`) : ''}</td>
-      </tr>`).join('')}</tbody>`;
-    App.tableTools($('table'), { placeholder: 'Cari produk, SKU atau subbrand...' });
+  /* ----- Shop-style grid: search, subbrand chips, status tabs, more on demand ----- */
+  const PAGE = 24;
+  let q = '', brand = '', status = 'active', limit = PAGE;
+
+  function renderBrands() {
+    const brands = [...new Set(D.products(true).map(p => p.brand).filter(Boolean))].sort();
+    if (brand && !brands.includes(brand)) brand = '';
+    $('brandChips').hidden = !brands.length;
+    $('brandChips').innerHTML = ['', ...brands].map(b =>
+      `<button type="button" class="chip ${b === brand ? 'on' : ''}" data-brand="${App.esc(b)}" aria-pressed="${b === brand}">${App.esc(b || 'Semua')}</button>`).join('');
   }
+
+  function card(p) {
+    return `<button type="button" class="pcard-shop ${p.active ? '' : 'off'}" data-id="${p.id}" aria-label="${App.esc(p.name)}, ${App.rp(p.price)}">
+      <span class="ph"><img src="${App.esc(App.productSrc(p))}" alt="" loading="lazy">${p.active ? '' : '<span class="pill">Nonaktif</span>'}</span>
+      <span class="body">
+        ${p.brand ? `<span class="brand">${App.esc(p.brand)}</span>` : ''}
+        <span class="name">${App.esc(p.name)}</span>
+        ${p.sku ? `<span class="sku">SKU ${App.esc(p.sku)}</span>` : ''}
+        <span class="price">${App.rp(p.price)}</span>
+      </span>
+    </button>`;
+  }
+
+  function render() {
+    const all = D.products(true);
+    $('count').textContent = `${all.filter(p => p.active).length} aktif dari ${all.length}`;
+    const needle = q.trim().toLowerCase();
+    const list = all.filter(p => (status === 'all' || p.active === (status === 'active'))
+      && (!brand || p.brand === brand)
+      && (!needle || [p.name, p.sku, p.brand, p.barcode].join(' ').toLowerCase().includes(needle)));
+    $('grid').innerHTML = list.slice(0, limit).map(card).join('');
+    $('none').hidden = list.length > 0;
+    $('moreWrap').hidden = list.length <= limit;
+    $('shown').textContent = list.length ? `${Math.min(limit, list.length)} dari ${list.length} produk` : '';
+  }
+  const refilter = () => { limit = PAGE; render(); };
+
+  $('q').addEventListener('input', e => { q = e.target.value; refilter(); });
+  $('brandChips').addEventListener('click', e => {
+    const b = e.target.closest('[data-brand]');
+    if (!b) return;
+    brand = b.dataset.brand;
+    renderBrands();
+    $('brandChips').querySelector('.chip.on').scrollIntoView({ block: 'nearest', inline: 'center' });
+    refilter();
+  });
+  $('statusTabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-status]');
+    if (!b) return;
+    status = b.dataset.status;
+    $('statusTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    refilter();
+  });
+  $('more').addEventListener('click', () => { limit += PAGE; render(); });
 
   const byName = id => { const u = D.user(id); return u ? u.name : '-'; };
   $('openAdd').hidden = !D.canAddCatalog(user);
@@ -50,11 +88,20 @@ Data.ready(function () {
     image = p ? p.image || '' : '';
     showImage();
     form.active.checked = p ? p.active : true;
-    $('formTitle').textContent = p ? 'Ubah produk' : 'Tambah produk';
+    const canEdit = !p || D.canEditCatalog(user, p);
+    $('formTitle').textContent = !p ? 'Tambah produk' : canEdit ? 'Ubah produk' : 'Detail produk';
+    form.querySelectorAll('input:not([type=hidden])').forEach(i => { i.disabled = !canEdit; });
+    $('pickImg').hidden = !canEdit;
+    $('saveBtn').hidden = !canEdit;
+    $('cancelBtn').textContent = canEdit ? 'Batal' : 'Tutup';
+    const by = p ? 'Ditambahkan oleh ' + byName(p.createdBy) + (p.updatedBy && p.updatedBy !== p.createdBy ? ' · diubah ' + byName(p.updatedBy) : '') : '';
+    $('byline').textContent = by;
+    $('byline').hidden = !by;
   }
 
-  $('table').addEventListener('click', e => {
-    const b = e.target.closest('button[data-id]');
+  // Tap a card: edit it, or just look when the user may not change it
+  $('grid').addEventListener('click', e => {
+    const b = e.target.closest('[data-id]');
     if (!b) return;
     fill(D.product(b.dataset.id));
     dlg.open();
@@ -73,9 +120,11 @@ Data.ready(function () {
     dlg.close();
     fill(null);
     fillBrands();
+    renderBrands();
     render();
   });
 
   fill(null);
+  renderBrands();
   render();
 });

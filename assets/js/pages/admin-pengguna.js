@@ -39,12 +39,12 @@ Data.ready(function () {
       if (photo) { D.setUserPhoto(ph.dataset.photo, photo); App.toast('Foto diperbarui.'); render(); }
     } else if (rs) {
       const u = D.user(rs.dataset.reset);
-      if (!confirm(`Reset password ${u.name}?`)) return;
+      if (!await App.confirm(`Password ${u.name} kembali ke password awal dan harus diganti saat login.`, { title: 'Reset password?', ok: 'Reset' })) return;
       const pw = await D.resetPassword(u.id, user.id);
       App.toast(pw ? `Password ${u.name} direset ke: ${pw}` : 'Tidak bisa reset password.');
     } else if (ac) {
       const u = D.user(ac.dataset.active);
-      if (u.active && !confirm(`Nonaktifkan ${u.name}? Pengguna ini tidak bisa login.`)) return;
+      if (u.active && !await App.confirm(`${u.name} tidak bisa login.`, { title: 'Nonaktifkan pengguna?', ok: 'Nonaktifkan', danger: true })) return;
       D.setActive(u.id, !u.active);
       App.toast(`${u.name} ${u.active ? 'diaktifkan' : 'dinonaktifkan'}.`);
       render();

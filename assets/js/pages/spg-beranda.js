@@ -43,7 +43,7 @@ Data.ready(function () {
       action = `<p class="next">${report ? nextText : 'Belum ada penjualan'} · ${st ? App.esc(st.name) + ', ' : ''}sejak ${shift.start}</p>
         <a class="btn block" href="${App.page('laporan.html')}">Catat penjualan</a>`;
     } else {
-      action = `<p class="next">Shift ${shift.start}–${shift.end} selesai</p><a href="${App.page('laporan.html')}">Lihat penjualan hari ini</a>`;
+      action = `<p class="next">Shift ${shift.start}–${shift.end} selesai</p><a class="btn ghost block" href="${App.page('laporan.html')}">Lihat penjualan hari ini</a>`;
     }
     $('today').innerHTML = `
       ${App.ring(day.pct, `<div class="pct">${App.pct(day.pct)}</div><div class="lbl">target hari ini</div>`, `${App.pct(day.pct)} dari target hari ini`)}

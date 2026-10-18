@@ -509,33 +509,110 @@ tr.detail .note-photos { max-width: 480px; }
   body:not(.spg) .mainnav { margin-left: 12px; }
 }
 
-/* Target page: one card per store (mobile first), two columns on wide screens */
-.tgt-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 10px; }
-.tgt-head h2 { margin: 0; }
-.tgt-search { max-width: none; margin-bottom: 12px; }
-.tgt-list { display: grid; gap: 12px; }
-.tcard { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fff; min-width: 0; }
-.tcard.dirty { border-color: var(--blue); }
-.tcard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
-.tcard-head > div { min-width: 0; }
-.tcard-head b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tcard-head small, .tcard-head .by { display: block; color: var(--muted); font-size: 12px; }
-.tcard-head .by { text-align: right; white-space: nowrap; flex: none; }
-.tcard .field { margin-bottom: 10px; }
-.tcard .field:last-child { margin-bottom: 0; }
-.tcard .field label { font-size: 12px; margin-bottom: 4px; }
-.tcard .t-input { width: 100%; }
-.tcard .t-input::placeholder { font-size: 13px; }
+/* Target page: one card per SPG with their stores; a bottom sheet to assign a store and set its target */
+.tg-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: -8px 0 24px; }
+.tg-summary .stat-box { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; min-width: 0; }
+.tg-summary .l { font-size: 12px; color: var(--muted); }
+.tg-summary .v { font-size: 20px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-summary .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.tg-summary .bar { margin-top: 8px; }
+.tg-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.tg-bar h2 { margin: 0; }
+.tg-spgs { display: grid; gap: 12px; }
+.tg-spg { border: 1px solid var(--line); border-radius: 14px; background: #fff; overflow: hidden; }
+.tg-spg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; }
+.tg-spg-head .person { flex: 1; }
+.tg-spg-head .total { text-align: right; flex: none; }
+.tg-spg-head .total b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+.tg-spg-head .total small { font-size: 12px; color: var(--muted); }
+.tg-stores { border-top: 1px solid var(--line); }
+.tg-store { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.tg-store:hover { background: var(--soft); }
+.tg-store > .icon { width: 18px; height: 18px; color: var(--muted); flex: none; }
+.tg-store .grow { flex: 1; min-width: 0; }
+.tg-store .grow b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-store .grow small { display: block; font-size: 12px; color: var(--muted); }
+.tg-store .amt { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tg-store .amt.zero { color: var(--warn); font-weight: 500; font-size: 13px; }
+.tg-foot { padding: 12px 14px 14px; }
+.tg-foot .btn .icon, .tg-bar .btn .icon, .modal-foot .btn .icon { width: 16px; height: 16px; }
+.tg-empty { padding: 0 14px 4px; font-size: 13px; color: var(--muted); }
+.tg-search { max-width: none; margin-bottom: 10px; }
+.tg-free { border: 1px solid var(--line); border-radius: 14px; background: #fff; overflow: hidden; }
+.tg-free .tg-store:last-child { border-bottom: 0; }
+.tg-free .tg-store > .btn { flex: none; pointer-events: none; }
+.tg-free:empty { display: none; }
+.tg-hint { font-size: 13px; color: var(--muted); margin: -6px 0 12px; }
+.tg-manual summary { list-style: none; margin-bottom: 12px; }
+.tg-manual summary::-webkit-details-marker { display: none; }
+.tg-manual[open] summary { background: var(--soft); }
 .tcard-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tcard-nums .monthly-f { grid-column: 1 / -1; }
 .tcard-nums .field { margin-bottom: 0; }
-.tcard .field label small { color: var(--muted); font-weight: 400; }
 .tgt-taken { margin-top: 16px; }
-.tgt-taken summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 8px 0; }
+.tgt-taken summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; font-weight: 600; color: var(--ink); }
+.tgt-taken summary::-webkit-details-marker { display: none; }
+.tgt-taken summary::after { content: '+'; font-size: 20px; line-height: 1; color: var(--muted); }
+.tgt-taken[open] summary::after { content: '−'; }
 .tgt-taken .rows > * { padding: 10px 0; }
-#spgRows .val b { color: var(--ink); }
-.save-bar { position: sticky; bottom: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 -20px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .96); border-top: 1px solid var(--line); }
-@media (min-width: 760px) {
-  .tgt-list { grid-template-columns: 1fr 1fr; }
-  .tgt-search { max-width: 360px; }
+.modal-foot .grow { flex: 1; }
+/* Phones: dialogs marked .sheet slide up from the bottom */
+@media (max-width: 599px) {
+  dialog.modal.sheet { width: 100%; max-width: none; margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92vh; padding-bottom: env(safe-area-inset-bottom); }
+  dialog.modal.sheet[open] { animation: sheet-in .2s ease-out; }
+}
+@keyframes sheet-in { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }
+@media (min-width: 760px) { .tg-spgs { grid-template-columns: 1fr 1fr; align-items: start; } .tg-summary { max-width: 560px; } }
+
+/* Product catalog: shop-style cards (2 per row on phones) */
+.shop-search { max-width: none; margin-bottom: 12px; }
+.shop-filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.shop-brands { flex-wrap: nowrap; overflow-x: auto; margin: 0 -20px; padding: 0 20px 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.shop-brands::-webkit-scrollbar { display: none; }
+.shop-brands .chip { flex: none; white-space: nowrap; font-size: 13px; padding: 6px 12px; border-radius: 99px; }
+.shop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+.pcard-shop { display: flex; flex-direction: column; text-align: left; padding: 0; border: 1px solid var(--card-line); border-radius: 14px; background: #fff; overflow: hidden; cursor: pointer; font: inherit; color: inherit; min-width: 0; transition: box-shadow .15s, transform .15s; }
+.pcard-shop:hover { box-shadow: 0 6px 18px rgba(17, 24, 39, .08); }
+.pcard-shop:active { transform: scale(.98); }
+.pcard-shop:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.pcard-shop .ph { position: relative; aspect-ratio: 1; background: var(--soft); display: grid; place-items: center; }
+.pcard-shop .ph img { width: 78%; height: 78%; object-fit: contain; }
+.pcard-shop .ph .pill { position: absolute; top: 8px; left: 8px; }
+.pcard-shop.off .ph img { opacity: .45; filter: grayscale(1); }
+.pcard-shop .body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.pcard-shop .brand { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pcard-shop .name { font-size: 14px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+.pcard-shop .price { margin-top: auto; padding-top: 4px; font-size: 15px; font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }
+.pcard-shop .sku { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#moreWrap { margin-top: 16px; }
+@media (min-width: 600px) { .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 900px) {
+  .shop-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .shop-filters { flex-direction: row; align-items: center; justify-content: space-between; }
+  .shop-brands { margin: 0; padding: 0 0 2px; flex: 1; min-width: 0; }
+  .shop-search { max-width: 420px; }
+}
+
+/* Store catalog: same cards, with a storefront photo (4:3) */
+.store-grid .pcard-shop .ph { aspect-ratio: 4 / 3; }
+.store-grid .pcard-shop .ph img { width: 100%; height: 100%; object-fit: cover; }
+.store-grid .pcard-shop .name { min-height: 0; }
+.store-grid .pcard-shop .where { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.store-photo-pick { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.store-photo-pick img { width: 120px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: var(--soft); display: block; }
+.store-photo-pick .btn .icon { width: 16px; height: 16px; }
+
+/* In-app confirmation */
+@media (min-width: 600px) { dialog.modal.confirm { width: min(400px, calc(100% - 32px)); } }
+dialog.modal.confirm .modal-body { padding-top: 20px; }
+dialog.modal.confirm h3 { margin: 0 0 6px; font-size: 17px; }
+dialog.modal.confirm p { margin: 0; color: var(--muted); }
+.btn.danger { background: var(--bad); border-color: var(--bad); }
+
+/* Outline button for destructive actions */
+.btn.ghost.danger { background: #fff; color: var(--bad); border-color: #F1C4C7; }
+.btn.ghost.danger:hover { border-color: var(--bad); }
+/* Phones: bigger tap targets */
+@media (max-width: 599px) {
+  .btn.small { min-height: 40px; padding: 8px 14px; }
+  .modal-foot .btn { min-height: 44px; }
 }

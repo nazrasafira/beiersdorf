@@ -32,7 +32,7 @@ Data.ready(function () {
     const rs = e.target.closest('button[data-reset]');
     if (rs) {
       const t = D.user(rs.dataset.reset);
-      if (!confirm(`Reset password ${t.name}?`)) return;
+      if (!await App.confirm(`Password ${t.name} kembali ke password awal dan harus diganti saat login.`, { title: 'Reset password?', ok: 'Reset' })) return;
       const pw = await D.resetPassword(t.id, user.id);
       App.toast(pw ? `Password ${t.name} direset ke: ${pw}` : 'Tidak bisa reset password.');
       return;
@@ -40,7 +40,7 @@ Data.ready(function () {
     const b = e.target.closest('button[data-id]');
     if (!b) return;
     const u = D.user(b.dataset.id);
-    if (u.active && !confirm(`Nonaktifkan ${u.name}? SPG ini tidak bisa login dan tidak masuk peringkat.`)) return;
+    if (u.active && !await App.confirm(`${u.name} tidak bisa login dan tidak masuk peringkat.`, { title: 'Nonaktifkan SPG?', ok: 'Nonaktifkan', danger: true })) return;
     D.setActive(u.id, !u.active);
     App.toast(`${u.name} ${u.active ? 'diaktifkan' : 'dinonaktifkan'}`);
     render();

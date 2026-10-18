@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#ffffff">
 <title>Target</title>
 <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
-<link rel="stylesheet" href="../assets/css/style.css?v=20261019024240">
-<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261019024240","../")</script>
+<link rel="stylesheet" href="../assets/css/style.css?v=20261019030318">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261019030318","../")</script>
 </head>
 <body data-root="../">
 <main>
@@ -15,33 +15,53 @@
     <div><h1>Target</h1><p class="sub" id="sub"></p></div>
     <div class="actions"><button type="button" class="btn ghost small" id="prev" aria-label="Bulan sebelumnya"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><b id="month"></b><button type="button" class="btn ghost small" id="next" aria-label="Bulan berikutnya"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div>
   </div>
-<section>
-  <h2>Per SPG</h2>
-  <div class="rows" id="spgRows"></div>
-  <p class="note">Target SPG adalah jumlah target toko yang dipegangnya.</p>
-</section>
-<section>
-  <div class="tgt-head">
-    <h2>Target per toko</h2>
-    <div class="actions">
-      <button type="button" class="link" id="copyPrev">Salin bulan lalu</button>
-      <button type="button" class="link" id="applyAll">Samakan semua</button>
-    </div>
+<div class="tg-summary" id="summary"></div>
+<section class="flat">
+  <div class="tg-bar">
+    <h2>SPG dan tokonya</h2>
+    <button type="button" class="btn ghost small" id="copyPrev"><span data-icon="calendar"></span>Salin bulan lalu</button>
   </div>
-  <label class="tt-search tgt-search"><span data-icon="search"></span><input type="search" class="input" id="search" placeholder="Cari toko atau SPG..." aria-label="Cari toko atau SPG" autocomplete="off"></label>
-  <div class="tgt-list" id="rows"></div>
-  <p class="empty" id="none" hidden>Tidak ditemukan</p>
+  <div class="tg-spgs" id="spgs"></div>
+</section>
+<section class="flat" id="freeWrap">
+  <div class="tg-bar"><h2 id="freeTitle">Toko tanpa SPG</h2></div>
+  <label class="tt-search tg-search" id="freeSearchWrap" hidden><span data-icon="search"></span><input type="search" class="input" id="freeSearch" placeholder="Cari toko..." aria-label="Cari toko tanpa SPG" autocomplete="off"></label>
+  <div class="tg-free" id="free"></div>
   <details class="tgt-taken" id="takenWrap" hidden>
     <summary id="takenSum"></summary>
     <div class="rows" id="taken"></div>
   </details>
-  <p class="note">Satu toko dipegang satu SPG; satu SPG boleh memegang beberapa toko. Mingguan dan harian dihitung otomatis. Isi hanya jika ingin diubah manual.</p>
 </section>
-<div class="save-bar"><span class="small muted" id="dirty"></span><button type="button" class="btn" id="save">Simpan</button></div>
+<p class="note">Setiap toko dipegang satu SPG. Target SPG = jumlah target toko yang dipegangnya; target harian dan mingguan dihitung dari hari kerja tim.</p>
 </main>
-<script src="../assets/js/config.js?v=20261019024240"></script>
-<script src="../assets/js/data.js?v=20261019024240"></script>
-<script src="../assets/js/common.js?v=20261019024240"></script>
-<script src="../assets/js/pages/leader-target.js?v=20261019024240"></script>
+<dialog class="modal sheet" id="sheet" aria-labelledby="sheetTitle">
+  <form id="sheetForm" autocomplete="off">
+    <div class="modal-head"><h3 id="sheetTitle"></h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
+    <div class="modal-body">
+      <div class="field" id="storeField"><label for="sheetStore">Toko</label><select id="sheetStore" data-placeholder="Cari toko..."></select></div>
+      <div class="field"><label for="sheetSpg">SPG</label><select id="sheetSpg" data-placeholder="Cari SPG..."></select></div>
+      <div class="field"><label for="sheetMonthly">Target bulanan</label><input class="input tg-amount" id="sheetMonthly" required></div>
+      <p class="tg-hint" id="sheetHint"></p>
+      <details class="tg-manual" id="manual">
+        <summary class="btn ghost small">Atur mingguan / harian sendiri</summary>
+        <div class="tcard-nums">
+          <div class="field"><label for="sheetWeekly">Mingguan</label><input class="input" id="sheetWeekly"></div>
+          <div class="field"><label for="sheetDaily">Harian</label><input class="input" id="sheetDaily"></div>
+        </div>
+        <p class="note" style="margin-top:6px">Kosongkan untuk dihitung otomatis.</p>
+      </details>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn ghost danger" id="release" hidden><span data-icon="x"></span>Lepas toko</button>
+      <span class="grow"></span>
+      <button type="button" class="btn ghost" data-close>Batal</button>
+      <button class="btn" type="submit">Simpan</button>
+    </div>
+  </form>
+</dialog>
+<script src="../assets/js/config.js?v=20261019030318"></script>
+<script src="../assets/js/data.js?v=20261019030318"></script>
+<script src="../assets/js/common.js?v=20261019030318"></script>
+<script src="../assets/js/pages/leader-target.js?v=20261019030318"></script>
 </body>
 </html>

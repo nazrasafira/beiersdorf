@@ -58,7 +58,7 @@ const productOut_ = p => ({
   createdBy: p.created_by || null, updatedBy: p.updated_by || null, updatedAt: p.updated_at,
 });
 const storeOut_ = s => ({
-  id: s.id, name: s.name, chain: s.chain, city: s.city, address: s.address, areaId: s.area_id || null, active: s.active,
+  id: s.id, name: s.name, chain: s.chain, city: s.city, address: s.address, areaId: s.area_id || null, active: s.active, image: s.photo || '',
   createdBy: s.created_by || null, updatedBy: s.updated_by || null, updatedAt: s.updated_at,
 });
 

@@ -110,9 +110,9 @@ Data.ready(function () {
     render();
   });
 
-  $('list').addEventListener('click', e => {
+  $('list').addEventListener('click', async e => {
     const b = e.target.closest('[data-del]');
-    if (!b || !confirm('Hapus transaksi ini?')) return;
+    if (!b || !await App.confirm('Transaksi ini dihapus dari laporan.', { title: 'Hapus transaksi?', ok: 'Hapus', danger: true })) return;
     D.removeSale(owner.id, date, b.dataset.del, user.id);
     render();
   });
