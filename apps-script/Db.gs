@@ -9,7 +9,8 @@ const TABLES = {
   Teams: ['id', 'name', 'area_id', 'leader_id'],
   Products: ['id', 'name', 'sku', 'price', 'photo', 'active', 'created_by', 'updated_by', 'updated_at', 'brand', 'barcode'],
   Stores: ['id', 'name', 'chain', 'city', 'address', 'area_id', 'active', 'created_by', 'updated_by', 'updated_at'],
-  Targets: ['user_id', 'month', 'monthly', 'weekly', 'daily', 'set_by', 'set_at'],
+  // Targets are per store and month; user_id = the SPG holding the store that month (one SPG per store)
+  StoreTargets: ['store_id', 'month', 'user_id', 'monthly', 'weekly', 'daily', 'set_by', 'set_at'],
   Shifts: ['id', 'user_id', 'date', 'start', 'end', 'store_id'],
   StoreVisits: ['shift_id', 'store_id', 'from_time'],
   ShiftPhotos: ['shift_id', 'url', 'at'], // photos of the SPG's handwritten notes, taken when ending a shift

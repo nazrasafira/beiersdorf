@@ -30,7 +30,7 @@ Instead of step 3, on an **empty** Sheet: **Laporan SPG → Isi data demo…** a
 2. **Deploy**, then copy the **Web app URL** (`https://script.google.com/macros/s/…/exec`).
 3. Check it: open the URL in a browser; it shows `{"ok":true,"data":{"app":"Laporan SPG",…}}`.
 
-After changing the code later: paste the new files, run **Laporan SPG → 1. Siapkan tab** again (adds new tabs such as `ShiftPhotos`; existing data stays), then **Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy**. The URL stays the same.
+After changing the code later: paste the new files, run **Laporan SPG → 1. Siapkan tab** again (adds new tabs such as `ShiftPhotos` or `StoreTargets`; existing data stays), then **Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy**. The URL stays the same.
 
 ## 4. Point the app to it
 
@@ -46,7 +46,7 @@ Then `python3 tools/bump-version.py`, commit and push; GitHub Pages serves the a
 ## 5. Start using it
 
 1. The Admin logs in, chooses a new password, adds **Supervisors** and **Team Leaders** (Pengguna), products and stores (Katalog).
-2. Team Leaders add their **SPGs** (Tim) and set **targets** (Target). Every new account logs in with the role's starting password (`spg123`, `leader123`, `super123`) and must choose its own.
+2. Team Leaders add their **SPGs** (Tim) give each store to an SPG and set the **store targets** (Target). Every new account logs in with the role's starting password (`spg123`, `leader123`, `super123`) and must choose its own.
 3. SPGs start a shift at a store and record each sale.
 
 ## Good to know

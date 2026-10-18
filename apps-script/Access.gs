@@ -1,8 +1,8 @@
 /**
  * Who may do what (same rules as the demo's data.js):
  * - Admin manages Supervisors and Team Leaders, all products and stores.
- * - Supervisor: SPGs, targets, settings and reports of every team in their area; edits any product/store.
- * - Team Leader: their own team's SPGs, targets, settings and reports; edits only products/stores they added.
+ * - Supervisor: SPGs, store targets, settings and reports of every team in their area; edits any product/store.
+ * - Team Leader: their own team's SPGs, store targets, settings and reports; edits only products/stores they added.
  * - SPG: their own shifts and sales, today (with a shift) or inside the team's edit window.
  */
 function teamIds_(me) {

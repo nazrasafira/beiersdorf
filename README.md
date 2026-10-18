@@ -12,7 +12,7 @@ The app starts with the **Admin** account, the product catalog and the stores; t
 |------|-------|----------|----------|
 | Admin | `0811 0000 0001` | `admin123` | Pengguna |
 
-Log in with **phone number + password** (any format works: `0811 0000 0001`, `62811…`, `+62 811-…`). The Admin adds Supervisors and Team Leaders (Pengguna); Team Leaders add their SPGs (Tim) and set targets. New accounts start with `super123`, `leader123` or `spg123` and must choose their own password at the first login.
+Log in with **phone number + password** (any format works: `0811 0000 0001`, `62811…`, `+62 811-…`). The Admin adds Supervisors and Team Leaders (Pengguna); Team Leaders add their SPGs (Tim), give each store to an SPG and set the store targets (Target). New accounts start with `super123`, `leader123` or `spg123` and must choose their own password at the first login.
 
 - **Products**: the 199 SKUs of the client's file *SOH OFFTAKE YCA & LSI PJR AGUST'26 FILE BARU 199 SKU* (KODE SKU, Nama SKU di HO, Subbrand, price, barcode), kept in `assets/js/data.js`.
 - **Stores**: the 16 NMA stores (Yogya Cimanggu, LSI Pajajaran, AEON Sentul City, … Yogya Ciranjang).
@@ -30,7 +30,7 @@ In demo mode (`backend: 'demo'`) changes are saved in your browser; clear the si
 | `spg/riwayat.html` — report history per month | SPG |
 | `leader/dashboard.html` — team summary, SPG ranking, missing reports, products, CSV export, monthly Excel in the client's SOH / offtake format | Leader, Supervisor |
 | `leader/laporan.html` — team reports, detail, unlock | Leader, Supervisor |
-| `leader/target.html` — monthly targets, auto weekly/daily, overrides | Leader, Supervisor |
+| `leader/target.html` — per month: which SPG holds each store and the store's target (auto weekly/daily, overrides); an SPG's target is the sum of their stores | Leader, Supervisor |
 | `leader/tim.html` — add / deactivate / reset SPGs | Leader, Supervisor |
 | `leader/pengaturan.html` — working days, holidays, edit window | Leader, Supervisor |
 | `supervisor/dashboard.html` — team comparison, top SPGs in the area | Supervisor |
@@ -39,6 +39,10 @@ In demo mode (`backend: 'demo'`) changes are saved in your browser; clear the si
 | `admin/pengguna.html` — add / deactivate / reset Supervisors and Team Leaders | Admin |
 
 See [`PLAN.md`](PLAN.md) for the product plan, [`IMPLEMENTATION.md`](IMPLEMENTATION.md) for how the prototype is built, [`IMPLEMENTATION-GOOGLE-SHEETS.md`](IMPLEMENTATION-GOOGLE-SHEETS.md) for the plan to run it on Google Sheets, and [`IMPLEMENTATION-WEB.md`](IMPLEMENTATION-WEB.md) for the Laravel + MySQL web version.
+
+## Targets
+
+Targets are set **per store and month** (Target page). Each store is held by one SPG that month; an SPG may hold several stores, and their target is the sum of those stores' targets (daily = each store's monthly target over the team's working days, unless overridden). A store held by an active SPG of another team can't be taken; a store becomes free again when its SPG is removed from it or deactivated. **Salin bulan lalu** copies last month's SPGs and targets.
 
 ## Google Sheets backend
 
@@ -57,4 +61,4 @@ After editing any page, run `python3 tools/bump-version.py` before committing. I
 
 ## SOH / offtake Excel
 
-Dashboard Tim → **Laporan SOH & offtake** → pick a month → **Export Excel** (`assets/js/soh-export.js`, ExcelJS loaded from cdnjs on first use). Same layout as the client's monthly file: one row per SKU (NO, KODE SKU, Nama SKU di HO, Subbrand, price, barcode), then for each store the team sold at that month a block with the SPGs' names, the store name and Qty / Val / SOH / Val SOH, then the totals (all, and per focus brand) with target and achievement. Qty comes from the recorded sales; Val, Val SOH and the totals are Excel formulas. SOH is not recorded in the app, so those columns are left empty to fill in. An SPG's monthly target is counted under the store where she sold the most that month.
+Dashboard Tim → **Laporan SOH & offtake** → pick a month → **Export Excel** (`assets/js/soh-export.js`, ExcelJS loaded from cdnjs on first use). Same layout as the client's monthly file: one row per SKU (NO, KODE SKU, Nama SKU di HO, Subbrand, price, barcode), then for each store the team sold at or held that month a block with the SPGs' names, the store name and Qty / Val / SOH / Val SOH, then the totals (all, and per focus brand) with target and achievement. Qty comes from the recorded sales; Val, Val SOH and the totals are Excel formulas. SOH is not recorded in the app, so those columns are left empty to fill in. Each block's target is that store's monthly target.

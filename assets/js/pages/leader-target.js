@@ -9,6 +9,16 @@ Data.ready(function () {
   if (!/^\d{4}-\d{2}$/.test(mk)) mk = D.monthKey(D.TODAY);
 
   const fmtInput = n => n ? App.num(n) : '';
+  const firstName = u => u.name.split(' ')[0];
+
+  // A store held by an active SPG of another team can't be given out from this page
+  function holderOf(storeId, month) {
+    const t = D.storeTarget(storeId, month);
+    if (!t) return { t: null, holder: null, taken: false };
+    const holder = t.userId ? D.user(t.userId) : null;
+    const taken = !!t.taken || (!!holder && holder.teamId !== teamId && holder.active);
+    return { t, holder, taken };
+  }
 
   function render() {
     const spgs = D.spgsOf(teamId);
@@ -18,19 +28,62 @@ Data.ready(function () {
     $('month').textContent = App.monthName(mk);
     $('sub').textContent = `Tim ${D.team(teamId).name} · ${wd} hari kerja (${days})`;
 
-    $('rows').innerHTML = spgs.map(u => {
-      const t = D.targetRow(u.id, mk) || {};
-      const setBy = t.setBy ? `${App.esc(D.user(t.setBy).name.split(' ')[0])}, ${App.dateMid(t.setAt)}` : '–';
-      return `<tr data-id="${u.id}">
-        <td><b>${App.esc(u.name)}</b><small>${App.esc(D.storeLabel(u))}</small></td>
-        <td class="num"><input class="input t-input monthly" inputmode="numeric" value="${fmtInput(t.monthly)}" placeholder="0" aria-label="Target bulanan ${App.esc(u.name)}"></td>
-        <td class="num"><input class="input t-input weekly ${t.weekly ? 'override' : ''}" inputmode="numeric" value="${fmtInput(t.weekly)}" aria-label="Target mingguan ${App.esc(u.name)}"></td>
-        <td class="num"><input class="input t-input daily ${t.daily ? 'override' : ''}" inputmode="numeric" value="${fmtInput(t.daily)}" aria-label="Target harian ${App.esc(u.name)}"></td>
+    // Active stores, plus inactive ones that still have a target this month; own team's first, then free, then taken
+    const list = D.stores(true).map(st => ({ st, ...holderOf(st.id, mk) }))
+      .filter(x => x.st.active || (x.t && !x.taken))
+      .map(x => ({ ...x, rank: x.taken ? 2 : x.holder ? 0 : 1 }))
+      .sort((a, b) => a.rank - b.rank || (a.holder && b.holder ? a.holder.name.localeCompare(b.holder.name) : 0) || a.st.name.localeCompare(b.st.name));
+
+    $('rows').innerHTML = list.map(({ st, t, holder, taken }) => {
+      const place = App.esc([st.chain, st.city].filter(Boolean).join(' · '));
+      const storeCell = `<td><b>${App.esc(st.name)}</b>${place ? `<small>${place}</small>` : ''}</td>`;
+      if (taken) {
+        const who = holder ? `${App.esc(holder.name)} · Tim ${App.esc((D.team(holder.teamId) || {}).name || '')}` : 'SPG tim lain';
+        return `<tr class="taken">${storeCell}<td colspan="5" class="small muted">Dipegang ${who}</td></tr>`;
+      }
+      const opts = spgs.slice();
+      if (holder && !opts.includes(holder)) opts.push(holder); // deactivated SPG who still holds it
+      const setBy = t && t.setBy && D.user(t.setBy) ? `${App.esc(firstName(D.user(t.setBy)))}, ${App.dateMid(t.setAt)}` : '–';
+      const v = t || {};
+      return `<tr data-store="${st.id}" data-had="${t ? 1 : 0}">
+        ${storeCell}
+        <td><select class="input spg" aria-label="SPG untuk ${App.esc(st.name)}">
+          <option value="">– Belum ada –</option>
+          ${opts.map(u => `<option value="${u.id}" ${holder && holder.id === u.id ? 'selected' : ''}>${App.esc(u.name)}${u.active ? '' : ' (nonaktif)'}</option>`).join('')}
+        </select></td>
+        <td class="num"><input class="input t-input monthly" inputmode="numeric" value="${fmtInput(v.monthly)}" placeholder="0" aria-label="Target bulanan ${App.esc(st.name)}"></td>
+        <td class="num"><input class="input t-input weekly ${v.weekly ? 'override' : ''}" inputmode="numeric" value="${fmtInput(v.weekly)}" aria-label="Target mingguan ${App.esc(st.name)}"></td>
+        <td class="num"><input class="input t-input daily ${v.daily ? 'override' : ''}" inputmode="numeric" value="${fmtInput(v.daily)}" aria-label="Target harian ${App.esc(st.name)}"></td>
         <td class="small muted">${setBy}</td>
       </tr>`;
-    }).join('') || '<tr><td colspan="5" class="empty">Belum ada SPG aktif di tim ini.</td></tr>';
-    $('rows').querySelectorAll('tr[data-id]').forEach(updatePlaceholders);
-    App.tableTools($('rows').closest('table'), { placeholder: 'Cari SPG atau toko...' });
+    }).join('') || '<tr><td colspan="6" class="empty">Belum ada toko. Tambahkan di Katalog → Toko.</td></tr>';
+    $('rows').querySelectorAll('tr[data-store]').forEach(updatePlaceholders);
+    App.tableTools($('rows').closest('table'), {
+      placeholder: 'Cari toko atau SPG...', pageSize: 50,
+      text: tr => tr.cells[0].textContent + ' ' + (tr.querySelector('.spg') ? tr.querySelector('.spg').selectedOptions[0].text : tr.textContent),
+    });
+    renderSpgs();
+  }
+
+  // Per SPG: the stores chosen on this page and the sum of their monthly targets (follows the inputs before saving)
+  function renderSpgs() {
+    const by = {};
+    document.querySelectorAll('#rows tr[data-store]').forEach(tr => {
+      const id = tr.querySelector('.spg').value;
+      if (!id) return;
+      const b = by[id] || (by[id] = { stores: [], monthly: 0 });
+      b.stores.push(tr.cells[0].querySelector('b').textContent);
+      b.monthly += App.parseNum(tr.querySelector('.monthly').value);
+    });
+    const spgs = D.spgsOf(teamId).concat(Object.keys(by).map(D.user).filter(u => u && !u.active));
+    $('spgRows').innerHTML = spgs.map(u => {
+      const b = by[u.id];
+      return `<tr>
+        <td>${App.person(u, u.active ? '' : 'nonaktif')}</td>
+        <td class="small">${b ? b.stores.map(App.esc).join(', ') : '<span class="pill warn">Belum ada toko</span>'}</td>
+        <td class="num"><b>${b ? App.rp(b.monthly) : '–'}</b></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="3" class="empty">Belum ada SPG aktif di tim ini.</td></tr>';
   }
 
   function updatePlaceholders(tr) {
@@ -41,9 +94,10 @@ Data.ready(function () {
 
   $('rows').addEventListener('input', e => {
     const tr = e.target.closest('tr');
-    if (e.target.classList.contains('monthly')) updatePlaceholders(tr);
-    else e.target.classList.toggle('override', App.parseNum(e.target.value) > 0);
+    if (e.target.classList.contains('monthly')) { updatePlaceholders(tr); renderSpgs(); }
+    else if (e.target.classList.contains('t-input')) e.target.classList.toggle('override', App.parseNum(e.target.value) > 0);
   });
+  $('rows').addEventListener('change', e => { if (e.target.classList.contains('spg')) renderSpgs(); });
   $('rows').addEventListener('focusout', e => {
     if (e.target.matches('.t-input')) e.target.value = fmtInput(App.parseNum(e.target.value));
   });
@@ -52,20 +106,24 @@ Data.ready(function () {
   $('next').addEventListener('click', () => { mk = D.addMonths(mk, 1); render(); });
 
   $('applyAll').addEventListener('click', () => {
-    const inputs = [...document.querySelectorAll('#rows .monthly')];
-    const first = inputs.find(i => App.parseNum(i.value));
-    if (!first) { App.toast('Isi target bulanan di salah satu baris dulu.'); return; }
-    inputs.forEach(i => { i.value = first.value; updatePlaceholders(i.closest('tr')); });
-    App.toast('Target ' + first.value + ' diterapkan ke semua SPG. Klik Simpan.');
+    const rows = [...document.querySelectorAll('#rows tr[data-store]')].filter(tr => tr.querySelector('.spg').value);
+    const first = rows.map(tr => tr.querySelector('.monthly')).find(i => App.parseNum(i.value));
+    if (!first) { App.toast('Pilih SPG dan isi target bulanan di salah satu toko dulu.'); return; }
+    rows.forEach(tr => { tr.querySelector('.monthly').value = first.value; updatePlaceholders(tr); });
+    renderSpgs();
+    App.toast('Target ' + first.value + ' diterapkan ke semua toko yang punya SPG. Klik Simpan.');
   });
 
+  // Last month's SPG and targets, for the stores still free on this page
   $('copyPrev').addEventListener('click', () => {
     const prev = D.addMonths(mk, -1);
     let n = 0;
-    document.querySelectorAll('#rows tr[data-id]').forEach(tr => {
-      const t = D.targetRow(tr.dataset.id, prev);
-      if (!t) return;
+    document.querySelectorAll('#rows tr[data-store]').forEach(tr => {
+      const { t, holder } = holderOf(tr.dataset.store, prev);
+      const sel = tr.querySelector('.spg');
+      if (!t || !holder || !holder.active || holder.teamId !== teamId || ![...sel.options].some(o => o.value === holder.id)) return;
       n++;
+      sel.value = holder.id;
       tr.querySelector('.monthly').value = fmtInput(t.monthly);
       tr.querySelector('.weekly').value = fmtInput(t.weekly);
       tr.querySelector('.daily').value = fmtInput(t.daily);
@@ -73,16 +131,29 @@ Data.ready(function () {
       tr.querySelector('.daily').classList.toggle('override', !!t.daily);
       updatePlaceholders(tr);
     });
-    App.toast(n ? `Target ${App.monthName(prev)} disalin. Klik Simpan.` : `Tidak ada target di ${App.monthName(prev)}.`);
+    renderSpgs();
+    App.toast(n ? `Toko dan target ${App.monthName(prev)} disalin. Klik Simpan.` : `Tidak ada target di ${App.monthName(prev)}.`);
   });
 
   $('save').addEventListener('click', () => {
-    const rows = [...document.querySelectorAll('#rows tr[data-id]')].map(tr => ({
-      userId: tr.dataset.id, mk,
-      monthly: App.parseNum(tr.querySelector('.monthly').value),
-      weekly: App.parseNum(tr.querySelector('.weekly').value),
-      daily: App.parseNum(tr.querySelector('.daily').value),
-    }));
+    const rows = [];
+    let missing = null;
+    document.querySelectorAll('#rows tr[data-store]').forEach(tr => {
+      const r = {
+        storeId: tr.dataset.store, mk, userId: tr.querySelector('.spg').value || null,
+        monthly: App.parseNum(tr.querySelector('.monthly').value),
+        weekly: App.parseNum(tr.querySelector('.weekly').value),
+        daily: App.parseNum(tr.querySelector('.daily').value),
+      };
+      if (!r.userId && (r.monthly || r.weekly || r.daily)) missing = missing || tr;
+      if (r.userId || tr.dataset.had === '1') rows.push(r); // a store that had an SPG and now has none is released
+    });
+    if (missing) {
+      App.toast('Pilih SPG untuk ' + missing.cells[0].querySelector('b').textContent + ' atau kosongkan targetnya.');
+      missing.querySelector('.spg').focus();
+      return;
+    }
+    if (!rows.length) { App.toast('Pilih SPG untuk minimal satu toko.'); return; }
     D.saveTargets(rows, user.id);
     App.toast('Target ' + App.monthName(mk) + ' disimpan.');
     render();

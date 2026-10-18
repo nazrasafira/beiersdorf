@@ -283,14 +283,14 @@
   function seed() {
     const stamp = { createdBy: 'u-admin', updatedBy: 'u-admin', updatedAt: '2026-10-16' };
     state = {
-      version: 6,
+      version: 7,
       products: PRODUCTS.map(p => ({ ...p, active: true, image: 'assets/products/placeholder.svg', ...stamp })),
       stores: STORES.map(st => ({ ...st, areaId: 'a1', active: true, ...stamp })),
       activity: [],
       areas: [{ id: 'a1', name: 'Jabodetabek' }],
       teams: [],
       users: [{ id: 'u-admin', username: 'admin', password: 'admin123', name: 'Admin', role: 'admin', phone: '081100000001', photo: 'assets/avatars/admin.svg', active: true }],
-      targets: {}, reports: {}, settings: {}, shifts: {},
+      storeTargets: {}, reports: {}, settings: {}, shifts: {},
     };
     memo = {};
     return state;
@@ -382,22 +382,46 @@
     return memo[key];
   }
 
-  /* ---------- Targets ---------- */
-  const targetRow = (userId, mk) => state.targets[userId + '|' + mk] || null;
-
+  /* ---------- Targets: set per store and month; the SPG holding a store that month gets its target ---------- */
+  // state.storeTargets["storeId|month"] = { userId, monthly, weekly, daily, setBy, setAt }; live mode may also send
+  // { taken: true } for a store held by an SPG of another team.
+  const storeTarget = (storeId, mk) => (state.storeTargets || {})[storeId + '|' + mk] || null;
+  // Stores an SPG holds in a month, with their targets
+  function heldStores(userId, mk) {
+    const key = 'held|' + mk;
+    if (!memo[key]) {
+      const map = {};
+      Object.keys(state.storeTargets || {}).forEach(k => {
+        const [storeId, m] = k.split('|'), t = state.storeTargets[k];
+        if (m === mk && t.userId) (map[t.userId] = map[t.userId] || []).push({ storeId, ...t });
+      });
+      memo[key] = map;
+    }
+    return memo[key][userId] || [];
+  }
+  // An SPG's month target: the sum of the stores they hold (null when they hold none)
+  function targetRow(userId, mk) {
+    const list = heldStores(userId, mk);
+    return list.length ? { monthly: list.reduce((a, t) => a + (t.monthly || 0), 0), stores: list } : null;
+  }
+  // One store's share of a day: its daily override, or its monthly target spread over the working days of the SPG's team
+  function storeDay(t, teamId, date) {
+    if (!isWorkingDay(teamId, date)) return 0;
+    if (t.daily) return t.daily;
+    const wd = workingDaysInMonth(teamId, monthKey(date));
+    return wd ? (t.monthly || 0) / wd : 0;
+  }
   function dailyTarget(userId, date) {
     const u = user(userId);
-    if (!isWorkingDay(u.teamId, date)) return 0;
-    const t = targetRow(userId, monthKey(date));
-    if (!t) return 0;
-    if (t.daily) return t.daily;
-    const wd = workingDaysInMonth(u.teamId, monthKey(date));
-    return wd ? t.monthly / wd : 0;
+    return heldStores(userId, monthKey(date)).reduce((a, t) => a + storeDay(t, u.teamId, date), 0);
   }
+  // Stores with a weekly override count it; the others add up their days of the week
   function weekTarget(userId, date) {
-    const t = targetRow(userId, monthKey(date));
-    if (t && t.weekly) return t.weekly;
-    return eachDay(weekStart(date), weekEnd(date)).reduce((a, d) => a + dailyTarget(userId, d), 0);
+    const u = user(userId);
+    const fixed = heldStores(userId, monthKey(date)).filter(t => t.weekly);
+    const skip = fixed.map(t => t.storeId);
+    return fixed.reduce((a, t) => a + t.weekly, 0) + eachDay(weekStart(date), weekEnd(date)).reduce((a, d) =>
+      a + heldStores(userId, monthKey(d)).filter(t => !skip.includes(t.storeId)).reduce((b, t) => b + storeDay(t, u.teamId, d), 0), 0);
   }
   function periodTarget(userId, period, date) {
     if (period === 'day') return dailyTarget(userId, date);
@@ -405,18 +429,27 @@
     const t = targetRow(userId, monthKey(date));
     return t ? t.monthly : 0;
   }
+  // A store's target for one day (0 when no SPG holds it that month, or with userIds: none of them)
+  function storeDailyTarget(storeId, date, userIds) {
+    const t = storeTarget(storeId, monthKey(date)), u = t && t.userId && user(t.userId);
+    return u && (!userIds || userIds.includes(u.id)) ? storeDay(t, u.teamId, date) : 0;
+  }
   // Preview of derived targets for the target page
   function targetPreview(teamId, mk, monthly) {
     const wd = workingDaysInMonth(teamId, mk);
     const daily = wd ? monthly / wd : 0;
     return { workDays: wd, daily, weekly: daily * state.settings[teamId].workingDays.length };
   }
+  // rows: { storeId, mk, userId (null = no SPG), monthly, weekly, daily }
   function saveTargets(rows, by) {
+    if (!state.storeTargets) state.storeTargets = {};
     rows.forEach(r => {
-      state.targets[r.userId + '|' + r.mk] = {
-        monthly: r.monthly || 0, weekly: r.weekly || null, daily: r.daily || null, setBy: by, setAt: TODAY,
-      };
+      if (!r.storeId) return; // per-SPG targets of the old version, left in an offline queue
+      const key = r.storeId + '|' + r.mk;
+      if (!r.userId) delete state.storeTargets[key];
+      else state.storeTargets[key] = { userId: r.userId, monthly: r.monthly || 0, weekly: r.weekly || null, daily: r.daily || null, setBy: by, setAt: TODAY };
     });
+    memo = {};
     persist();
   }
 
@@ -614,7 +647,7 @@
   }
 
   // Daily totals for a group of SPGs: one point per working day (actual sales vs. summed daily target)
-  // With storeId: only sales made at that store, and no target (targets are per SPG, not per store)
+  // With storeId: only sales made at that store, against that store's target
   function dailySeries(userIds, teamIds, from, to, storeId) {
     const amount = r => !r ? 0 : !storeId ? r.total
       : getTransactions(r).filter(t => t.storeId === storeId).reduce((a, t) => a + t.qty * t.price, 0);
@@ -623,7 +656,7 @@
       .map(d => ({
         date: d,
         actual: userIds.reduce((a, id) => a + amount(getReport(id, d)), 0),
-        target: storeId ? 0 : userIds.reduce((a, id) => a + dailyTarget(id, d), 0),
+        target: storeId ? storeDailyTarget(storeId, d, userIds) : userIds.reduce((a, id) => a + dailyTarget(id, d), 0),
       }));
   }
   // Chart window per period: last 14 days for "today", otherwise the period itself (up to today)
@@ -772,7 +805,7 @@
   const CACHE_FRESH_MS = 5 * 60 * 1000;  // younger cache: show it at once and refresh in the background
   let lastError = '';
   let writes = 0;                        // local writes since the page opened (see refreshCache)
-  const emptyState = () => ({ me: null, areas: [], teams: [], users: [], products: [], stores: [], targets: {}, reports: {}, settings: {}, shifts: {}, activity: [] });
+  const emptyState = () => ({ me: null, areas: [], teams: [], users: [], products: [], stores: [], storeTargets: {}, reports: {}, settings: {}, shifts: {}, activity: [] });
   const notify = msg => { if (window.App && App.toast) App.toast(msg); };
   const siteRoot = () => (document.body && document.body.dataset.root) || '';
   // Page addresses as written in the pages ('spg/laporan.html'); a server with clean URLs can set cleanUrls
@@ -981,7 +1014,9 @@
     saveTargets(rows, by) {
       saveTargets(rows, by);
       const n = v => (v ? Math.round(v) : null);
-      enqueue('saveTargets', [rows, by], 'targets.save', { rows: rows.map(r => ({ userId: r.userId, mk: r.mk, monthly: n(r.monthly) || 0, weekly: n(r.weekly), daily: n(r.daily) })) });
+      enqueue('saveTargets', [rows, by], 'targets.save', {
+        rows: rows.map(r => ({ storeId: r.storeId, mk: r.mk, userId: r.userId || null, monthly: n(r.monthly) || 0, weekly: n(r.weekly), daily: n(r.daily) })),
+      });
     },
     saveSettings(teamId, st) {
       saveSettings(teamId, st);
@@ -1049,7 +1084,7 @@
     if (LIVE) { state = emptyState(); return; }
     const raw = lsGet(STORE_KEY);
     if (raw) {
-      try { const s = JSON.parse(raw); if (s && s.version === 6) { state = s; return; } } catch (e) { /* reseed */ }
+      try { const s = JSON.parse(raw); if (s && s.version === 7) { state = s; return; } } catch (e) { /* reseed */ }
     }
     seed();
     persist();
@@ -1069,7 +1104,7 @@
     login, logout, currentUser,
     user, team, teams, area, spgsOf, products, product, canView,
     isWorkingDay, workingDays, workingDaysInMonth,
-    targetRow, dailyTarget, periodTarget, targetPreview, saveTargets,
+    targetRow, dailyTarget, periodTarget, targetPreview, saveTargets, storeTarget, heldStores, storeDailyTarget,
     getReport, saveReport, setUnlocked, isLocked, canEdit, listReports,
     progress, level, nextLevel, leaderboard, streak, teamSummary, areaSummary, dailySeries, chartRange,
     addSpg, setActive, getSettings, saveSettings, saveProduct, reset,

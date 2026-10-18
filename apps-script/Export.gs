@@ -1,7 +1,7 @@
 /**
  * Daily sales recap per SPG for a date range (the page turns it into an Excel file, assets/js/recap-export.js):
  * each day's sales per SPG, OFF on days off, MISSING when a working day has no report, then the total, the target
- * (monthly targets of the months in the range) and the achievement, best first.
+ * (monthly targets of the stores the SPG holds in the months of the range) and the achievement, best first.
  * Team Leader: own team; Supervisor: teams in their area; Admin: any team or all.
  */
 const DAY_NAMES_ = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -48,7 +48,8 @@ function dailyRecap_(me, req) {
   rows_('DayReports').forEach(r => { if (r.no_sales && ids[r.user_id]) noSales[r.user_id + '|' + r.date] = true; });
   const months = {};
   days.forEach(d => { months[d.slice(0, 7)] = true; });
-  rows_('Targets').forEach(t => { if (ids[t.user_id] && months[t.month]) target[t.user_id] = (target[t.user_id] || 0) + (t.monthly || 0); });
+  // An SPG's target: the monthly targets of the stores they hold in those months
+  rows_('StoreTargets').forEach(t => { if (ids[t.user_id] && months[t.month]) target[t.user_id] = (target[t.user_id] || 0) + (t.monthly || 0); });
 
   const today = today_();
   const teamName = {};

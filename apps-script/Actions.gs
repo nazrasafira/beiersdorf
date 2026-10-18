@@ -167,27 +167,44 @@ function actUnlock_(req, me) {
 }
 
 /* ---------- Targets and team settings ---------- */
+/**
+ * Store targets for a month: rows { storeId, mk, userId, monthly, weekly, daily }.
+ * Each store is held by one SPG per month (userId null = no SPG); an SPG may hold several stores and their
+ * target is the sum of those stores. A store held by an active SPG the user doesn't manage can't be taken.
+ */
 function actTargets_(req, me) {
-  const rowsIn = Array.isArray(req.rows) ? req.rows.slice(0, 200) : [];
+  if (me.role !== 'leader' && me.role !== 'supervisor') fail_('Kamu tidak punya akses.', 403);
+  const rowsIn = Array.isArray(req.rows) ? req.rows.slice(0, 300) : [];
   if (!rowsIn.length) fail_('Tidak ada target.');
-  rowsIn.forEach(r => {
-    if (!canManageUser_(me, byId_('Users', r.userId))) fail_('Kamu hanya bisa mengatur target SPG timmu.', 403);
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(r.mk))) fail_('Bulan tidak valid.');
-  });
-  const add = [];
-  rowsIn.forEach(r => {
+  const seen = {};
+  const checked = rowsIn.map(r => {
+    const mk = String(r.mk || '');
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mk)) fail_('Bulan tidak valid.');
+    const st = byId_('Stores', r.storeId) || fail_('Toko tidak ditemukan.');
+    if (seen[st.id + '|' + mk]) fail_('Toko ' + st.name + ' muncul dua kali.');
+    seen[st.id + '|' + mk] = true;
+    const holder = r.userId ? byId_('Users', r.userId) : null;
+    if (r.userId && (!holder || holder.role !== 'spg' || !canManageUser_(me, holder))) fail_('Kamu hanya bisa memberi toko ke SPG timmu.', 403);
+    const cur = find_('StoreTargets', t => t.store_id === st.id && t.month === mk);
+    const curHolder = cur && cur.user_id ? byId_('Users', cur.user_id) : null;
+    if (curHolder && curHolder.active && !canManageUser_(me, curHolder)) fail_('Toko ' + st.name + ' sudah dipegang SPG tim lain.', 409);
     const vals = {
+      user_id: holder ? holder.id : '',
       monthly: int_(r.monthly || 0, 0, 1e11, 'Target tidak valid.'),
       weekly: r.weekly ? int_(r.weekly, 0, 1e11, 'Target tidak valid.') : '',
       daily: r.daily ? int_(r.daily, 0, 1e11, 'Target tidak valid.') : '',
       set_by: me.id, set_at: today_(),
     };
-    const cur = find_('Targets', t => t.user_id === String(r.userId) && t.month === r.mk);
-    if (cur) save_('Targets', Object.assign(cur, vals));
-    else add.push(Object.assign({ user_id: String(r.userId), month: r.mk }, vals));
+    if (!holder && (vals.monthly || vals.weekly || vals.daily)) fail_('Pilih SPG untuk toko ' + st.name + '.');
+    return { st, mk, cur, vals };
   });
-  append_('Targets', add);
-  log_(me, 'atur', 'target', '', rowsIn.length + ' SPG · ' + rowsIn[0].mk);
+  const add = [];
+  checked.forEach(c => {
+    if (c.cur) save_('StoreTargets', Object.assign(c.cur, c.vals));
+    else if (c.vals.user_id) add.push(Object.assign({ store_id: c.st.id, month: c.mk }, c.vals));
+  });
+  append_('StoreTargets', add);
+  log_(me, 'atur', 'target', '', checked.length + ' toko · ' + checked[0].mk);
   return {};
 }
 

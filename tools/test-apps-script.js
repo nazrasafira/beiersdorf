@@ -89,7 +89,7 @@ test('what each role sees', () => {
   const budi = g.as('budi', 'bootstrap').data;
   assert.equal(budi.teams.length, 5);
   const admin = g.as('admin', 'bootstrap').data;
-  assert.deepEqual([Object.keys(admin.reports).length, Object.keys(admin.targets).length], [0, 0]);
+  assert.deepEqual([Object.keys(admin.reports).length, Object.keys(admin.storeTargets).length], [0, 0]);
 });
 
 test('sales: shift needed today, idempotent, totals and no-sales', () => {
@@ -157,10 +157,8 @@ test('who adds whom', () => {
 
 test('targets and settings: own team only', () => {
   const g = app();
-  assert.ok(g.as('rina', 'targets.save', { rows: [{ userId: 'u-sari', mk: '2026-11', monthly: 40000000 }] }).ok);
-  assert.equal(g.as('sari', 'bootstrap').data.targets['u-sari|2026-11'].monthly, 40000000);
   const other = g.rows('Users').find(u => u.role === 'spg' && u.team_id === 't2');
-  assert.equal(g.as('rina', 'targets.save', { rows: [{ userId: other.id, mk: '2026-11', monthly: 1 }] }).status, 403);
+  assert.equal(g.as('rina', 'targets.save', { rows: [{ storeId: 'st1', userId: other.id, mk: '2026-11', monthly: 1 }] }).status, 403);
   const body = { teamId: 't1', workingDays: [1, 2, 3, 4, 5], editDays: 3, reminder: '19:30', holidays: [{ date: '2026-12-25', name: 'Natal', working: false }] };
   assert.equal(g.as('andi', 'settings.save', body).status, 403);
   assert.ok(g.as('rina', 'settings.save', body).ok);
@@ -239,6 +237,39 @@ test('starting data: Admin, 199 products with subbrand and barcode, 16 stores', 
   assert.deepEqual([saved.data.product.brand, saved.data.product.barcode, saved.data.product.price], ['NIVEA BODY', '123', 23000]);
 });
 
+test('targets are per store: one SPG per store, an SPG holds several', () => {
+  const g = app();
+  const mk = '2026-11';
+  assert.ok(g.as('rina', 'targets.save', { rows: [
+    { storeId: 'st1', userId: 'u-sari', mk, monthly: 30000000 },
+    { storeId: 'st2', userId: 'u-sari', mk, monthly: 10000000, daily: 500000 },
+  ] }).ok);
+  const mine = g.as('sari', 'bootstrap').data.storeTargets;
+  assert.deepEqual([mine['st1|' + mk].userId, mine['st2|' + mk].userId, mine['st2|' + mk].daily], ['u-sari', 'u-sari', 500000]);
+  // Another team sees the stores as taken, without the numbers, and can't take them
+  const andi = g.as('andi', 'bootstrap').data;
+  assert.deepEqual(andi.storeTargets['st1|' + mk], { userId: null, taken: true });
+  const other = g.rows('Users').find(u => u.role === 'spg' && u.team_id === 't2' && u.active);
+  assert.equal(g.as('andi', 'targets.save', { rows: [{ storeId: 'st1', userId: other.id, mk, monthly: 1 }] }).status, 409);
+  // A target needs an SPG; the same store twice is refused; unknown store
+  assert.equal(g.as('rina', 'targets.save', { rows: [{ storeId: 'st3', userId: null, mk, monthly: 5 }] }).status, 422);
+  assert.equal(g.as('rina', 'targets.save', { rows: [{ storeId: 'st3', userId: 'u-sari', mk }, { storeId: 'st3', userId: 'u-dewi', mk }] }).status, 422);
+  assert.equal(g.as('rina', 'targets.save', { rows: [{ storeId: 'nope', userId: 'u-sari', mk }] }).status, 422);
+  // Moving a store to a teammate replaces the row (still one SPG per store)
+  assert.ok(g.as('rina', 'targets.save', { rows: [{ storeId: 'st2', userId: 'u-dewi', mk, monthly: 12000000 }] }).ok);
+  g.fresh();
+  assert.equal(g.rows('StoreTargets').filter(t => t.store_id === 'st2' && t.month === mk).map(t => t.user_id).join(), 'u-dewi');
+  // Released stores (no SPG) and stores of a deactivated SPG are free for other teams
+  assert.ok(g.as('rina', 'targets.save', { rows: [{ storeId: 'st2', userId: null, mk }] }).ok);
+  assert.ok(g.as('andi', 'targets.save', { rows: [{ storeId: 'st2', userId: other.id, mk, monthly: 2 }] }).ok);
+  assert.ok(g.as('rina', 'user.setActive', { userId: 'u-sari', active: false }).ok);
+  assert.ok(g.as('andi', 'targets.save', { rows: [{ storeId: 'st1', userId: other.id, mk, monthly: 3 }] }).ok);
+  // Supervisor may move stores between teams in the area; SPGs and admins may not set targets
+  assert.ok(g.as('budi', 'targets.save', { rows: [{ storeId: 'st1', userId: 'u-dewi', mk, monthly: 4 }] }).ok);
+  assert.equal(g.as('dewi', 'targets.save', { rows: [{ storeId: 'st5', userId: 'u-dewi', mk }] }).status, 403);
+  assert.equal(g.as('admin', 'targets.save', { rows: [{ storeId: 'st5', userId: 'u-dewi', mk }] }).status, 403);
+});
+
 test('daily recap: days, totals, OFF and missing days, sorted by achievement', () => {
   const g = app();
   const r = g.as('rina', 'report.dailyRecap', { from: '2026-10-01', to: '2026-10-11' });
@@ -248,13 +279,14 @@ test('daily recap: days, totals, OFF and missing days, sorted by achievement', (
   // 4 Oct 2026 is a Sunday: day off for Tim Jakarta Selatan (Mon–Sat)
   assert.equal(d.offDays[3], true);
   d.rows.forEach(x => assert.equal(x.cells[3], 'OFF'));
-  // Totals match the Sales tab, targets are the October targets, rows sorted by achievement
-  const sales = g.rows('Sales'), users = g.rows('Users'), targets = g.rows('Targets');
+  // Totals match the Sales tab, targets are the October store targets, rows sorted by achievement
+  const sales = g.rows('Sales'), users = g.rows('Users'), targets = g.rows('StoreTargets');
   let prev = Infinity;
   d.rows.forEach(x => {
     const u = users.find(y => y.name === x.name);
     const total = sales.filter(s => s.user_id === u.id && !s.deleted && s.date >= '2026-10-01' && s.date <= '2026-10-11').reduce((a, s) => a + s.subtotal, 0);
-    assert.deepEqual([x.total, x.target], [total, targets.find(t => t.user_id === u.id && t.month === '2026-10').monthly]);
+    const target = targets.filter(t => t.user_id === u.id && t.month === '2026-10').reduce((a, t) => a + t.monthly, 0);
+    assert.deepEqual([x.total, x.target], [total, target]);
     assert.equal(x.total, x.cells.filter(c => typeof c === 'number').reduce((a, c) => a + c, 0));
     assert.ok(x.ach <= prev);
     prev = x.ach;

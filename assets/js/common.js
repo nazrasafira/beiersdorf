@@ -405,7 +405,8 @@
       if (old) old.remove();
       const rows = [...body.rows].filter(r => !r.classList.contains('detail') && !r.querySelector('td.empty'));
       const needle = st.q.trim().toLowerCase();
-      const match = rows.filter(r => !needle || r.textContent.toLowerCase().includes(needle));
+      const text = opts.text || (r => r.textContent); // rows with form fields can say what to search in
+      const match = rows.filter(r => !needle || text(r).toLowerCase().includes(needle));
       const pages = Math.max(1, Math.ceil(match.length / size));
       st.page = Math.min(Math.max(1, st.page), pages);
       const from = (st.page - 1) * size;

@@ -29,26 +29,24 @@
 
   /**
    * The month's data for a team: products in catalog order (active ones, plus inactive ones sold that month) and
-   * one block per store the team's SPGs sold at, with qty per product, the SPGs and their monthly targets.
-   * An SPG's target goes to the store where she sold the most that month (so it is counted once).
+   * one block per store the team's SPGs sold at or hold that month, with qty per product, the SPGs and the store's target.
    */
   function collect(teamId, mk) {
     const D = window.Data;
     const from = mk + '-01', to = D.monthEnd(from);
     const spgs = D.spgsOf(teamId, true);
-    const blocks = {}, byUser = {};
+    const blocks = {};
+    const block = id => blocks[id] || (blocks[id] = { store: D.store(id) || { id, name: id }, qty: {}, spgs: new Set(), target: 0 });
     D.listReports({ userIds: spgs.map(u => u.id), from, to }).forEach(r => D.getTransactions(r).forEach(t => {
-      const b = blocks[t.storeId] || (blocks[t.storeId] = { store: D.store(t.storeId) || { id: t.storeId, name: t.storeId }, qty: {}, spgs: new Set(), target: 0 });
+      const b = block(t.storeId);
       b.qty[t.productId] = (b.qty[t.productId] || 0) + t.qty;
       b.spgs.add(r.userId);
-      const u = byUser[r.userId] || (byUser[r.userId] = {});
-      u[t.storeId] = (u[t.storeId] || 0) + t.qty * t.price;
     }));
-    Object.keys(byUser).forEach(uid => {
-      const main = Object.keys(byUser[uid]).sort((a, b) => byUser[uid][b] - byUser[uid][a])[0];
-      const t = D.targetRow(uid, mk);
-      if (t && t.monthly) blocks[main].target += t.monthly;
-    });
+    spgs.forEach(u => D.heldStores(u.id, mk).forEach(t => {
+      const b = block(t.storeId);
+      b.target += t.monthly || 0;
+      b.spgs.add(u.id);
+    }));
     const order = D.stores(true).map(s => s.id);
     const list = Object.values(blocks)
       .sort((a, b) => (order.indexOf(a.store.id) + 1 || 1e9) - (order.indexOf(b.store.id) + 1 || 1e9))

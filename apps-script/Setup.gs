@@ -132,17 +132,18 @@ function importDemoData(source) {
   append_('Settings', Object.keys(d.settings).map(t => ({ team_id: t, working_days: d.settings[t].workingDays.join(','), edit_days: d.settings[t].editDays, reminder: d.settings[t].reminder })));
   append_('Holidays', [].concat.apply([], Object.keys(d.settings).map(t => d.settings[t].holidays.map(h => ({ team_id: t, date: h.date, name: h.name, working: h.working })))));
 
-  // Targets for every month the moved data covers, plus the current month (from the user's latest demo target)
+  // Store targets for every month the moved data covers, plus the current month (from the store's latest demo target)
   const targets = {}, latest = {};
-  Object.keys(d.targets).forEach(k => {
-    const [uid, month] = k.split('|'), t = d.targets[k];
-    if (!latest[uid] || month > latest[uid][0]) latest[uid] = [month, t];
-    [mv(month + '-01').slice(0, 7), mv(month + '-28').slice(0, 7)].forEach(m => { targets[uid + '|' + m] = t; });
+  Object.keys(d.storeTargets || {}).forEach(k => {
+    const [sid, month] = k.split('|'), t = d.storeTargets[k];
+    if (!t.userId) return;
+    if (!latest[sid] || month > latest[sid][0]) latest[sid] = [month, t];
+    [mv(month + '-01').slice(0, 7), mv(month + '-28').slice(0, 7)].forEach(m => { targets[sid + '|' + m] = t; });
   });
-  Object.keys(latest).forEach(uid => { targets[uid + '|' + today_().slice(0, 7)] = targets[uid + '|' + today_().slice(0, 7)] || latest[uid][1]; });
-  append_('Targets', Object.keys(targets).map(k => {
-    const [uid, month] = k.split('|'), t = targets[k];
-    return { user_id: uid, month, monthly: t.monthly, weekly: t.weekly || '', daily: t.daily || '', set_by: t.setBy || '', set_at: t.setAt || '' };
+  Object.keys(latest).forEach(sid => { targets[sid + '|' + today_().slice(0, 7)] = targets[sid + '|' + today_().slice(0, 7)] || latest[sid][1]; });
+  append_('StoreTargets', Object.keys(targets).map(k => {
+    const [sid, month] = k.split('|'), t = targets[k];
+    return { store_id: sid, month, user_id: t.userId, monthly: t.monthly, weekly: t.weekly || '', daily: t.daily || '', set_by: t.setBy || '', set_at: t.setAt || '' };
   }));
 
   const shifts = [], visits = [], sales = [], days_ = [];

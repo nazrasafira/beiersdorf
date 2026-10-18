@@ -40,7 +40,7 @@ function buildState_(me) {
     products: rows_('Products').filter(p => p.id).map(productOut_),
     stores: rows_('Stores').map(storeOut_),
     settings,
-    targets: targetsFor_(me.role === 'admin' ? [] : spgIds),
+    storeTargets: me.role === 'admin' ? {} : storeTargetsFor_(spgIds, from),
     reports: reportsFor_(fullIds, totalsIds, from, today),
     shifts: shiftsFor_(fullIds.concat(totalsIds), from, today, fullIds),
     activity: me.role === 'admin' || me.role === 'supervisor' ? rows_('Activity').slice(-200).reverse()
@@ -62,11 +62,22 @@ const storeOut_ = s => ({
   createdBy: s.created_by || null, updatedBy: s.updated_by || null, updatedAt: s.updated_at,
 });
 
-function targetsFor_(userIds) {
-  const out = {};
-  rows_('Targets').forEach(t => {
-    if (userIds.indexOf(t.user_id) < 0) return;
-    out[t.user_id + '|' + t.month] = { monthly: t.monthly || 0, weekly: t.weekly || null, daily: t.daily || null, setBy: t.set_by || null, setAt: t.set_at };
+/**
+ * Store targets keyed "storeId|month". Stores held by the visible SPGs come in full; a store held by an active SPG
+ * of another team only as { taken: true } (from `from` on), so the target page can show it is not free.
+ */
+function storeTargetsFor_(userIds, from) {
+  const out = {}, ids = {};
+  userIds.forEach(id => { ids[id] = true; });
+  rows_('StoreTargets').forEach(t => {
+    if (!t.user_id) return;
+    const key = t.store_id + '|' + t.month;
+    if (ids[t.user_id]) {
+      out[key] = { userId: t.user_id, monthly: t.monthly || 0, weekly: t.weekly || null, daily: t.daily || null, setBy: t.set_by || null, setAt: t.set_at };
+    } else if (t.month >= from.slice(0, 7)) {
+      const holder = byId_('Users', t.user_id);
+      if (holder && holder.active) out[key] = { userId: null, taken: true };
+    }
   });
   return out;
 }
