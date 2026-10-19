@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#ffffff">
 <title>Katalog Produk</title>
 <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
-<link rel="stylesheet" href="../assets/css/style.css?v=20261019030748">
-<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261019030748","../")</script>
+<link rel="stylesheet" href="../assets/css/style.css?v=20261019144708">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261019144708","../")</script>
 </head>
 <body data-root="../">
 <main>
@@ -16,13 +16,13 @@
   <section class="flat">
     <label class="tt-search shop-search"><span data-icon="search"></span><input type="search" class="input" id="q" placeholder="Cari nama, SKU, barcode..." aria-label="Cari produk" autocomplete="off"></label>
     <div class="shop-filters">
-      <div class="chips shop-brands" id="brandChips" role="group" aria-label="Subbrand"></div>
+      <div class="field shop-filter" id="brandWrap"><label for="brand">Subbrand</label><select id="brand"></select></div>
       <nav class="tabs shop-status" id="statusTabs" aria-label="Status"><button type="button" data-status="active" class="on">Aktif</button><button type="button" data-status="inactive">Nonaktif</button><button type="button" data-status="all">Semua</button></nav>
     </div>
     <p class="small muted" id="shown"></p>
     <div class="shop-grid" id="grid"></div>
     <p class="empty center" id="none" hidden>Tidak ada produk yang cocok.</p>
-    <p class="center" id="moreWrap" hidden><button type="button" class="btn ghost" id="more">Tampilkan lebih banyak</button></p>
+    <nav class="shop-pager" id="pager" aria-label="Halaman"></nav>
   </section>
   <dialog class="modal" id="dlg" aria-labelledby="formTitle">
     <form id="form" autocomplete="off">
@@ -47,9 +47,9 @@
     </form>
   </dialog>
 </main>
-<script src="../assets/js/config.js?v=20261019030748"></script>
-<script src="../assets/js/data.js?v=20261019030748"></script>
-<script src="../assets/js/common.js?v=20261019030748"></script>
-<script src="../assets/js/pages/katalog-produk.js?v=20261019030748"></script>
+<script src="../assets/js/config.js?v=20261019144708"></script>
+<script src="../assets/js/data.js?v=20261019144708"></script>
+<script src="../assets/js/common.js?v=20261019144708"></script>
+<script src="../assets/js/pages/katalog-produk.js?v=20261019144708"></script>
 </body>
 </html>

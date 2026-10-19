@@ -6,23 +6,24 @@ Data.ready(function () {
   const form = $('form');
   App.moneyInput(form.price); // "Rp 22.275" while typing
 
-  /* ----- Shop-style grid: search, subbrand chips, status tabs, more on demand ----- */
-  const PAGE = 24;
-  let q = '', brand = '', status = 'active', limit = PAGE;
+  /* ----- Shop-style grid: search, subbrand filter, status tabs, pages ----- */
+  const PAGE = 24; // cards per page (fills 2, 3 or 4 columns)
+  let q = '', brand = '', status = 'active', page = 1;
 
+  // Subbrand filter: a searchable dropdown (long names, and the list can grow)
   function renderBrands() {
     const brands = [...new Set(D.products(true).map(p => p.brand).filter(Boolean))].sort();
     if (brand && !brands.includes(brand)) brand = '';
-    $('brandChips').hidden = !brands.length;
-    $('brandChips').innerHTML = ['', ...brands].map(b =>
-      `<button type="button" class="chip ${b === brand ? 'on' : ''}" data-brand="${App.esc(b)}" aria-pressed="${b === brand}">${App.esc(b || 'Semua')}</button>`).join('');
+    $('brandWrap').hidden = !brands.length;
+    $('brand').innerHTML = '<option value="">Semua subbrand</option>' + brands.map(b => `<option value="${App.esc(b)}" ${b === brand ? 'selected' : ''}>${App.esc(b)}</option>`).join('');
+    if ($('brand')._combo) $('brand')._combo.sync(); else App.combobox($('brand'));
   }
 
   function card(p) {
     return `<button type="button" class="pcard-shop ${p.active ? '' : 'off'}" data-id="${p.id}" aria-label="${App.esc(p.name)}, ${App.rp(p.price)}">
       <span class="ph"><img src="${App.esc(App.productSrc(p))}" alt="" loading="lazy">${p.active ? '' : '<span class="pill">Nonaktif</span>'}</span>
       <span class="body">
-        ${p.brand ? `<span class="brand">${App.esc(p.brand)}</span>` : ''}
+        ${p.brand ? `<span class="brand" title="${App.esc(p.brand)}">${App.esc(p.brand)}</span>` : ''}
         <span class="name">${App.esc(p.name)}</span>
         ${p.sku ? `<span class="sku">SKU ${App.esc(p.sku)}</span>` : ''}
         <span class="price">${App.rp(p.price)}</span>
@@ -30,29 +31,24 @@ Data.ready(function () {
     </button>`;
   }
 
-  function render() {
+  function render(scroll) {
     const all = D.products(true);
     $('count').textContent = `${all.filter(p => p.active).length} aktif dari ${all.length}`;
     const needle = q.trim().toLowerCase();
     const list = all.filter(p => (status === 'all' || p.active === (status === 'active'))
       && (!brand || p.brand === brand)
       && (!needle || [p.name, p.sku, p.brand, p.barcode].join(' ').toLowerCase().includes(needle)));
-    $('grid').innerHTML = list.slice(0, limit).map(card).join('');
+    const [from, to, at] = App.pager($('pager'), { page, size: PAGE, total: list.length, label: 'produk', onPage: n => { page = n; render(true); } });
+    page = at;
+    $('grid').innerHTML = list.slice(from, to).map(card).join('');
     $('none').hidden = list.length > 0;
-    $('moreWrap').hidden = list.length <= limit;
-    $('shown').textContent = list.length ? `${Math.min(limit, list.length)} dari ${list.length} produk` : '';
+    $('shown').textContent = list.length ? `${list.length} produk` : '';
+    if (scroll) $('q').closest('section').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
-  const refilter = () => { limit = PAGE; render(); };
+  const refilter = () => { page = 1; render(); };
 
   $('q').addEventListener('input', e => { q = e.target.value; refilter(); });
-  $('brandChips').addEventListener('click', e => {
-    const b = e.target.closest('[data-brand]');
-    if (!b) return;
-    brand = b.dataset.brand;
-    renderBrands();
-    $('brandChips').querySelector('.chip.on').scrollIntoView({ block: 'nearest', inline: 'center' });
-    refilter();
-  });
+  $('brand').addEventListener('change', e => { brand = e.target.value; refilter(); });
   $('statusTabs').addEventListener('click', e => {
     const b = e.target.closest('[data-status]');
     if (!b) return;
@@ -60,7 +56,6 @@ Data.ready(function () {
     $('statusTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
     refilter();
   });
-  $('more').addEventListener('click', () => { limit += PAGE; render(); });
 
   const byName = id => { const u = D.user(id); return u ? u.name : '-'; };
   $('openAdd').hidden = !D.canAddCatalog(user);

@@ -10,16 +10,17 @@ Data.ready(function () {
   // A photo that can't be loaded (e.g. removed from Drive) falls back to the drawing
   const FALLBACK = `onerror="this.onerror=null;this.src='${App.esc(App.storeSrc(null))}'"`;
 
-  /* ----- Shop-style grid: search, city chips, status tabs, more on demand ----- */
-  const PAGE = 24;
-  let q = '', city = '', status = 'active', limit = PAGE;
+  /* ----- Shop-style grid: search, city filter, status tabs, pages ----- */
+  const PAGE = 24; // cards per page (fills 2, 3 or 4 columns)
+  let q = '', city = '', status = 'active', page = 1;
 
+  // City filter: a searchable dropdown
   function renderCities() {
     const cities = [...new Set(D.stores(true).map(s => s.city).filter(Boolean))].sort();
     if (city && !cities.includes(city)) city = '';
-    $('cityChips').hidden = cities.length < 2;
-    $('cityChips').innerHTML = ['', ...cities].map(c =>
-      `<button type="button" class="chip ${c === city ? 'on' : ''}" data-city="${App.esc(c)}" aria-pressed="${c === city}">${App.esc(c || 'Semua kota')}</button>`).join('');
+    $('cityWrap').hidden = cities.length < 2;
+    $('city').innerHTML = '<option value="">Semua kota</option>' + cities.map(c => `<option value="${App.esc(c)}" ${c === city ? 'selected' : ''}>${App.esc(c)}</option>`).join('');
+    if ($('city')._combo) $('city')._combo.sync(); else App.combobox($('city'));
   }
 
   function card(s) {
@@ -27,14 +28,14 @@ Data.ready(function () {
     return `<button type="button" class="pcard-shop ${s.active ? '' : 'off'}" data-id="${s.id}" aria-label="${App.esc(s.name)}">
       <span class="ph"><img src="${App.esc(App.storeSrc(s))}" alt="" loading="lazy" ${FALLBACK}>${s.active ? '' : '<span class="pill">Nonaktif</span>'}</span>
       <span class="body">
-        ${s.chain ? `<span class="brand">${App.esc(s.chain)}</span>` : ''}
+        ${s.chain ? `<span class="brand" title="${App.esc(s.chain)}">${App.esc(s.chain)}</span>` : ''}
         <span class="name">${App.esc(s.name)}</span>
         ${where ? `<span class="where">${App.esc(where)}</span>` : ''}
       </span>
     </button>`;
   }
 
-  function render() {
+  function render(scroll) {
     const all = D.stores(true);
     $('count').textContent = `${all.filter(s => s.active).length} toko aktif dari ${all.length}`;
     const needle = q.trim().toLowerCase();
@@ -42,26 +43,21 @@ Data.ready(function () {
       && (!city || s.city === city)
       && (!needle || [s.name, s.chain, s.city, s.address].join(' ').toLowerCase().includes(needle)))
       .sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name));
-    $('grid').innerHTML = list.slice(0, limit).map(card).join('');
+    const [from, to, at] = App.pager($('pager'), { page, size: PAGE, total: list.length, label: 'toko', onPage: n => { page = n; render(true); } });
+    page = at;
+    $('grid').innerHTML = list.slice(from, to).map(card).join('');
     $('none').hidden = list.length > 0;
-    $('moreWrap').hidden = list.length <= limit;
-    $('shown').textContent = list.length ? `${Math.min(limit, list.length)} dari ${list.length} toko` : '';
+    $('shown').textContent = list.length ? `${list.length} toko` : '';
+    if (scroll) $('q').closest('section').scrollIntoView({ block: 'start', behavior: 'smooth' });
     // Suggestions in the form: the chains and cities already used
     const uniq = k => [...new Set(all.map(s => s[k]).filter(Boolean))].sort();
     $('chains').innerHTML = uniq('chain').map(v => `<option value="${App.esc(v)}">`).join('');
     $('cities').innerHTML = uniq('city').map(v => `<option value="${App.esc(v)}">`).join('');
   }
-  const refilter = () => { limit = PAGE; render(); };
+  const refilter = () => { page = 1; render(); };
 
   $('q').addEventListener('input', e => { q = e.target.value; refilter(); });
-  $('cityChips').addEventListener('click', e => {
-    const b = e.target.closest('[data-city]');
-    if (!b) return;
-    city = b.dataset.city;
-    renderCities();
-    $('cityChips').querySelector('.chip.on').scrollIntoView({ block: 'nearest', inline: 'center' });
-    refilter();
-  });
+  $('city').addEventListener('change', e => { city = e.target.value; refilter(); });
   $('statusTabs').addEventListener('click', e => {
     const b = e.target.closest('[data-status]');
     if (!b) return;
@@ -69,7 +65,6 @@ Data.ready(function () {
     $('statusTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
     refilter();
   });
-  $('more').addEventListener('click', () => { limit += PAGE; render(); });
 
   /* ----- Form: add, edit, or just look when the user may not change it ----- */
   let image = '';

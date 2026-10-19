@@ -1,2 +1,4 @@
 .DS_Store
 server/
+# Project report material (reference + screenshots), not part of the app
+report/

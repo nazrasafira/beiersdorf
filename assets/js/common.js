@@ -466,6 +466,22 @@
     apply();
   }
 
+  /* ---------- Page-by-page navigation for long card lists ----------
+   * App.pager(el, { page, size, total, label, onPage }) draws "1–24 dari 199 produk" and Sebelumnya / Berikutnya buttons;
+   * returns [from, to] (slice indexes) of the page, after clamping the page number. */
+  function pager(el, o) {
+    const pages = Math.max(1, Math.ceil(o.total / o.size));
+    const page = Math.min(Math.max(1, o.page), pages);
+    const from = (page - 1) * o.size, to = Math.min(from + o.size, o.total);
+    el.hidden = o.total <= o.size;
+    el.innerHTML = `
+      <button type="button" class="btn ghost" aria-label="Halaman sebelumnya" data-pg="${page - 1}" ${page <= 1 ? 'disabled' : ''}>${icon('left')}<span>Sebelumnya</span></button>
+      <span class="pg-info"><b>${page} / ${pages}</b><small>${from + 1}–${to} dari ${o.total} ${esc(o.label || '')}</small></span>
+      <button type="button" class="btn ghost" aria-label="Halaman berikutnya" data-pg="${page + 1}" ${page >= pages ? 'disabled' : ''}><span>Berikutnya</span>${icon('right')}</button>`;
+    el.onclick = e => { const b = e.target.closest('[data-pg]'); if (b && !b.disabled) o.onPage(+b.dataset.pg); };
+    return [from, to, page];
+  }
+
   /* ---------- Pop-up form (native <dialog>) ----------
    * Closes with [data-close] buttons, Esc, or a click on the backdrop. */
   function modal(dlg) {
@@ -706,7 +722,7 @@
   }
 
   window.App = {
-    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
+    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
     esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum, moneyInput, setMoney,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,
