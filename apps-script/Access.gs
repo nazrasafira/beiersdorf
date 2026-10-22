@@ -1,8 +1,9 @@
 /**
  * Who may do what (same rules as the demo's data.js):
- * - Admin manages Supervisors and Team Leaders, all products and stores.
- * - Supervisor: SPGs, store targets, settings and reports of every team in their area; edits any product/store.
- * - Team Leader: their own team's SPGs, store targets, settings and reports; edits only products/stores they added.
+ * - Admin manages Managers and Team Leaders, all products and stores.
+ * - Manager (role code "supervisor"): SPGs, schedules, store targets, settings and reports of every team in their area.
+ * - Team Leader: their own team's SPGs, schedules, store targets, settings and reports.
+ * - Admin, Manager and Team Leader add and change any product or store (shared lists).
  * - SPG: their own shifts and sales, today (with a shift) or inside the team's edit window.
  */
 function teamIds_(me) {
@@ -29,7 +30,8 @@ function canManageUser_(me, target) {
 }
 
 const canAddCatalog_ = me => ['admin', 'supervisor', 'leader'].indexOf(me.role) >= 0;
-const canEditCatalog_ = (me, item) => me.role === 'admin' || me.role === 'supervisor' || (me.role === 'leader' && item.created_by === me.id);
+// Products and stores are shared lists: Admin, Manager and Team Leader may add and change any of them
+const canEditCatalog_ = (me, item) => !!item && canAddCatalog_(me);
 
 function settingsFor_(teamId) {
   const s = find_('Settings', r => r.team_id === teamId);
@@ -38,6 +40,19 @@ function settingsFor_(teamId) {
     editDays: s && s.edit_days !== null ? s.edit_days : 2,
     reminder: (s && s.reminder) || '20:00',
   };
+}
+
+/** An SPG's own working days (0 = Sunday … 6), or null when they follow the team's working days. */
+function workDays_(u) {
+  const s = String((u && u.work_days) || '').trim();
+  return s ? s.split(',').filter(x => x !== '').map(Number) : null;
+}
+
+/** Whether a day is a working day for this SPG: a team holiday decides first, then their own days or the team's. */
+function isWorkingDayFor_(u, date, settings, holidays) {
+  if (date in holidays) return holidays[date];
+  const [y, m, d] = date.split('-').map(Number);
+  return (workDays_(u) || settings.workingDays).indexOf(new Date(Date.UTC(y, m - 1, d)).getUTCDay()) >= 0;
 }
 
 const dayReport_ = (userId, date) => find_('DayReports', r => r.user_id === userId && r.date === date);

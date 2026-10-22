@@ -1,6 +1,6 @@
 # Laporan Penjualan Harian (NIVEA)
 
-Prototype of a daily sales report app for SPGs, Team Leaders and Supervisors. Static HTML/CSS/JS with demo data; no server needed.
+Prototype of a daily sales report app for SPGs, Team Leaders and Managers (area Bogor). Static HTML/CSS/JS with demo data; no server needed.
 
 **Live demo:** https://muhghifari.github.io/sales-daily-report/
 
@@ -12,7 +12,7 @@ The app starts with the **Admin** account, the product catalog and the stores; t
 |------|-------|----------|----------|
 | Admin | `0811 0000 0001` | `admin123` | Pengguna |
 
-Log in with **phone number + password** (any format works: `0811 0000 0001`, `62811…`, `+62 811-…`). The Admin adds Supervisors and Team Leaders (Pengguna); Team Leaders add their SPGs (Tim), give each store to an SPG and set the store targets (Target). New accounts start with `super123`, `leader123` or `spg123` and must choose their own password at the first login.
+Log in with **phone number + password** (any format works: `0811 0000 0001`, `62811…`, `+62 811-…`). The Admin adds Managers and Team Leaders (Pengguna); Team Leaders add their SPGs and set each SPG's working days and hours (Tim), give each store to an SPG and set the store targets (Target). New accounts start with `super123`, `leader123` or `spg123` and must choose their own password at the first login.
 
 - **Products**: the 199 SKUs of the client's file *SOH OFFTAKE YCA & LSI PJR AGUST'26 FILE BARU 199 SKU* (KODE SKU, Nama SKU di HO, Subbrand, price, barcode), kept in `assets/js/data.js`.
 - **Stores**: the 16 NMA stores (Yogya Cimanggu, LSI Pajajaran, AEON Sentul City, … Yogya Ciranjang).
@@ -25,24 +25,29 @@ In demo mode (`backend: 'demo'`) changes are saved in your browser; clear the si
 |------|-----|
 | `index.html` — Masuk | everyone |
 | `spg/beranda.html` — big daily % ring, level, rank, streak, week/month progress | SPG |
-| `spg/laporan.html` — Penjualan: start shift at a chosen store, switch store, record each sale, end shift | SPG (Leader/Supervisor can edit too) |
+| `spg/laporan.html` — Penjualan: start shift at a chosen store, switch store, record each sale, end shift | SPG (Leader/Manager can edit too) |
 | `spg/peringkat.html` — team leaderboard by % of target | SPG |
 | `spg/riwayat.html` — report history per month | SPG |
-| `leader/dashboard.html` — team summary, SPG ranking, missing reports, products, CSV export, monthly Excel in the client's SOH / offtake format | Leader, Supervisor |
-| `leader/laporan.html` — team reports, detail, unlock | Leader, Supervisor |
-| `leader/target.html` — per month: which SPG holds each store and the store's target (auto weekly/daily, overrides); an SPG's target is the sum of their stores | Leader, Supervisor |
-| `leader/tim.html` — add / deactivate / reset SPGs | Leader, Supervisor |
-| `leader/pengaturan.html` — working days, holidays, edit window | Leader, Supervisor |
-| `supervisor/dashboard.html` — team comparison, top SPGs in the area | Supervisor |
-| `katalog/produk.html` — shared product catalog (Leaders edit the ones they added) | Admin, Supervisor, Leader |
-| `katalog/toko.html` — shared store list (same rules) | Admin, Supervisor, Leader |
-| `admin/pengguna.html` — add / deactivate / reset Supervisors and Team Leaders | Admin |
+| `leader/dashboard.html` — team summary, SPG ranking, SPGs scheduled today who have not started, sales per store/product, CSV and daily recap Excel | Leader, Manager |
+| `leader/laporan.html` — team reports, detail, unlock | Leader, Manager |
+| `leader/target.html` — per month: which SPG holds each store and the store's target (auto weekly/daily, overrides); an SPG's target is the sum of their stores | Leader, Manager |
+| `leader/tim.html` — SPGs: add / deactivate / reset, **schedule per SPG** (working days and hours) | Leader, Manager |
+| `leader/pengaturan.html` — team default working days (for SPGs without their own schedule), holidays, edit window | Leader, Manager |
+| `supervisor/dashboard.html` — Manager's area dashboard: team comparison, top SPGs | Manager |
+| `katalog/produk.html` — shared product catalog (add and edit any product) | Admin, Manager, Leader |
+| `katalog/toko.html` — shared store list (add and edit any store) | Admin, Manager, Leader |
+| `admin/pengguna.html` — add / deactivate / reset Managers and Team Leaders | Admin |
 
 See [`PLAN.md`](PLAN.md) for the product plan, [`IMPLEMENTATION.md`](IMPLEMENTATION.md) for how the prototype is built, [`IMPLEMENTATION-GOOGLE-SHEETS.md`](IMPLEMENTATION-GOOGLE-SHEETS.md) for the plan to run it on Google Sheets, and [`IMPLEMENTATION-WEB.md`](IMPLEMENTATION-WEB.md) for the Laravel + MySQL web version.
 
 ## Targets
 
-Targets are set **per store and month** (Target page). Each store is held by one SPG that month; an SPG may hold several stores, and their target is the sum of those stores' targets (daily = each store's monthly target over the team's working days, unless overridden). A store held by an active SPG of another team can't be taken; a store becomes free again when its SPG is removed from it or deactivated. **Salin bulan lalu** copies last month's SPGs and targets.
+Targets are set **per store and month** (Target page). Each store is held by one SPG that month; an SPG may hold several stores, and their target is the sum of those stores' targets (daily = each store's monthly target over the working days of the SPG who holds it, unless overridden). A store held by an active SPG of another team can't be taken; a store becomes free again when its SPG is removed from it or deactivated. **Salin bulan lalu** copies last month's SPGs and targets.
+
+## Roles and schedules
+
+- **Manager** is the area role (code `supervisor` in the data, so existing accounts keep working). The area is **Bogor**.
+- Each SPG can have their **own schedule**: working days of the week and working hours (e.g. Mon–Fri 10:00–19:00), set by their Team Leader or Manager in **Tim → Atur jadwal**. SPGs without one follow the team's default working days (Pengaturan). Team holidays apply to everyone. The schedule decides the SPG's daily target, who is expected to start a shift today, and OFF / MISSING in the daily recap.
 
 ## Google Sheets backend
 
@@ -55,11 +60,7 @@ After editing any page, run `python3 tools/bump-version.py` before committing. I
 ## Photos
 
 - **Profile photos**: SPGs tap their photo on Beranda to take or choose a new one; Team Leaders can set an SPG's photo in Kelola Tim. Users without a photo (or whose photo can't be loaded) get `assets/avatars/default.svg`. The Admin starts with an illustrated portrait in `assets/avatars/` (DiceBear "Lorelei" by Lisa Wischofsky, CC0 1.0, generated with `tools/generate-avatars.js`).
-- **Store photos**: whoever may edit a store can add a storefront photo (Katalog → Toko, cropped to 4:3). Stores start with a drawing (`assets/stores/placeholder.svg`).
+- **Store photos**: Admin, Managers and Team Leaders can add a storefront photo (Katalog → Toko, cropped to 4:3). Stores start with a drawing (`assets/stores/placeholder.svg`).
 - **Product photos**: Admin can upload a photo per product. Products start with a placeholder image (`assets/products/placeholder.svg`) until a packshot is uploaded.
 - Uploaded photos are resized in the browser and stored with the demo data.
 - **Logo**: see `assets/brand/README.md`.
-
-## SOH / offtake Excel
-
-Dashboard Tim → **Laporan SOH & offtake** → pick a month → **Export Excel** (`assets/js/soh-export.js`, ExcelJS loaded from cdnjs on first use). Same layout as the client's monthly file: one row per SKU (NO, KODE SKU, Nama SKU di HO, Subbrand, price, barcode), then for each store the team sold at or held that month a block with the SPGs' names, the store name and Qty / Val / SOH / Val SOH, then the totals (all, and per focus brand) with target and achievement. Qty comes from the recorded sales; Val, Val SOH and the totals are Excel formulas. SOH is not recorded in the app, so those columns are left empty to fill in. Each block's target is that store's monthly target.

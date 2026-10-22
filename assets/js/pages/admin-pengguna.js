@@ -3,7 +3,7 @@ Data.ready(function () {
   const user = App.init({ roles: ['admin'] });
   if (!user) return;
   const D = Data, $ = id => document.getElementById(id);
-  const ROLE = { leader: 'Team Leader', supervisor: 'Supervisor' };
+  const ROLE = { leader: 'Team Leader', supervisor: 'Manager' };
   const PW = { leader: 'leader123', supervisor: 'super123' };
 
   function scopeOf(u) {
@@ -14,7 +14,7 @@ Data.ready(function () {
   function render() {
     const list = D.allUsers().filter(u => u.role === 'leader' || u.role === 'supervisor')
       .sort((a, b) => (b.active - a.active) || a.role.localeCompare(b.role) || a.name.localeCompare(b.name));
-    $('count').textContent = `${list.filter(u => u.active && u.role === 'supervisor').length} Supervisor · ${list.filter(u => u.active && u.role === 'leader').length} Team Leader aktif`;
+    $('count').textContent = `${list.filter(u => u.active && u.role === 'supervisor').length} Manager · ${list.filter(u => u.active && u.role === 'leader').length} Team Leader aktif`;
     $('table').innerHTML = `
       <thead><tr><th>Nama</th><th>Peran</th><th>Tim / Area</th><th>No. HP</th><th>Status</th><th></th></tr></thead>
       <tbody>${list.map(u => `<tr>

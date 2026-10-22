@@ -4,7 +4,8 @@
  * numbers and TRUE/FALSE are converted on reading (see NUM_COLS / BOOL_COLS).
  */
 const TABLES = {
-  Users: ['id', 'phone', 'name', 'role', 'area_id', 'team_id', 'home_store_id', 'photo', 'password_hash', 'salt', 'token_version', 'must_change_password', 'active', 'created_at'],
+  // work_days / work_start / work_end: the SPG's own schedule ("1,2,3" with 0 = Sunday, "10:00", "19:00"); empty = the team's working days
+  Users: ['id', 'phone', 'name', 'role', 'area_id', 'team_id', 'home_store_id', 'photo', 'password_hash', 'salt', 'token_version', 'must_change_password', 'active', 'created_at', 'work_days', 'work_start', 'work_end'],
   Areas: ['id', 'name'],
   Teams: ['id', 'name', 'area_id', 'leader_id'],
   Products: ['id', 'name', 'sku', 'price', 'photo', 'active', 'created_by', 'updated_by', 'updated_at', 'brand', 'barcode'],

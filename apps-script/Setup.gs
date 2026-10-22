@@ -6,7 +6,7 @@
  */
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Laporan SPG')
-    .addItem('1. Siapkan tab (setupSheet)', 'setupSheet')
+    .addItem('1. Siapkan tab (setupSheet)', 'setupSheetMenu')
     .addItem('2. Buat akun Admin', 'createAdminPrompt')
     .addSeparator()
     .addItem('Isi data demo…', 'importDemoDataPrompt')
@@ -36,7 +36,36 @@ function setupSheet() {
   const blank = ss.getSheetByName('Sheet1') || ss.getSheetByName('Sheet 1');
   if (blank && blank.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(blank);
   secret_(); // makes the token secret now
-  return 'ok';
+  // Rows copied or typed by hand may have no id or a repeated one: the app can't tell them apart
+  const fixed = repairIds_('Products', 'p') + repairIds_('Stores', 'st');
+  return fixed ? 'ok · ' + fixed + ' baris produk/toko diberi ID baru' : 'ok';
+}
+
+function setupSheetMenu() {
+  const res = setupSheet();
+  SpreadsheetApp.getUi().alert(res === 'ok' ? 'Tab siap.' : 'Tab siap. ' + res.replace('ok · ', '') + ' (ID kosong atau kembar).');
+}
+
+/**
+ * Gives a new id to rows of a table whose id is empty or already used by an earlier row (the first row keeps it).
+ * Sales already saved with a repeated id stay with the first row. Returns the number of rows changed.
+ */
+function repairIds_(name, prefix) {
+  const sh = sheet_(name), cols = TABLES[name], n = sh.getLastRow() - 1;
+  if (n < 1) return 0;
+  const values = sh.getRange(2, 1, n, cols.length).getValues(), idCol = cols.indexOf('id'), seen = {};
+  let fixed = 0;
+  values.forEach((r, i) => {
+    if (r.every(v => v === '' || v === null)) return;
+    const id = String(r[idCol] || '').trim();
+    if (id && !seen[id]) { seen[id] = true; return; }
+    const fresh = newId_(prefix);
+    sh.getRange(i + 2, idCol + 1).setValue(fresh);
+    seen[fresh] = true;
+    fixed++;
+  });
+  if (fixed) delete TABLE_CACHE[name];
+  return fixed;
 }
 
 function createAdminPrompt() {
@@ -54,29 +83,40 @@ function createAdmin(phone, name, password, areaName) {
   if (!/^08\d{8,11}$/.test(phone)) return 'Nomor HP tidak valid (contoh: 0812 3456 7890).';
   if (String(password || '').length < 8) return 'Password minimal 8 karakter.';
   if (find_('Users', u => u.phone === phone)) return 'Nomor HP sudah terdaftar.';
-  if (!rows_('Areas').length) append_('Areas', [{ id: newId_('a'), name: areaName || 'Jabodetabek' }]);
+  if (!rows_('Areas').length) append_('Areas', [{ id: newId_('a'), name: areaName || 'Bogor' }]);
   const u = { id: newId_('u'), phone, name: name || 'Admin', role: 'admin', area_id: '', team_id: '', home_store_id: '', photo: '', token_version: 0, must_change_password: true, active: true, created_at: nowStamp_() };
   setPassword_(u, password);
   append_('Users', [u]);
   return 'Admin ' + phone + ' dibuat. Login di aplikasi dengan nomor HP ini.';
 }
 
-/* ---------- Manual edits in the Products tab ---------- */
+/* ---------- Manual edits in the Products and Stores tabs ---------- */
 /**
- * Runs when someone edits the Sheet by hand. In Products: gives new rows an id, stamps updated_at, cleans prices ("Rp 45.000" → 45000),
- * and marks rows the app can't use (no name, price not a positive number) red with a note.
+ * Runs when someone edits the Sheet by hand. Products and Stores: new or copied rows get their own id (an empty or
+ * repeated id would make two rows look like one in the app). Products also: stamps updated_at, cleans prices
+ * ("Rp 45.000" → 45000), and marks rows the app can't use (no name, price not a positive number) red with a note.
  */
 function onEdit(e) {
-  const sh = e.range.getSheet();
-  if (sh.getName() !== 'Products') return;
-  const cols = TABLES.Products, col = c => cols.indexOf(c) + 1;
+  const sh = e.range.getSheet(), name = sh.getName();
+  if (name !== 'Products' && name !== 'Stores') return;
+  const cols = TABLES[name], col = c => cols.indexOf(c) + 1;
+  const ids = sh.getLastRow() > 1 ? sh.getRange(2, col('id'), sh.getLastRow() - 1, 1).getValues().map(r => String(r[0] || '').trim()) : [];
   for (let r = e.range.getRow(); r < e.range.getRow() + e.range.getNumRows(); r++) {
     if (r === 1) continue;
     const row = sh.getRange(r, 1, 1, cols.length);
     const v = row.getValues()[0];
     if (v.every(x => x === '')) continue;
     const get = c => v[col(c) - 1];
-    if (!get('id')) sh.getRange(r, col('id')).setValue(newId_('p'));
+    const id = String(get('id') || '').trim();
+    if (!id || ids.indexOf(id) !== r - 2) { // empty, or the same id is on an earlier row
+      const fresh = newId_(name === 'Products' ? 'p' : 'st');
+      sh.getRange(r, col('id')).setValue(fresh);
+      ids[r - 2] = fresh;
+    }
+    if (name === 'Stores') {
+      if (get('active') === '') sh.getRange(r, col('active')).setValue('TRUE');
+      continue;
+    }
     if (get('active') === '') sh.getRange(r, col('active')).setValue('TRUE');
     sh.getRange(r, col('updated_at')).setValue(Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'));
     const price = Number(String(get('price')).replace(/[^\d]/g, ''));
@@ -124,6 +164,7 @@ function importDemoData(source) {
     return {
       id: u.id, phone: u.phone, name: u.name, role: u.role, area_id: u.areaId || '', team_id: u.teamId || '', home_store_id: u.homeStoreId || '',
       photo: u.photo || '', password_hash: hashes[u.role], salt, token_version: 0, must_change_password: false, active: u.active, created_at: stamp,
+      work_days: (u.workDays || []).join(','), work_start: u.workStart || '', work_end: u.workEnd || '',
     };
   }));
   const cat = x => ({ active: x.active, created_by: x.createdBy || '', updated_by: x.updatedBy || '', updated_at: x.updatedAt || '' });

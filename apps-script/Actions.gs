@@ -310,6 +310,28 @@ function actUserReset_(req, me) {
   return { password: DEFAULT_PASSWORD[u.role] };
 }
 
+/**
+ * An SPG's own schedule, set by their Team Leader or Manager: working days of the week and working hours.
+ * days empty / useTeam = follow the team's working days again.
+ */
+function actUserSchedule_(req, me) {
+  const u = managed_(me, req.userId);
+  if (u.role !== 'spg') fail_('Jadwal hanya untuk SPG.');
+  if (req.useTeam) {
+    Object.assign(u, { work_days: '', work_start: '', work_end: '' });
+  } else {
+    const days = (Array.isArray(req.days) ? req.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
+    if (!days.length) fail_('Pilih minimal 1 hari kerja.');
+    const start = str_(req.start, 5), end = str_(req.end, 5);
+    if ((start || end) && (!isTime_(start) || !isTime_(end))) fail_('Isi jam mulai dan jam selesai (contoh 10:00 dan 19:00).');
+    if (start && start >= end) fail_('Jam selesai harus setelah jam mulai.');
+    Object.assign(u, { work_days: days.filter((d, i) => days.indexOf(d) === i).sort().join(','), work_start: start, work_end: end });
+  }
+  save_('Users', u);
+  log_(me, 'atur jadwal', 'pengguna', u.id, u.name);
+  return { user: userOut_(u, true) };
+}
+
 /** Profile photo: own photo, or of someone the user manages. Stored in Google Drive. */
 function actUserPhoto_(req, me) {
   const u = String(req.userId) === me.id ? me : managed_(me, req.userId);
@@ -322,7 +344,7 @@ function actUserPhoto_(req, me) {
 function catalogItem_(table, req, me, kind) {
   if (req.id) {
     const cur = byId_(table, req.id) || fail_(kind[0].toUpperCase() + kind.slice(1) + ' tidak ditemukan.', 404);
-    if (!canEditCatalog_(me, cur)) fail_('Kamu hanya bisa mengubah ' + kind + ' yang kamu tambahkan.', 403);
+    if (!canEditCatalog_(me, cur)) fail_('Kamu tidak punya akses untuk mengubah ' + kind + '.', 403);
     return cur;
   }
   if (!canAddCatalog_(me)) fail_('Kamu tidak punya akses untuk menambah ' + kind + '.', 403);

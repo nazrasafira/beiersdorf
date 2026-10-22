@@ -1,6 +1,6 @@
 /**
  * Daily sales recap per SPG for a date range (the page turns it into an Excel file, assets/js/recap-export.js):
- * each day's sales per SPG, OFF on days off, MISSING when a working day has no report, then the total, the target
+ * each day's sales per SPG, OFF on the SPG's days off, MISSING when a working day has no report, then the total, the target
  * (monthly targets of the stores the SPG holds in the months of the range) and the achievement, best first.
  * Team Leader: own team; Supervisor: teams in their area; Admin: any team or all.
  */
@@ -28,13 +28,15 @@ function dailyRecap_(me, req) {
   const teams = rows_('Teams').filter(t => teamIds.indexOf(t.id) >= 0);
   if (!teams.length) fail_('Belum ada tim.');
 
-  // Working day per team (holidays override the weekly pattern), as in the app
-  const working = {};
+  // Working days per team (holidays override the weekly pattern); each SPG then has their own days or the team's
+  const teamSettings = {}, teamHolidays = {};
   teams.forEach(t => {
-    const st = settingsFor_(t.id), hol = {};
-    rows_('Holidays').filter(h => h.team_id === t.id).forEach(h => { hol[h.date] = !!h.working; });
-    working[t.id] = d => (d in hol ? hol[d] : st.workingDays.indexOf(dow_(d)) >= 0);
+    teamSettings[t.id] = settingsFor_(t.id);
+    teamHolidays[t.id] = {};
+    rows_('Holidays').filter(h => h.team_id === t.id).forEach(h => { teamHolidays[t.id][h.date] = !!h.working; });
   });
+  const workingFor = (u, d) => isWorkingDayFor_(u, d, teamSettings[u.team_id], teamHolidays[u.team_id]);
+  const teamWorking = (t, d) => (d in teamHolidays[t.id] ? teamHolidays[t.id][d] : teamSettings[t.id].workingDays.indexOf(dow_(d)) >= 0);
 
   const spgs = rows_('Users').filter(u => u.role === 'spg' && u.active && teamIds.indexOf(u.team_id) >= 0);
   const ids = {};
@@ -62,14 +64,14 @@ function dailyRecap_(me, req) {
       if (amount[k]) { total += amount[k]; return amount[k]; }
       if (noSales[k]) return 0;
       if (d > today) return '';
-      return working[u.team_id](d) ? 'MISSING' : 'OFF';
+      return workingFor(u, d) ? 'MISSING' : 'OFF';
     });
     const t = target[u.id] || 0;
     return { name: u.name, team: teamName[u.team_id] || '', cells, total, target: t, ach: t ? total / t : null };
   }).sort((a, b) => (b.ach === null ? -1 : b.ach) - (a.ach === null ? -1 : a.ach) || b.total - a.total || a.name.localeCompare(b.name));
 
   // A day is marked in the header when it is a day off for every team in the recap
-  const offDays = days.map(d => teams.every(t => !working[t.id](d)));
+  const offDays = days.map(d => teams.every(t => !teamWorking(t, d)));
   return { teams, days, offDays, rows };
 }
 

@@ -28,7 +28,7 @@ Data.ready(function () {
           <span class="top"><b>Tim ${App.esc(t.team.name)}</b><b class="pct">${App.pct(t.pct)}</b></span>
           ${App.bar(t.pct)}
           <span class="meta"><span>${App.rpShort(t.actual)} / ${App.rpShort(t.target)}</span>
-            <span class="pill ${t.reported === t.size ? 'ok' : 'warn'}">Shift ${t.reported}/${t.size}</span></span>
+            <span class="pill ${t.reported === t.due ? 'ok' : 'warn'}">Shift ${t.reported}/${t.due}</span></span>
         </span>
       </button>`;
     }).join('') || '<p class="empty">Belum ada tim di area ini.</p>';

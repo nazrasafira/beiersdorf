@@ -5,7 +5,7 @@ Data.ready(function () {
   const D = Data, today = D.TODAY, $ = id => document.getElementById(id);
 
   $('hello').textContent = 'Halo, ' + user.name.split(' ')[0];
-  $('sub').textContent = App.dateLong(today);
+  $('sub').textContent = App.dateLong(today) + ' · Jadwal ' + D.scheduleLabel(user.id);
 
   // Profile photo: tap to take or choose a new one
   const showPhoto = () => { $('photoBtn').innerHTML = App.avatar(D.user(user.id), 'lg') + `<span class="cam">${App.icon('camera')}</span>`; };
@@ -30,7 +30,7 @@ Data.ready(function () {
   const report = D.getReport(user.id, today);
   const shift = D.getShift(user.id, today);
 
-  if (!D.isWorkingDay(user.teamId, today) && !shift) {
+  if (!D.isWorkingDayFor(user.id, today) && !shift) {
     $('today').innerHTML = `<p class="muted">Hari ini libur.</p>`;
   } else {
     const next = D.nextLevel(day.pct);

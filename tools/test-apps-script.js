@@ -166,16 +166,16 @@ test('targets and settings: own team only', () => {
   assert.deepEqual([st.workingDays, st.editDays, st.reminder, st.holidays.length], [[1, 2, 3, 4, 5], 3, '19:30', 1]);
 });
 
-test('products and stores: leaders edit only what they added', () => {
+test('products and stores: admin, manager and leaders change any; SPGs none', () => {
   const g = app();
-  assert.equal(g.as('rina', 'product.save', { id: 'p1', name: 'X', price: 1000 }).status, 403);
+  assert.ok(g.as('rina', 'product.save', { id: 'p1', name: 'NIVEA Soft Creme', price: 1000 }).ok, 'leaders change any product');
   const p = g.as('rina', 'product.save', { name: 'NIVEA Baru', price: 25000 }).data.product;
   assert.ok(g.as('rina', 'product.save', { id: p.id, name: 'NIVEA Baru 2', price: 26000 }).ok);
   assert.ok(g.as('budi', 'product.save', { id: 'p1', name: 'NIVEA Soft', sku: 'X1', price: 46000 }).ok);
   assert.equal(g.as('budi', 'product.save', { id: p.id, name: 'Y', sku: 'X1', price: 1 }).error, 'SKU sudah dipakai produk lain.');
   const notHers = g.rows('Stores').find(st => st.created_by !== 'u-rina');
-  assert.equal(g.as('rina', 'store.save', { id: notHers.id, name: 'X', city: 'Y' }).status, 403);
-  assert.ok(g.as('rina', 'store.save', { id: 'st1', name: 'Toko Kemang', city: 'Jakarta Selatan' }).ok, 'she added st1');
+  assert.ok(g.as('rina', 'store.save', { id: notHers.id, name: notHers.name, city: notHers.city }).ok, 'leaders change any store');
+  assert.ok(g.as('rina', 'store.save', { id: 'st1', name: 'Toko Kemang', city: 'Jakarta Selatan' }).ok);
   assert.ok(g.as('rina', 'store.save', { name: 'Toko Baru', city: 'Depok' }).ok);
   const withPhoto = g.as('rina', 'store.save', { id: 'st1', name: 'Toko Kemang', city: 'Jakarta Selatan', image: JPG });
   assert.ok(/^https:\/\/drive\.google\.com\/thumbnail\?id=/.test(withPhoto.data.store.image), 'store photo saved in Drive');
@@ -240,6 +240,29 @@ test('starting data: Admin, 199 products with subbrand and barcode, 16 stores', 
   assert.deepEqual([saved.data.product.brand, saved.data.product.barcode, saved.data.product.price], ['NIVEA BODY', '123', 23000]);
 });
 
+test('stores and products copied or typed in the Sheet get their own id', () => {
+  const g = load({ DEMO_TODAY: '2026-10-22' }, { quiet: true });
+  g.ctx.setupSheet();
+  g.ctx.importDemoData('file://' + path.join(__dirname, '..', 'apps-script', 'demo-data.json'));
+  const sh = g.ss.getSheetByName('Stores'), width = sh.data[0].length;
+  const row = (id, name) => { const r = Array(width).fill(''); r[0] = id; r[1] = name; r[2] = 'LSI'; r[3] = 'Bogor'; r[6] = 'TRUE'; return r; };
+  // A copied row (same id as st8) and a row without id, as when edited by hand
+  sh.data.push(row('st8', 'Toko Salinan'), row('', 'Toko Tanpa ID'));
+  assert.match(g.ctx.setupSheet(), /2 baris/);
+  g.ctx.handle_('{}');
+  const ids = g.ctx.rows_('Stores').map(s => s.id);
+  assert.equal(new Set(ids).size, ids.length, 'every store has its own id');
+  assert.equal(g.ctx.rows_('Stores').find(s => s.name === 'AEON Mall Kota Wisata').id, 'st8', 'the first row keeps its id');
+  // Typing a new row: onEdit gives it an id at once; pasting a copied id gets a new one
+  sh.data.push(row('', 'Toko Baru'), row('st9', 'Toko Tempel'));
+  const n = sh.data.length;
+  g.ctx.onEdit({ range: sh.getRange(n - 1, 1, 2, width) });
+  g.ctx.handle_('{}');
+  const added = g.ctx.rows_('Stores').filter(s => s.name === 'Toko Baru' || s.name === 'Toko Tempel');
+  assert.ok(added.every(s => /^st[0-9a-f]{10}$/.test(s.id)), added.map(s => s.id).join());
+  assert.equal(g.ctx.setupSheet(), 'ok', 'nothing left to repair');
+});
+
 test('targets are per store: one SPG per store, an SPG holds several', () => {
   const g = app();
   const mk = '2026-11';
@@ -297,6 +320,25 @@ test('daily recap: days, totals, OFF and missing days, sorted by achievement', (
   // Sari skipped 13 Oct (a Tuesday, working day): MISSING
   const sari = g.as('rina', 'report.dailyRecap', { from: '2026-10-13', to: '2026-10-13' }).data.rows.find(x => x.name === 'Sari Wulandari');
   assert.deepEqual(sari.cells, ['MISSING']);
+});
+
+test('SPG schedule: own days and hours, set by their leader; recap uses them', () => {
+  const g = app();
+  const set = (who, params) => g.as(who, 'user.schedule', Object.assign({ userId: 'u-sari' }, params));
+  assert.equal(set('sari', { days: [1, 3, 5] }).status, 403, 'not by the SPG herself');
+  assert.equal(set('andi', { days: [1, 3, 5] }).status, 403, 'not by another team');
+  assert.equal(set('rina', { days: [] }).status, 422);
+  assert.equal(set('rina', { days: [1], start: '19:00', end: '10:00' }).status, 422);
+  assert.equal(set('rina', { days: [1], start: '10:00' }).status, 422, 'both hours or none');
+  assert.ok(set('rina', { days: [5, 1, 3, 3], start: '10:00', end: '19:00' }).ok);
+  const sari = g.as('sari', 'bootstrap').data.users.find(u => u.id === 'u-sari');
+  assert.equal([sari.workDays.join(), sari.workStart, sari.workEnd].join(' '), '1,3,5 10:00 19:00');
+  // 13 Oct 2026 is a Tuesday: a team working day, but not one of Sari's days → OFF instead of MISSING
+  assert.equal(g.as('rina', 'report.dailyRecap', { from: '2026-10-13', to: '2026-10-13' }).data.rows.find(x => x.name === 'Sari Wulandari').cells.join(), 'OFF');
+  // Back to the team's working days
+  assert.ok(set('budi', { useTeam: true }).ok, 'the manager of the area may too');
+  assert.equal(g.as('sari', 'bootstrap').data.users.find(u => u.id === 'u-sari').workDays, null);
+  assert.equal(g.as('rina', 'report.dailyRecap', { from: '2026-10-13', to: '2026-10-13' }).data.rows.find(x => x.name === 'Sari Wulandari').cells.join(), 'MISSING');
 });
 
 test('daily recap: who may see what', () => {

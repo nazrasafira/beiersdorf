@@ -45,7 +45,7 @@
 
   /* ---------- Seed data ---------- */
   // Product catalog: KODE SKU, Nama SKU di HO, Subbrand, price (Rp), barcode.
-  // From "SOH OFFTAKE YCA & LSI PJR AGUST'26 FILE BARU 199 SKU" (199 SKUs); the Excel export uses the same order.
+  // From the client's file "SOH OFFTAKE YCA & LSI PJR AGUST'26 FILE BARU 199 SKU" (199 SKUs), in that order.
   const PRODUCTS = [
     ['A1', 'NCRM CREME TIN 60ML', 'NIVEA ALL PURPOSE CREAMS', 22470, '8850029801025'],
     ['A2', 'NCRM CREME TIN 30ML', 'NIVEA ALL PURPOSE CREAMS', 9444, '40058153'],
@@ -283,11 +283,11 @@
   function seed() {
     const stamp = { createdBy: 'u-admin', updatedBy: 'u-admin', updatedAt: '2026-10-16' };
     state = {
-      version: 7,
+      version: 8,
       products: PRODUCTS.map(p => ({ ...p, active: true, image: 'assets/products/placeholder.svg', ...stamp })),
       stores: STORES.map(st => ({ ...st, areaId: 'a1', active: true, ...stamp })),
       activity: [],
-      areas: [{ id: 'a1', name: 'Jabodetabek' }],
+      areas: [{ id: 'a1', name: 'Bogor' }],
       teams: [],
       users: [{ id: 'u-admin', username: 'admin', password: 'admin123', name: 'Admin', role: 'admin', phone: '081100000001', photo: 'assets/avatars/admin.svg', active: true }],
       storeTargets: {}, reports: {}, settings: {}, shifts: {},
@@ -382,6 +382,42 @@
     return memo[key];
   }
 
+  /* Each SPG may have their own schedule (days of the week + hours, set by the Team Leader in Tim);
+     without one they follow the team's working days. Team holidays apply to everyone. */
+  const spgDays = u => (u && u.workDays && u.workDays.length ? u.workDays : state.settings[u.teamId].workingDays);
+  function isWorkingDayFor(userId, d) {
+    const u = user(userId);
+    const h = state.settings[u.teamId].holidays.find(x => x.date === d);
+    if (h) return !!h.working;
+    return spgDays(u).includes(dow(d));
+  }
+  const workingDaysFor = (userId, from, to) => eachDay(from, to).filter(d => isWorkingDayFor(userId, d));
+  function workingDaysInMonthFor(userId, mk) {
+    const key = 'u|' + userId + '|' + mk;
+    if (!(key in memo)) memo[key] = workingDaysFor(userId, mk + '-01', monthEnd(mk + '-01')).length;
+    return memo[key];
+  }
+  // "Sen–Sab · 10:00–19:00", or the team's days when the SPG has no schedule of their own
+  const DAY_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  function scheduleLabel(userId) {
+    const u = user(userId), days = spgDays(u).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+    // Consecutive days (Mon first) shown as a range
+    const idx = days.map(d => (d + 6) % 7), runs = [];
+    idx.forEach(i => { const r = runs[runs.length - 1]; if (r && r[1] === i - 1) r[1] = i; else runs.push([i, i]); });
+    const name = i => DAY_SHORT[(i + 1) % 7];
+    const text = runs.map(([a, b]) => (a === b ? name(a) : b === a + 1 ? name(a) + ', ' + name(b) : name(a) + '–' + name(b))).join(', ');
+    return text + (u.workStart && u.workEnd ? ` · ${u.workStart}–${u.workEnd}` : '');
+  }
+  const hasOwnSchedule = userId => { const u = user(userId); return !!(u && u.workDays && u.workDays.length); };
+  function setSchedule(userId, sch) {
+    const u = user(userId);
+    if (!u) return;
+    if (sch.useTeam) Object.assign(u, { workDays: null, workStart: '', workEnd: '' });
+    else Object.assign(u, { workDays: sch.days.slice(), workStart: sch.start || '', workEnd: sch.end || '' });
+    memo = {};
+    persist();
+  }
+
   /* ---------- Targets: set per store and month; the SPG holding a store that month gets its target ---------- */
   // state.storeTargets["storeId|month"] = { userId, monthly, weekly, daily, setBy, setAt }; live mode may also send
   // { taken: true } for a store held by an SPG of another team.
@@ -404,24 +440,22 @@
     const list = heldStores(userId, mk);
     return list.length ? { monthly: list.reduce((a, t) => a + (t.monthly || 0), 0), stores: list } : null;
   }
-  // One store's share of a day: its daily override, or its monthly target spread over the working days of the SPG's team
-  function storeDay(t, teamId, date) {
-    if (!isWorkingDay(teamId, date)) return 0;
+  // One store's share of a day: its daily override, or its monthly target spread over the SPG's working days
+  function storeDay(t, userId, date) {
+    if (!isWorkingDayFor(userId, date)) return 0;
     if (t.daily) return t.daily;
-    const wd = workingDaysInMonth(teamId, monthKey(date));
+    const wd = workingDaysInMonthFor(userId, monthKey(date));
     return wd ? (t.monthly || 0) / wd : 0;
   }
   function dailyTarget(userId, date) {
-    const u = user(userId);
-    return heldStores(userId, monthKey(date)).reduce((a, t) => a + storeDay(t, u.teamId, date), 0);
+    return heldStores(userId, monthKey(date)).reduce((a, t) => a + storeDay(t, userId, date), 0);
   }
   // Stores with a weekly override count it; the others add up their days of the week
   function weekTarget(userId, date) {
-    const u = user(userId);
     const fixed = heldStores(userId, monthKey(date)).filter(t => t.weekly);
     const skip = fixed.map(t => t.storeId);
     return fixed.reduce((a, t) => a + t.weekly, 0) + eachDay(weekStart(date), weekEnd(date)).reduce((a, d) =>
-      a + heldStores(userId, monthKey(d)).filter(t => !skip.includes(t.storeId)).reduce((b, t) => b + storeDay(t, u.teamId, d), 0), 0);
+      a + heldStores(userId, monthKey(d)).filter(t => !skip.includes(t.storeId)).reduce((b, t) => b + storeDay(t, userId, d), 0), 0);
   }
   function periodTarget(userId, period, date) {
     if (period === 'day') return dailyTarget(userId, date);
@@ -432,13 +466,14 @@
   // A store's target for one day (0 when no SPG holds it that month, or with userIds: none of them)
   function storeDailyTarget(storeId, date, userIds) {
     const t = storeTarget(storeId, monthKey(date)), u = t && t.userId && user(t.userId);
-    return u && (!userIds || userIds.includes(u.id)) ? storeDay(t, u.teamId, date) : 0;
+    return u && (!userIds || userIds.includes(u.id)) ? storeDay(t, u.id, date) : 0;
   }
-  // Preview of derived targets for the target page
-  function targetPreview(teamId, mk, monthly) {
-    const wd = workingDaysInMonth(teamId, mk);
+  // Preview of derived targets for the target page (with userId: that SPG's schedule, else the team's days)
+  function targetPreview(teamId, mk, monthly, userId) {
+    const u = userId && user(userId);
+    const wd = u ? workingDaysInMonthFor(u.id, mk) : workingDaysInMonth(teamId, mk);
     const daily = wd ? monthly / wd : 0;
-    return { workDays: wd, daily, weekly: daily * state.settings[teamId].workingDays.length };
+    return { workDays: wd, daily, weekly: daily * (u ? spgDays(u) : state.settings[teamId].workingDays).length };
   }
   // rows: { storeId, mk, userId (null = no SPG), monthly, weekly, daily }
   function saveTargets(rows, by) {
@@ -591,13 +626,12 @@
   function progress(userId, period, date) {
     date = date || TODAY;
     const [from, to] = range(period, date);
-    const u = user(userId);
     const actual = actualSum(userId, from, date < to ? date : to);
     const target = periodTarget(userId, period, date);
     const pct = target > 0 ? actual / target * 100 : 0;
     const remaining = Math.max(0, target - actual);
-    let restDays = workingDays(u.teamId, addDays(date, 1), to).length;
-    if (!getReport(userId, date) && isWorkingDay(u.teamId, date)) restDays += 1;
+    let restDays = workingDaysFor(userId, addDays(date, 1), to).length;
+    if (!getReport(userId, date) && isWorkingDayFor(userId, date)) restDays += 1;
     return { period, from, to, actual, target, pct, remaining, restDays, perDay: restDays ? remaining / restDays : remaining };
   }
 
@@ -623,13 +657,12 @@
   // Working days in a row with sales >= daily target. Today only counts once it's reached.
   function streak(userId, date) {
     date = date || TODAY;
-    const u = user(userId);
     let d = date;
     const r0 = getReport(userId, d);
     if (!(r0 && dailyTarget(userId, d) > 0 && r0.total >= dailyTarget(userId, d))) d = addDays(d, -1);
     let n = 0;
     for (; d >= DATA_START; d = addDays(d, -1)) {
-      if (!isWorkingDay(u.teamId, d)) continue;
+      if (!isWorkingDayFor(userId, d)) continue;
       const r = getReport(userId, d), t = dailyTarget(userId, d);
       if (!r || !t || r.total < t) break;
       n++;
@@ -652,7 +685,7 @@
     const amount = r => !r ? 0 : !storeId ? r.total
       : getTransactions(r).filter(t => t.storeId === storeId).reduce((a, t) => a + t.qty * t.price, 0);
     return eachDay(from, to)
-      .filter(d => teamIds.some(t => isWorkingDay(t, d)))
+      .filter(d => (userIds.length ? userIds.some(id => isWorkingDayFor(id, d)) : teamIds.some(t => isWorkingDay(t, d))))
       .map(d => ({
         date: d,
         actual: userIds.reduce((a, id) => a + amount(getReport(id, d)), 0),
@@ -677,11 +710,13 @@
       const all = workingDays(teamId, from, to).length;
       expected = all ? workingDays(teamId, from, date).length / all * 100 : null;
     }
-    const working = isWorkingDay(teamId, date);
-    const missing = working ? lb.filter(r => !getShift(r.user.id, date) && !getReport(r.user.id, date)).map(r => r.user) : [];
+    // Today: only SPGs whose own schedule has today as a working day are expected to start a shift
+    const due = lb.filter(r => isWorkingDayFor(r.user.id, date));
+    const working = due.length > 0;
+    const missing = due.filter(r => !getShift(r.user.id, date) && !getReport(r.user.id, date)).map(r => r.user);
     return {
       team: team(teamId), lb, from, to, actual, target, pct: target ? actual / target * 100 : 0, expected, working,
-      missing, reported: lb.length - missing.length, size: lb.length,
+      missing, reported: due.length - missing.length, due: due.length, size: lb.length,
       products: productTotals(lb.map(r => r.user.id), from, date < to ? date : to),
     };
   }
@@ -694,7 +729,7 @@
     return {
       area: area(areaId), teams: list.sort((a, b) => b.pct - a.pct), actual, target,
       pct: target ? actual / target * 100 : 0, expected: list[0] ? list[0].expected : null,
-      reported: list.reduce((a, t) => a + t.reported, 0), size: list.reduce((a, t) => a + t.size, 0), topSpgs,
+      reported: list.reduce((a, t) => a + t.reported, 0), due: list.reduce((a, t) => a + t.due, 0), size: list.reduce((a, t) => a + t.size, 0), topSpgs,
     };
   }
 
@@ -759,14 +794,14 @@
   }
 
   // Products and stores are shared lists. Add: Admin, Supervisor, Team Leader.
-  // Edit/deactivate: Admin and Supervisor any item, Team Leader only items they added.
+  // Edit/deactivate: the same roles, any item.
   const canAddCatalog = viewer => !!viewer && ['admin', 'supervisor', 'leader'].includes(viewer.role);
-  const canEditCatalog = (viewer, item) => !!viewer && !!item && (viewer.role === 'admin' || viewer.role === 'supervisor' || (viewer.role === 'leader' && item.createdBy === viewer.id));
+  const canEditCatalog = (viewer, item) => !!item && canAddCatalog(viewer);
   function saveCatalogItem(list, kind, prefix, item, by) {
     const viewer = user(by);
     if (item.id) {
       const cur = list.find(x => x.id === item.id);
-      if (!canEditCatalog(viewer, cur)) return 'Kamu hanya bisa mengubah ' + kind + ' yang kamu tambahkan.';
+      if (!canEditCatalog(viewer, cur)) return 'Kamu tidak punya akses untuk mengubah ' + kind + '.';
       Object.assign(cur, item, { updatedBy: by, updatedAt: TODAY });
       log(by, 'ubah', kind, cur.id, cur.name);
     } else {
@@ -912,6 +947,7 @@
     saveSettings: (teamId, st) => saveSettings(teamId, st),
     setActive: (u, v) => setActive(u, v),
     setUserPhoto: (u, photo) => setUserPhoto(u, photo),
+    setSchedule: (u, sch) => setSchedule(u, sch),
   };
   function useServerState(s) {
     state = Object.assign(emptyState(), s);
@@ -1029,6 +1065,11 @@
       setActive(userId, value);
       enqueue('setActive', [userId, !!value], 'user.setActive', { userId, active: !!value });
     },
+    // sch: { days: [0–6], start: 'HH:MM', end: 'HH:MM' } or { useTeam: true }
+    setSchedule(userId, sch) {
+      setSchedule(userId, sch);
+      enqueue('setSchedule', [userId, sch], 'user.schedule', Object.assign({ userId }, sch));
+    },
     setUserPhoto(userId, photo) {
       setUserPhoto(userId, photo);
       enqueue('setUserPhoto', [userId, photo], 'user.photo', { userId, photo });
@@ -1084,7 +1125,7 @@
     if (LIVE) { state = emptyState(); return; }
     const raw = lsGet(STORE_KEY);
     if (raw) {
-      try { const s = JSON.parse(raw); if (s && s.version === 7) { state = s; return; } } catch (e) { /* reseed */ }
+      try { const s = JSON.parse(raw); if (s && s.version === 8) { state = s; return; } } catch (e) { /* reseed */ }
     }
     seed();
     persist();
@@ -1107,7 +1148,7 @@
     targetRow, dailyTarget, periodTarget, targetPreview, saveTargets, storeTarget, heldStores, storeDailyTarget,
     getReport, saveReport, setUnlocked, isLocked, canEdit, listReports,
     progress, level, nextLevel, leaderboard, streak, teamSummary, areaSummary, dailySeries, chartRange,
-    addSpg, setActive, getSettings, saveSettings, saveProduct, reset,
+    addSpg, setActive, setSchedule, scheduleLabel, hasOwnSchedule, isWorkingDayFor, workingDaysInMonthFor, getSettings, saveSettings, saveProduct, reset,
     getShift, startShift, endShift, switchStore, lastStoreId, storeLabel, storeFor, getTransactions, addSale, removeSale,
     addUser, resetPassword, canManageUser, canAddCatalog, canEditCatalog, saveStore, stores, store, activity, storeTotals,
     allUsers, setUserPhoto, normalizePhone, exportState, areas,

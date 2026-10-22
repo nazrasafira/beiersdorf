@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#ffffff">
 <title>Dashboard Tim</title>
 <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
-<link rel="stylesheet" href="../assets/css/style.css?v=20261019144708">
-<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261019144708","../")</script>
+<link rel="stylesheet" href="../assets/css/style.css?v=20261023042420">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261023042420","../")</script>
 </head>
 <body data-root="../">
 <main>
@@ -50,7 +50,6 @@
     <div class="dl-list">
       <button type="button" class="dl" id="export"><span class="dl-ic" data-icon="file"></span><span class="grow"><b>Transaksi (CSV)</b><small id="exportSub"></small></span><span data-icon="download"></span></button>
       <button type="button" class="dl" id="openRecap"><span class="dl-ic" data-icon="calendar"></span><span class="grow"><b>Rekap harian (Excel)</b><small>Per SPG per hari, OFF dan belum lapor, target dan pencapaian</small></span><span data-icon="right"></span></button>
-      <button type="button" class="dl" id="openSoh"><span class="dl-ic" data-icon="box"></span><span class="grow"><b>SOH &amp; offtake (Excel)</b><small>Format laporan klien per bulan: Qty dan Val per SKU per toko</small></span><span data-icon="right"></span></button>
     </div>
   </section>
 </main>
@@ -58,21 +57,10 @@
   <div class="modal-head"><h3 id="recapTitle">Rekap harian (Excel)</h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
   <div class="modal-body"><p class="muted small" style="margin-top:0">Penjualan per SPG per hari: OFF di hari libur, merah bila hari kerja belum lapor, lalu total, target dan pencapaian.</p><div id="dxWrap"></div></div>
 </dialog>
-<dialog class="modal sheet" id="sohDlg" aria-labelledby="sohTitle">
-  <form id="sohForm">
-    <div class="modal-head"><h3 id="sohTitle">SOH &amp; offtake (Excel)</h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
-    <div class="modal-body">
-      <p class="muted small" style="margin-top:0">Qty dan Val per SKU untuk setiap toko, total per brand fokus, target dan pencapaian. Kolom SOH dikosongkan untuk diisi.</p>
-      <div class="field"><label for="sohMonth">Bulan</label><select id="sohMonth"></select></div>
-    </div>
-    <div class="modal-foot"><button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit" id="sohExport"><span data-icon="download"></span>Export Excel</button></div>
-  </form>
-</dialog>
-<script src="../assets/js/config.js?v=20261019144708"></script>
-<script src="../assets/js/data.js?v=20261019144708"></script>
-<script src="../assets/js/common.js?v=20261019144708"></script>
-<script src="../assets/js/recap-export.js?v=20261019144708"></script>
-<script src="../assets/js/soh-export.js?v=20261019144708"></script>
-<script src="../assets/js/pages/leader-dashboard.js?v=20261019144708"></script>
+<script src="../assets/js/config.js?v=20261023042420"></script>
+<script src="../assets/js/data.js?v=20261023042420"></script>
+<script src="../assets/js/common.js?v=20261023042420"></script>
+<script src="../assets/js/recap-export.js?v=20261023042420"></script>
+<script src="../assets/js/pages/leader-dashboard.js?v=20261023042420"></script>
 </body>
 </html>

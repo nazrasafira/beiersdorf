@@ -43,7 +43,7 @@ Data.ready(function () {
       const text = encodeURIComponent(`Halo ${u.name.split(' ')[0]}, jangan lupa mulai shift dan catat setiap penjualan hari ini ya. Terima kasih.`);
       const wa = u.phone ? `https://wa.me/62${u.phone.replace(/\D/g, '').replace(/^0/, '')}?text=${text}` : '';
       return `<div>
-        <div class="grow">${App.person(u, D.storeLabel(u))}</div>
+        <div class="grow">${App.person(u, 'Jadwal ' + D.scheduleLabel(u.id))}</div>
         ${wa ? `<a class="btn small ghost wa" href="${wa}" target="_blank" rel="noopener">${App.icon('message')}Ingatkan</a>` : ''}
       </div>`;
     }).join('');
@@ -115,21 +115,6 @@ Data.ready(function () {
   App.dailyExport(() => teamId);
   const recapDlg = App.modal($('recapDlg'));
   $('openRecap').addEventListener('click', () => { recapDlg.open(); document.activeElement.blur(); });
-
-  // Monthly Excel in the client's SOH / offtake layout (assets/js/soh-export.js)
-  const months = [];
-  for (let mk = D.monthKey(D.TODAY); mk >= D.monthKey(D.DATA_START); mk = D.addMonths(mk, -1)) months.push(mk);
-  $('sohMonth').innerHTML = months.map(mk => `<option value="${mk}">${App.monthName(mk)}</option>`).join('');
-  App.combobox($('sohMonth'));
-  const sohDlg = App.modal($('sohDlg'));
-  $('openSoh').addEventListener('click', () => { sohDlg.open(); document.activeElement.blur(); });
-  $('sohForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const b = $('sohExport');
-    b.disabled = true;
-    try { await SohExport.download(teamId, $('sohMonth').value); sohDlg.close(); } catch (err) { App.toast('Export gagal. Periksa koneksi internet lalu coba lagi.'); }
-    b.disabled = false;
-  });
 
   render();
 });

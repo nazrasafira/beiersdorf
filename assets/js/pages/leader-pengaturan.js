@@ -12,7 +12,7 @@ Data.ready(function () {
   function renderDays() {
     $('days').innerHTML = DAYS.map(([d, n]) =>
       `<button type="button" class="chip ${s.workingDays.includes(d) ? 'on' : ''}" data-d="${d}" aria-pressed="${s.workingDays.includes(d)}">${n}</button>`).join('');
-    $('dayCount').textContent = `${s.workingDays.length} hari kerja per minggu.`;
+    $('dayCount').textContent = `${s.workingDays.length} hari kerja per minggu. Berlaku untuk SPG yang belum punya jadwal sendiri; jadwal per SPG (hari dan jam kerja) diatur di menu Tim.`;
   }
 
   function renderHolidays() {

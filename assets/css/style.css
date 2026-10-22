@@ -690,6 +690,27 @@ button.rk:active { background: var(--soft); }
 }
 @media (min-width: 1000px) {
   .dash-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-  .dl-list { grid-template-columns: repeat(3, 1fr); }
+  .dl-list { grid-template-columns: repeat(2, 1fr); }
 }
 .dash-cols > section { margin-bottom: 36px; min-width: 0; }
+
+/* Tim: one card per SPG with schedule and actions (phone first) */
+.spg-list { display: grid; gap: 12px; }
+.spg-card { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 14px; min-width: 0; }
+.spg-card.off { opacity: .7; }
+.spg-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.spg-top .person { flex: 1; }
+.spg-sch { display: flex; align-items: center; gap: 10px; width: 100%; margin: 12px 0; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--soft); font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.spg-sch > .icon { width: 20px; height: 20px; color: var(--blue); flex: none; }
+.spg-sch .grow { flex: 1; min-width: 0; }
+.spg-sch .grow b { display: block; font-weight: 600; }
+.spg-sch .grow small { display: block; font-size: 12px; color: var(--muted); }
+.spg-sch .btn { flex: none; pointer-events: none; background: #fff; }
+.spg-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.spg-actions .btn { flex-direction: column; gap: 4px; padding: 8px 4px; min-height: 56px; font-size: 12px; white-space: normal; text-align: center; line-height: 1.2; }
+.spg-actions .btn .icon { width: 18px; height: 18px; }
+.day-picks { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day-pick { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer; }
+.day-pick.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.sch-hours { grid-template-columns: 1fr 1fr; }
+@media (min-width: 760px) { .spg-list { grid-template-columns: 1fr 1fr; } }

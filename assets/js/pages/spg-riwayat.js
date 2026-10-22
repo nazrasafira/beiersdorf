@@ -16,7 +16,7 @@ Data.ready(function () {
     let workDays = 0, sent = 0, total = 0;
 
     $('list').innerHTML = D.eachDay(mk + '-01', end).reverse().map(d => {
-      const working = D.isWorkingDay(user.teamId, d);
+      const working = D.isWorkingDayFor(user.id, d);
       const r = D.getReport(user.id, d);
       if (working) workDays++;
       if (r) { sent++; total += r.total; }

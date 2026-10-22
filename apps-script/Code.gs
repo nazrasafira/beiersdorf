@@ -27,6 +27,7 @@ const actions_ = () => ({
   'user.setActive': [actUserActive_, true, true],
   'user.resetPassword': [actUserReset_, true, true],
   'user.photo': [actUserPhoto_, true, true],
+  'user.schedule': [actUserSchedule_, true, true],
   'product.save': [actProductSave_, true, true],
   'store.save': [actStoreSave_, true, true],
   'report.dailyRecap': [actDailyRecap_, true, false],

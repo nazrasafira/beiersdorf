@@ -4,7 +4,6 @@ Data.ready(function () {
   if (!user) return;
   const D = Data, $ = id => document.getElementById(id);
   const teamId = App.teamId(user);
-  const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
   let mk = App.param('bulan') || D.monthKey(D.TODAY);
   if (!/^\d{4}-\d{2}$/.test(mk)) mk = D.monthKey(D.TODAY);
 
@@ -27,11 +26,8 @@ Data.ready(function () {
 
   /* ---------- Page ---------- */
   function render() {
-    const settings = D.getSettings(teamId);
-    const wd = D.workingDaysInMonth(teamId, mk);
-    const days = [1, 2, 3, 4, 5, 6, 0].filter(d => settings.workingDays.includes(d)).map(d => DAY_NAMES[d]).join(', ');
     $('month').textContent = App.monthName(mk);
-    $('sub').textContent = `Tim ${D.team(teamId).name} · ${wd} hari kerja (${days})`;
+    $('sub').textContent = `Tim ${D.team(teamId).name} · target harian dihitung dari jadwal kerja tiap SPG`;
 
     const spgs = teamSpgs();
     const held = spgs.map(u => ({ u, stores: D.heldStores(u.id, mk).map(t => ({ ...t, st: D.store(t.storeId) || { id: t.storeId, name: t.storeId } })) }));
@@ -42,16 +38,16 @@ Data.ready(function () {
 
     $('summary').innerHTML = `
       <div class="stat-box"><div class="l">Target tim</div><div class="v">${App.rpShort(total)}</div>
-        <div class="s">${wd ? '≈ ' + App.rpShort(total / wd) + ' per hari kerja' : 'Tidak ada hari kerja'}</div></div>
+        <div class="s">${held.length ? '≈ ' + App.rpShort(held.reduce((a, h) => a + D.dailyTarget(h.u.id, firstWorkingDay(h.u.id)), 0)) + ' per hari (sesuai jadwal SPG)' : 'Belum ada SPG'}</div></div>
       <div class="stat-box"><div class="l">Toko dipegang</div><div class="v">${nHeld} <span class="small muted">/ ${nHeld + free.length}</span></div>
         <div class="s">${noStore ? `${noStore} SPG belum punya toko` : spgs.length ? 'Semua SPG punya toko' : 'Belum ada SPG'}</div></div>`;
 
     $('spgs').innerHTML = held.map(({ u, stores }) => {
       const sum = stores.reduce((a, t) => a + (t.monthly || 0), 0);
-      const daily = D.dailyTarget(u.id, firstWorkingDay()) || 0;
+      const daily = D.dailyTarget(u.id, firstWorkingDay(u.id)) || 0;
       return `<div class="tg-spg">
         <div class="tg-spg-head">
-          ${App.person(u, u.active ? `${stores.length} toko` : 'nonaktif · pindahkan tokonya', u.name)}
+          ${App.person(u, u.active ? `${stores.length} toko · ${D.scheduleLabel(u.id)}` : 'nonaktif · pindahkan tokonya', u.name)}
           <div class="total"><b>${stores.length ? App.rpShort(sum) : '–'}</b>${stores.length && daily ? `<small>${App.rpShort(daily)}/hari</small>` : ''}</div>
         </div>
         ${stores.length ? `<div class="tg-stores">${stores.sort((a, b) => a.st.name.localeCompare(b.st.name)).map(t => `
@@ -85,7 +81,7 @@ Data.ready(function () {
         <span class="small muted">${h ? `${App.esc(h.name)} · Tim ${App.esc((D.team(h.teamId) || {}).name || '')}` : 'SPG tim lain'}</span></div>`;
     }).join('');
   }
-  const firstWorkingDay = () => D.eachDay(mk + '-01', D.monthEnd(mk + '-01')).find(d => D.isWorkingDay(teamId, d)) || mk + '-01';
+  const firstWorkingDay = userId => D.eachDay(mk + '-01', D.monthEnd(mk + '-01')).find(d => D.isWorkingDayFor(userId, d)) || mk + '-01';
 
   function filterFree() {
     const q = $('freeSearch').value.trim().toLowerCase();
@@ -106,12 +102,15 @@ Data.ready(function () {
 
   function updateHint() {
     const monthly = App.parseNum($('sheetMonthly').value);
-    const p = D.targetPreview(teamId, mk, monthly);
+    const spg = $('sheetSpg').value || null; // the chosen SPG's own working days
+    const p = D.targetPreview(teamId, mk, monthly, spg);
+    const who = spg ? ' ' + D.user(spg).name.split(' ')[0] : ' tim';
     $('sheetHint').textContent = monthly && p.workDays
-      ? `≈ ${App.rpK(p.daily)} per hari · ${App.rpK(p.weekly)} per minggu (${p.workDays} hari kerja di ${App.monthName(mk)})`
-      : `${p.workDays} hari kerja di ${App.monthName(mk)}.`;
+      ? `≈ ${App.rpK(p.daily)} per hari · ${App.rpK(p.weekly)} per minggu (${p.workDays} hari kerja${who} di ${App.monthName(mk)})`
+      : `${p.workDays} hari kerja${who} di ${App.monthName(mk)}.`;
   }
   $('sheetMonthly').addEventListener('input', updateHint);
+  $('sheetSpg').addEventListener('change', updateHint);
 
   function openSheet({ storeId, userId }) {
     editing = storeId || null;

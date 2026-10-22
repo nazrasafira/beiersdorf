@@ -9,7 +9,7 @@
   const BRAND_LOGO = 'assets/brand/beiersdorf-logo.png';
   const logoImg = () => `<img class="brand-logo" src="${root + BRAND_LOGO}" alt="Beiersdorf" onerror="this.remove()">`;
 
-  const ROLE_LABEL = { spg: 'SPG', leader: 'Team Leader', supervisor: 'Supervisor', admin: 'Admin' };
+  const ROLE_LABEL = { spg: 'SPG', leader: 'Team Leader', supervisor: 'Manager', admin: 'Admin' };
   const HOME = {
     spg: 'spg/beranda.html',
     leader: 'leader/dashboard.html',
@@ -48,6 +48,7 @@
     x: '<path d="M18 6 6 18M6 6l12 12"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
     pencil: '<path d="M21.2 6.8a2.8 2.8 0 0 0-4-4L4 16v4h4Z"/><path d="m14.5 5.5 4 4"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
     userCheck: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
     minus: '<path d="M5 12h14"/>',
@@ -343,7 +344,8 @@
 
     let items = [], active = -1;
     const ph = select.dataset.placeholder; // optional: empty value shows as a placeholder and is not listed
-    const options = () => [...select.options].filter(o => !(ph && o.value === '')).map(o => ({ value: o.value, text: o.textContent.trim(), img: o.dataset.img }));
+    // By option position, not value: two options with the same value (e.g. stores sharing an id) are still told apart
+    const options = () => [...select.options].filter(o => !(ph && o.value === '')).map(o => ({ index: o.index, value: o.value, text: o.textContent.trim(), img: o.dataset.img }));
     const sync = () => {
       const o = select.options[select.selectedIndex];
       input.value = o && !(ph && o.value === '') ? o.textContent.trim() : '';
@@ -354,9 +356,9 @@
     function render(q) {
       const needle = q.trim().toLowerCase();
       items = options().filter(o => !needle || o.text.toLowerCase().includes(needle));
-      active = Math.max(0, items.findIndex(o => o.value === select.value));
+      active = Math.max(0, items.findIndex(o => o.index === select.selectedIndex));
       list.innerHTML = items.length
-        ? items.map((o, i) => `<li role="option" id="${id}-${i}" data-i="${i}" aria-selected="${o.value === select.value}" class="${i === active ? 'active' : ''}">${o.img ? `<img src="${esc(o.img)}" alt="">` : ''}<span>${esc(o.text)}</span></li>`).join('')
+        ? items.map((o, i) => `<li role="option" id="${id}-${i}" data-i="${i}" aria-selected="${o.index === select.selectedIndex}" class="${i === active ? 'active' : ''}">${o.img ? `<img src="${esc(o.img)}" alt="">` : ''}<span>${esc(o.text)}</span></li>`).join('')
         : '<li class="none">Tidak ditemukan</li>';
       highlight();
     }
@@ -375,8 +377,8 @@
     function choose(i) {
       const o = items[i];
       if (!o) return;
-      const changed = select.value !== o.value;
-      select.value = o.value;
+      const changed = select.selectedIndex !== o.index;
+      select.selectedIndex = o.index;
       close();
       if (changed) select.dispatchEvent(new Event('change', { bubbles: true }));
     }
@@ -531,7 +533,7 @@
         <div class="modal-body">
           <div class="field"><label for="pickStoreSel">Toko</label>
             <select id="pickStoreSel" data-placeholder="Cari toko...">${'<option value=""></option>' + list.map(st =>
-              `<option value="${st.id}" ${st.id === opts.current ? 'selected' : ''}>${esc(st.name)} · ${esc(st.city)}</option>`).join('')}</select>
+              `<option value="${st.id}" ${st.id === opts.current ? 'selected' : ''}>${esc([st.name, st.city].filter(Boolean).join(' · '))}</option>`).join('')}</select>
           </div>
           ${opts.note ? `<p class="note" style="margin:0">${esc(opts.note)}</p>` : ''}
         </div>
@@ -621,7 +623,7 @@
         </div>
       </div>
       <div class="dash-mini">
-        <div><span class="l">Mulai shift hari ini</span><b>${s.working === false ? 'Libur' : `${s.reported}/${s.size}`}</b></div>
+        <div><span class="l">Mulai shift hari ini</span><b>${s.working === false ? 'Libur' : `${s.reported}/${s.due == null ? s.size : s.due}`}</b></div>
         <div><span class="l">${left ? 'Kurang dari target' : 'Target'}</span><b>${left ? rpShort(left) : 'Tercapai'}</b></div>
       </div>`;
   }
