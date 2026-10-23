@@ -134,8 +134,8 @@ const salesOf = async (uid, date) => (await rows('Sales')).filter(s => s.user_id
   ok(await until(async () => (await rows('Shifts')).some(s => s.user_id === newUser.id)), 'shift started in the Sheet');
 
   // Supervisor
-  await login('0811 0000 0002', 'super123');
-  ok(p.url().includes('supervisor/dashboard.html'), 'Budi lands on supervisor dashboard');
+  await login('0811 0000 0002', 'manager123');
+  ok(p.url().includes('manager/dashboard.html'), 'Budi lands on the manager dashboard');
   await p.goto(B + 'leader/laporan.html'); await settle();
 
   // Admin

@@ -1,6 +1,6 @@
 Data.ready(function () {
   'use strict';
-  const user = App.init({ roles: ['supervisor'] });
+  const user = App.init({ roles: ['manager'] });
   if (!user) return;
   const D = Data, $ = id => document.getElementById(id);
   const SHOW = 5; // top SPGs shown before "Lihat semua"

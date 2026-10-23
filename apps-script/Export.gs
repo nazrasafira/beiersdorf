@@ -14,7 +14,7 @@ function dow_(date) {
 
 /** The recap as plain data (no Google calls, so it can be tested): { teams, days, offDays, rows }. */
 function dailyRecap_(me, req) {
-  if (['admin', 'supervisor', 'leader'].indexOf(me.role) < 0) fail_('Kamu tidak punya akses ke laporan ini.', 403);
+  if (['admin', 'manager', 'leader'].indexOf(me.role) < 0) fail_('Kamu tidak punya akses ke laporan ini.', 403);
   const from = req.from, to = req.to;
   if (!isDate_(from) || !isDate_(to) || from > to) fail_('Pilih tanggal mulai dan selesai yang benar.');
   const days = [];

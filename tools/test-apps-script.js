@@ -10,7 +10,7 @@ const { load } = require('./gas-mock');
 
 const DEMO = 'file://' + path.join(__dirname, 'fixtures', 'demo-data.json');
 const PHONE = { admin: '081100000001', budi: '081100000002', rina: '081200000001', andi: '081200000002', sari: '081300000001', dewi: '081300000002', rani: '081300000004' };
-const PW = { admin: 'admin123', budi: 'super123', rina: 'leader123', andi: 'leader123', sari: 'spg123', dewi: 'spg123', rani: 'spg123' };
+const PW = { admin: 'admin123', budi: 'manager123', rina: 'leader123', andi: 'leader123', sari: 'spg123', dewi: 'spg123', rani: 'spg123' };
 
 function app() {
   const g = load({ DEMO_TODAY: '2026-10-22' }, { quiet: true });
@@ -131,7 +131,7 @@ test('edit window and unlock', () => {
   assert.equal(g.as('sari', 'sale.add', sale({ date: '2026-10-23' })).status, 403, 'future');
 });
 
-test('leaders edit their team only, supervisor the area, admin no reports', () => {
+test('leaders edit their team only, manager the area, admin no reports', () => {
   const g = app();
   const other = g.rows('Users').find(u => u.role === 'spg' && u.team_id === 't2');
   assert.ok(g.as('rina', 'sale.add', sale({ date: '2026-10-10' })).ok);
@@ -143,7 +143,7 @@ test('leaders edit their team only, supervisor the area, admin no reports', () =
 test('who adds whom', () => {
   const g = app();
   assert.equal(g.as('admin', 'user.add', { role: 'spg', name: 'X', phone: '081377777777', teamId: 't1' }).status, 403);
-  assert.ok(g.as('admin', 'user.add', { role: 'supervisor', name: 'Sup', phone: '081177777777' }).ok);
+  assert.ok(g.as('admin', 'user.add', { role: 'manager', name: 'Sup', phone: '081177777777' }).ok);
   const lead = g.as('admin', 'user.add', { role: 'leader', name: 'Lead', phone: '0812 7777 7777', newTeam: 'Bogor' }).data;
   assert.equal(lead.team.name, 'Bogor');
   assert.equal(lead.team.leaderId, lead.user.id);
@@ -376,6 +376,17 @@ test('accounts: deactivated login message, fix name/phone, start date, store nam
   // Store names are unique; cities are written the same way
   assert.equal(g.as('rina', 'store.save', { name: 'toko kemang', city: 'Jakarta Selatan' }).status, 422);
   assert.equal(g.as('rina', 'store.save', { name: 'Toko Kemang 2', city: '  jakarta   selatan ' }).data.store.city, 'Jakarta Selatan');
+});
+
+test('role renamed: older "supervisor" rows still work and Siapkan tab rewrites them as "manager"', () => {
+  const g = app();
+  const sh = g.ss.getSheetByName('Users'), roleCol = sh.data[0].indexOf('role');
+  const row = sh.data.findIndex(r => r[0] === 'u-budi');
+  sh.data[row][roleCol] = 'supervisor'; // as in a Sheet made before the rename
+  g.ctx.handle_('{}');
+  assert.equal(g.as('budi', 'bootstrap').data.teams.length, 5, 'the manager still sees the area');
+  g.ctx.setupSheet();
+  assert.equal(sh.data[row][roleCol], 'manager');
 });
 
 test('daily recap: who may see what', () => {

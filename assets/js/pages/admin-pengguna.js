@@ -3,8 +3,8 @@ Data.ready(function () {
   const user = App.init({ roles: ['admin'] });
   if (!user) return;
   const D = Data, $ = id => document.getElementById(id);
-  const ROLE = { leader: 'Team Leader', supervisor: 'Manager' };
-  const PW = { leader: 'leader123', supervisor: 'super123' };
+  const ROLE = { leader: 'Team Leader', manager: 'Manager' };
+  const PW = { leader: 'leader123', manager: 'manager123' };
 
   function scopeOf(u) {
     if (u.role === 'leader') { const t = D.team(u.teamId); return t ? 'Tim ' + t.name : '-'; }
@@ -13,9 +13,9 @@ Data.ready(function () {
 
   /* ----- One card per Manager / Team Leader (phone first) ----- */
   function render() {
-    const list = D.allUsers().filter(u => u.role === 'leader' || u.role === 'supervisor')
+    const list = D.allUsers().filter(u => u.role === 'leader' || u.role === 'manager')
       .sort((a, b) => (b.active - a.active) || a.role.localeCompare(b.role) || a.name.localeCompare(b.name));
-    $('count').textContent = `${list.filter(u => u.active && u.role === 'supervisor').length} Manager · ${list.filter(u => u.active && u.role === 'leader').length} Team Leader aktif`;
+    $('count').textContent = `${list.filter(u => u.active && u.role === 'manager').length} Manager · ${list.filter(u => u.active && u.role === 'leader').length} Team Leader aktif`;
     $('table').innerHTML = list.map(u => `
       <div class="spg-card ${u.active ? '' : 'off'}" data-text="${App.esc([u.name, u.phone, scopeOf(u), ROLE[u.role]].join(' ').toLowerCase())}">
         <div class="spg-top">
@@ -74,7 +74,7 @@ Data.ready(function () {
   function syncRole() {
     const role = $('f-role').value;
     $('teamFields').hidden = role !== 'leader';
-    $('areaField').hidden = role !== 'supervisor';
+    $('areaField').hidden = role !== 'manager';
     $('newTeamField').hidden = !(role === 'leader' && $('f-team').value === '__new');
     $('pwNote').textContent = 'Password awal: ' + PW[role];
   }

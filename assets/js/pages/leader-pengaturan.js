@@ -1,6 +1,6 @@
 Data.ready(function () {
   'use strict';
-  const user = App.init({ roles: ['leader', 'supervisor'], teamPicker: true });
+  const user = App.init({ roles: ['leader', 'manager'], teamPicker: true });
   if (!user) return;
   const D = Data, $ = id => document.getElementById(id);
   const teamId = App.teamId(user);

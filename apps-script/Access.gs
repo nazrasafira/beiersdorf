@@ -1,35 +1,35 @@
 /**
  * Who may do what (same rules as the demo's data.js):
  * - Admin manages Managers and Team Leaders, all products and stores.
- * - Manager (role code "supervisor"): SPGs, schedules, store targets, settings and reports of every team in their area.
+ * - Manager (role "manager"; older Sheets said "supervisor", read as manager): SPGs, schedules, store targets, settings and reports of every team in their area.
  * - Team Leader: their own team's SPGs, schedules, store targets, settings and reports.
  * - Admin, Manager and Team Leader add and change any product or store (shared lists).
  * - SPG: their own shifts and sales, today (with a shift) or inside the team's edit window.
  */
 function teamIds_(me) {
   if (me.role === 'admin') return rows_('Teams').map(t => t.id);
-  if (me.role === 'supervisor') return rows_('Teams').filter(t => t.area_id === me.area_id).map(t => t.id);
+  if (me.role === 'manager') return rows_('Teams').filter(t => t.area_id === me.area_id).map(t => t.id);
   return me.team_id ? [me.team_id] : [];
 }
 
 function canView_(me, owner) {
   if (!owner) return false;
   if (me.role === 'spg') return me.id === owner.id;
-  if (me.role === 'leader' || me.role === 'supervisor') return !!owner.team_id && teamIds_(me).indexOf(owner.team_id) >= 0;
+  if (me.role === 'leader' || me.role === 'manager') return !!owner.team_id && teamIds_(me).indexOf(owner.team_id) >= 0;
   return false;
 }
 
-const canManageTeam_ = (me, teamId) => (me.role === 'leader' || me.role === 'supervisor') && teamIds_(me).indexOf(teamId) >= 0;
+const canManageTeam_ = (me, teamId) => (me.role === 'leader' || me.role === 'manager') && teamIds_(me).indexOf(teamId) >= 0;
 
 /** Admin → Supervisors & Team Leaders; Leader → own team's SPGs; Supervisor → SPGs in their area. */
 function canManageUser_(me, target) {
   if (!target) return false;
-  if (me.role === 'admin') return target.role === 'leader' || target.role === 'supervisor';
+  if (me.role === 'admin') return target.role === 'leader' || target.role === 'manager';
   if (target.role !== 'spg' || !target.team_id) return false;
   return canManageTeam_(me, target.team_id);
 }
 
-const canAddCatalog_ = me => ['admin', 'supervisor', 'leader'].indexOf(me.role) >= 0;
+const canAddCatalog_ = me => ['admin', 'manager', 'leader'].indexOf(me.role) >= 0;
 // Products and stores are shared lists: Admin, Manager and Team Leader may add and change any of them
 const canEditCatalog_ = (me, item) => !!item && canAddCatalog_(me);
 

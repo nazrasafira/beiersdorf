@@ -6,7 +6,7 @@
  * - SECRET lives in Script Properties (made on first use), never in the code or the Sheet.
  */
 const TOKEN_DAYS = 30;
-const DEFAULT_PASSWORD = { spg: 'spg123', leader: 'leader123', supervisor: 'super123', admin: 'admin123' };
+const DEFAULT_PASSWORD = { spg: 'spg123', leader: 'leader123', manager: 'manager123', admin: 'admin123' };
 
 function hashPassword_(password, salt) {
   let bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + password, Utilities.Charset.UTF_8);

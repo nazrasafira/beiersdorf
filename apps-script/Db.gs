@@ -45,6 +45,7 @@ function cell_(col, v) {
   if (v instanceof Date) {
     v = v.getFullYear() < 1900 ? Utilities.formatDate(v, TZ, 'HH:mm') : Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
   }
+  if (col === 'role' && String(v).trim() === 'supervisor') return 'manager'; // renamed role (older Sheets)
   if (BOOL_COLS.indexOf(col) >= 0) return v === true || String(v).toUpperCase() === 'TRUE';
   if (NUM_COLS.indexOf(col) >= 0) return v === '' || v === null ? null : Number(v) || 0;
   return v === null || v === undefined ? '' : String(v);

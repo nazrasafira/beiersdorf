@@ -161,7 +161,7 @@ function actSaleRemove_(req, me) {
 /** Leader/Supervisor lets an SPG edit a day outside the edit window again (or locks it again). */
 function actUnlock_(req, me) {
   const owner = byId_('Users', req.userId);
-  if (!owner || (me.role !== 'leader' && me.role !== 'supervisor') || !canView_(me, owner)) fail_('Kamu tidak punya akses.', 403);
+  if (!owner || (me.role !== 'leader' && me.role !== 'manager') || !canView_(me, owner)) fail_('Kamu tidak punya akses.', 403);
   if (!isDate_(req.date)) fail_('Tanggal tidak valid.');
   setDayReport_(owner.id, req.date, { unlocked: !!req.unlocked, unlocked_by: me.id });
   log_(me, req.unlocked ? 'buka kunci' : 'kunci', 'laporan', owner.id, owner.name + ' · ' + req.date);
@@ -189,7 +189,7 @@ function checkTargetParts_(store, monthly, weekly, daily) {
  * target is the sum of those stores. A store held by an active SPG the user doesn't manage can't be taken.
  */
 function actTargets_(req, me) {
-  if (me.role !== 'leader' && me.role !== 'supervisor') fail_('Kamu tidak punya akses.', 403);
+  if (me.role !== 'leader' && me.role !== 'manager') fail_('Kamu tidak punya akses.', 403);
   const rowsIn = Array.isArray(req.rows) ? req.rows.slice(0, 300) : [];
   if (!rowsIn.length) fail_('Tidak ada target.');
   const seen = {};
@@ -254,7 +254,7 @@ function actSettings_(req, me) {
 /* ---------- People ---------- */
 function actUserAdd_(req, me) {
   const role = String(req.role || '');
-  if (['spg', 'leader', 'supervisor'].indexOf(role) < 0) fail_('Peran tidak dikenal.');
+  if (['spg', 'leader', 'manager'].indexOf(role) < 0) fail_('Peran tidak dikenal.');
   const name = str_(req.name, 100), phone = normalizePhone_(req.phone);
   if (!name || !phone) fail_('Nama dan nomor HP wajib diisi.');
   if (!/^08\d{8,11}$/.test(phone)) fail_('Nomor HP tidak valid (contoh: 0812 3456 7890).');

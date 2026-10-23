@@ -43,7 +43,7 @@ function buildState_(me) {
     storeTargets: me.role === 'admin' ? {} : storeTargetsFor_(spgIds, from),
     reports: reportsFor_(fullIds, totalsIds, from, today),
     shifts: shiftsFor_(fullIds.concat(totalsIds), from, today, fullIds),
-    activity: me.role === 'admin' || me.role === 'supervisor' ? rows_('Activity').slice(-200).reverse()
+    activity: me.role === 'admin' || me.role === 'manager' ? rows_('Activity').slice(-200).reverse()
       .map(a => ({ at: a.at, by: a.by, action: a.action, kind: a.kind, id: a.subject_id, name: a.name })) : [],
   };
 }

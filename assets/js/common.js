@@ -9,18 +9,18 @@
   const BRAND_LOGO = 'assets/brand/beiersdorf-logo.png';
   const logoImg = () => `<img class="brand-logo" src="${root + BRAND_LOGO}" alt="Beiersdorf" onerror="this.remove()">`;
 
-  const ROLE_LABEL = { spg: 'SPG', leader: 'Team Leader', supervisor: 'Manager', admin: 'Admin' };
+  const ROLE_LABEL = { spg: 'SPG', leader: 'Team Leader', manager: 'Manager', admin: 'Admin' };
   const HOME = {
     spg: 'spg/beranda.html',
     leader: 'leader/dashboard.html',
-    supervisor: 'supervisor/dashboard.html',
+    manager: 'manager/dashboard.html',
     admin: 'admin/pengguna.html',
   };
   const NAV = {
     spg: [['spg/beranda.html', 'home', 'Beranda'], ['spg/laporan.html', 'edit', 'Penjualan'], ['spg/peringkat.html', 'trophy', 'Peringkat'], ['spg/riwayat.html', 'calendar', 'Riwayat']],
     // [href, icon, label, optional folder that also marks the item active]
     leader: [['leader/dashboard.html', 'grid', 'Dashboard'], ['leader/laporan.html', 'file', 'Laporan'], ['leader/target.html', 'target', 'Target'], ['leader/tim.html', 'users', 'Tim'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/'], ['leader/pengaturan.html', 'settings', 'Pengaturan']],
-    supervisor: [['supervisor/dashboard.html', 'map', 'Area'], ['leader/laporan.html', 'file', 'Laporan'], ['leader/target.html', 'target', 'Target'], ['leader/tim.html', 'users', 'Tim'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/'], ['leader/pengaturan.html', 'settings', 'Pengaturan']],
+    manager: [['manager/dashboard.html', 'map', 'Area'], ['leader/laporan.html', 'file', 'Laporan'], ['leader/target.html', 'target', 'Target'], ['leader/tim.html', 'users', 'Tim'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/'], ['leader/pengaturan.html', 'settings', 'Pengaturan']],
     admin: [['admin/pengguna.html', 'users', 'Pengguna'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/']],
   };
   // Server addresses (clean URLs on Laravel)
@@ -247,7 +247,7 @@
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
 
-  /* ---------- Team for leader / supervisor pages ---------- */
+  /* ---------- Team for leader / manager pages ---------- */
   function teamId(user) {
     if (user.role === 'leader') return user.teamId;
     const list = Data.teams();
@@ -309,7 +309,7 @@
       document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
     }
 
-    if (opts.teamPicker && user.role === 'supervisor') {
+    if (opts.teamPicker && user.role === 'manager') {
       const current = teamId(user);
       const box = document.createElement('div');
       box.className = 'team-pick';

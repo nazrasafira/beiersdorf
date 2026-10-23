@@ -38,7 +38,32 @@ function setupSheet() {
   secret_(); // makes the token secret now
   // Rows copied or typed by hand may have no id or a repeated one: the app can't tell them apart
   const fixed = repairIds_('Products', 'p') + repairIds_('Stores', 'st');
+  renameRole_('supervisor', 'manager');
   return fixed ? 'ok · ' + fixed + ' baris produk/toko diberi ID baru' : 'ok';
+}
+
+/** Writes a renamed role into the Users tab (the app already reads the old name as the new one). */
+function renameRole_(from, to) {
+  const sh = sheet_('Users'), n = sh.getLastRow() - 1, col = TABLES.Users.indexOf('role') + 1;
+  if (n < 1) return 0;
+  const range = sh.getRange(2, col, n, 1), values = range.getValues();
+  // A dropdown list typed into the Sheet by hand: offer the new name instead of the old one first
+  try {
+    let ruleChanged = false;
+    const rules = range.getDataValidations().map(r => {
+      const rule = r[0];
+      if (!rule || rule.getCriteriaType() !== SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) return [rule];
+      const [list, showDropdown] = rule.getCriteriaValues();
+      if (list.indexOf(from) < 0) return [rule];
+      ruleChanged = true;
+      return [rule.copy().requireValueInList(list.map(v => (v === from ? to : v)), showDropdown).build()];
+    });
+    if (ruleChanged) range.setDataValidations(rules);
+  } catch (e) { /* no dropdowns (or not supported here) */ }
+  let changed = 0;
+  values.forEach(r => { if (String(r[0]).trim() === from) { r[0] = to; changed++; } });
+  if (changed) { range.setValues(values); delete TABLE_CACHE.Users; }
+  return changed;
 }
 
 function setupSheetMenu() {

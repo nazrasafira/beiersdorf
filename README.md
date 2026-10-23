@@ -12,7 +12,7 @@ The app starts with the **Admin** account, the product catalog and the stores; t
 |------|-------|----------|----------|
 | Admin | `0811 0000 0001` | `admin123` | Pengguna |
 
-Log in with **phone number + password** (any format works: `0811 0000 0001`, `62811…`, `+62 811-…`). The Admin adds Managers and Team Leaders (Pengguna); Team Leaders add their SPGs and set each SPG's working days and hours (Tim), give each store to an SPG and set the store targets (Target). New accounts start with `super123`, `leader123` or `spg123` and must choose their own password at the first login.
+Log in with **phone number + password** (any format works: `0811 0000 0001`, `62811…`, `+62 811-…`). The Admin adds Managers and Team Leaders (Pengguna); Team Leaders add their SPGs and set each SPG's working days and hours (Tim), give each store to an SPG and set the store targets (Target). New accounts start with `manager123`, `leader123` or `spg123` and must choose their own password at the first login.
 
 - **Products**: the 199 SKUs of the client's file *SOH OFFTAKE YCA & LSI PJR AGUST'26 FILE BARU 199 SKU* (KODE SKU, Nama SKU di HO, Subbrand, price, barcode), kept in `assets/js/data.js`.
 - **Stores**: the 16 NMA stores (Yogya Cimanggu, LSI Pajajaran, AEON Sentul City, … Yogya Ciranjang).
@@ -33,7 +33,7 @@ In demo mode (`backend: 'demo'`) changes are saved in your browser; clear the si
 | `leader/target.html` — per month: which SPG holds each store and the store's target (auto weekly/daily, overrides); an SPG's target is the sum of their stores | Leader, Manager |
 | `leader/tim.html` — SPGs: add, edit name/phone, deactivate, reset password, **schedule per SPG** (working days and hours) | Leader, Manager |
 | `leader/pengaturan.html` — team default working days (for SPGs without their own schedule), holidays, edit window | Leader, Manager |
-| `supervisor/dashboard.html` — Manager's area dashboard: team comparison, top SPGs | Manager |
+| `manager/dashboard.html` — Manager's area dashboard: team comparison, top SPGs | Manager |
 | `katalog/produk.html` — shared product catalog (add and edit any product) | Admin, Manager, Leader |
 | `katalog/toko.html` — shared store list (add and edit any store) | Admin, Manager, Leader |
 | `admin/pengguna.html` — add / edit / deactivate / reset Managers and Team Leaders (warning before a second leader in a team), daily recap | Admin |
@@ -46,7 +46,7 @@ Targets are set **per store and month** (Target page). Each store is held by one
 
 ## Roles and schedules
 
-- **Manager** is the area role (code `supervisor` in the data, so existing accounts keep working). The area is **Bogor**.
+- **Manager** is the area role (role `manager`; Sheets made before the rename said `supervisor`, which the app reads as `manager` and **Siapkan tab** rewrites). The area is **Bogor**.
 - Each SPG can have their **own schedule**: working days of the week and working hours (e.g. Mon–Fri 10:00–19:00), set by their Team Leader or Manager in **Tim → Atur jadwal**. SPGs without one follow the team's default working days (Pengaturan). Team holidays apply to everyone. The schedule decides the SPG's daily target, who is expected to start a shift today, and OFF / MISSING in the daily recap.
 
 ## Google Sheets backend

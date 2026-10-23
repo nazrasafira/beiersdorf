@@ -1,6 +1,6 @@
 Data.ready(function () {
   'use strict';
-  const user = App.init({ roles: ['admin', 'supervisor', 'leader'] });
+  const user = App.init({ roles: ['admin', 'manager', 'leader'] });
   if (!user) return;
   const D = Data, $ = id => document.getElementById(id);
   const form = $('form');

@@ -283,7 +283,7 @@
   function seed() {
     const stamp = { createdBy: 'u-admin', updatedBy: 'u-admin', updatedAt: '2026-10-16' };
     state = {
-      version: 8,
+      version: 9,
       products: PRODUCTS.map(p => ({ ...p, active: true, image: 'assets/products/placeholder.svg', ...stamp })),
       stores: STORES.map(st => ({ ...st, areaId: 'a1', active: true, ...stamp })),
       activity: [],
@@ -365,7 +365,7 @@
     if (!viewer || !owner) return false;
     if (viewer.role === 'spg') return viewer.id === owner.id;
     if (viewer.role === 'leader') return owner.teamId === viewer.teamId;
-    return viewer.role === 'supervisor';
+    return viewer.role === 'manager';
   }
 
   /* ---------- Working days ---------- */
@@ -744,7 +744,7 @@
 
   /* ---------- Team, settings, products ---------- */
   /* ---------- People, products, stores (with permissions + activity log) ---------- */
-  const DEFAULT_PW = { spg: 'spg123', leader: 'leader123', supervisor: 'super123', admin: 'admin123' };
+  const DEFAULT_PW = { spg: 'spg123', leader: 'leader123', manager: 'manager123', admin: 'admin123' };
   function log(by, action, kind, id, name) {
     (state.activity = state.activity || []).unshift({ at: TODAY + ' ' + nowTime(), by, action, kind, id, name });
     state.activity.length = Math.min(state.activity.length, 500);
@@ -752,10 +752,10 @@
   // Who may manage which accounts: Admin → Supervisors & Team Leaders; Leader → own team's SPGs; Supervisor → SPGs in area
   function canManageUser(viewer, target) {
     if (!viewer || !target) return false;
-    if (viewer.role === 'admin') return target.role === 'leader' || target.role === 'supervisor';
+    if (viewer.role === 'admin') return target.role === 'leader' || target.role === 'manager';
     if (target.role !== 'spg') return false;
     if (viewer.role === 'leader') return target.teamId === viewer.teamId;
-    if (viewer.role === 'supervisor') { const t = team(target.teamId); return !!t && t.areaId === viewer.areaId; }
+    if (viewer.role === 'manager') { const t = team(target.teamId); return !!t && t.areaId === viewer.areaId; }
     return false;
   }
   function addUser(data, by) {
@@ -783,7 +783,7 @@
         u.teamId = t.id;
         if (!t.leaderId || !(user(t.leaderId) || {}).active) t.leaderId = u.id;
       }
-    } else if (role === 'supervisor') {
+    } else if (role === 'manager') {
       u.areaId = data.areaId || 'a1';
     } else return 'Peran tidak dikenal.';
     if (!canManageUser(viewer, u)) return 'Kamu tidak punya akses untuk menambah pengguna ini.';
@@ -817,7 +817,7 @@
 
   // Products and stores are shared lists. Add: Admin, Supervisor, Team Leader.
   // Edit/deactivate: the same roles, any item.
-  const canAddCatalog = viewer => !!viewer && ['admin', 'supervisor', 'leader'].includes(viewer.role);
+  const canAddCatalog = viewer => !!viewer && ['admin', 'manager', 'leader'].includes(viewer.role);
   const canEditCatalog = (viewer, item) => !!item && canAddCatalog(viewer);
   function saveCatalogItem(list, kind, prefix, item, by) {
     const viewer = user(by);
@@ -1160,7 +1160,7 @@
     if (LIVE) { state = emptyState(); return; }
     const raw = lsGet(STORE_KEY);
     if (raw) {
-      try { const s = JSON.parse(raw); if (s && s.version === 8) { state = s; return; } } catch (e) { /* reseed */ }
+      try { const s = JSON.parse(raw); if (s && s.version === 9) { state = s; return; } } catch (e) { /* reseed */ }
     }
     seed();
     persist();
