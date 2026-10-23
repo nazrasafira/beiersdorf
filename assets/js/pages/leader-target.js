@@ -11,12 +11,25 @@ Data.ready(function () {
   const photo = u => App.imgSrc((u && u.photo) || 'assets/avatars/default.svg');
 
   // Who holds a store in a month. "taken" = an active SPG of another team (can't be given out from here).
+  // A month nobody has set yet: the store stays with the team that held it before (until that team releases it).
   function holderOf(storeId, month) {
     const t = D.storeTarget(storeId, month);
-    const holder = t && t.userId ? D.user(t.userId) : null;
-    const taken = !!t && (!!t.taken || (!!holder && holder.teamId !== teamId && holder.active));
-    return { t: t && t.userId ? t : null, holder, taken, mine: !!holder && holder.teamId === teamId };
+    if (!t) {
+      for (let m = D.addMonths(month, -1), i = 0; i < 6; m = D.addMonths(m, -1), i++) {
+        const prev = D.storeTarget(storeId, m);
+        if (!prev) continue;
+        const ph = prev.userId ? D.user(prev.userId) : null;
+        const prevTaken = !!prev.taken || (!!ph && ph.teamId !== teamId && ph.active);
+        return { t: null, holder: prevTaken ? ph : null, taken: prevTaken, mine: false, fromMonth: prevTaken ? m : null };
+      }
+      return { t: null, holder: null, taken: false, mine: false };
+    }
+    const holder = t.userId ? D.user(t.userId) : null;
+    const taken = !!t.taken || (!!holder && holder.teamId !== teamId && holder.active);
+    return { t: t.userId ? t : null, holder, taken, mine: !!holder && holder.teamId === teamId };
   }
+  // Months that are over can't be changed (their results would be rewritten)
+  const isPast = () => mk < D.monthKey(D.TODAY);
   // Stores nobody in this team holds and no other team has taken (the inactive stores are left out)
   const freeStores = month => D.stores().filter(st => { const h = holderOf(st.id, month); return !h.mine && !h.taken; })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -27,6 +40,9 @@ Data.ready(function () {
   /* ---------- Page ---------- */
   function render() {
     $('month').textContent = App.monthName(mk);
+    $('pastNote').hidden = !isPast();
+    $('copyPrev').hidden = isPast();
+    document.body.classList.toggle('tg-past', isPast());
     $('sub').textContent = `Tim ${D.team(teamId).name} · target harian dihitung dari jadwal kerja tiap SPG`;
 
     const spgs = teamSpgs();
@@ -76,9 +92,9 @@ Data.ready(function () {
     $('takenWrap').hidden = !taken.length;
     $('takenSum').textContent = `Dipegang tim lain (${taken.length})`;
     $('taken').innerHTML = taken.map(st => {
-      const h = holderOf(st.id, mk).holder;
+      const ho = holderOf(st.id, mk), h = ho.holder;
       return `<div><div class="grow"><b>${App.esc(st.name)}</b><span>${App.esc(place(st))}</span></div>
-        <span class="small muted">${h ? `${App.esc(h.name)} · Tim ${App.esc((D.team(h.teamId) || {}).name || '')}` : 'SPG tim lain'}</span></div>`;
+        <span class="small muted">${h ? `${App.esc(h.name)} · Tim ${App.esc((D.team(h.teamId) || {}).name || '')}` : 'SPG tim lain'}${ho.fromMonth ? ` (sejak ${App.monthName(ho.fromMonth)})` : ''}</span></div>`;
     }).join('');
   }
   const firstWorkingDay = userId => D.eachDay(mk + '-01', D.monthEnd(mk + '-01')).find(d => D.isWorkingDayFor(userId, d)) || mk + '-01';
@@ -139,24 +155,31 @@ Data.ready(function () {
     if (storeId) document.activeElement.blur(); else $('sheetStore')._combo.focus();
   }
 
+  const pastBlocked = () => { if (isPast()) { App.toast('Bulan yang sudah lewat tidak bisa diubah.'); return true; } return false; };
   $('spgs').addEventListener('click', e => {
     const s = e.target.closest('[data-store]'), a = e.target.closest('[data-add]');
+    if ((s || a) && pastBlocked()) return;
     if (s) openSheet({ storeId: s.dataset.store });
     else if (a) {
       if (!freeStores(mk).length) { App.toast('Semua toko sudah punya SPG. Pindahkan toko dari SPG lain.'); return; }
       openSheet({ userId: a.dataset.add });
     }
   });
-  $('free').addEventListener('click', e => { const s = e.target.closest('[data-store]'); if (s) openSheet({ storeId: s.dataset.store }); });
+  $('free').addEventListener('click', e => { const s = e.target.closest('[data-store]'); if (s && !pastBlocked()) openSheet({ storeId: s.dataset.store }); });
 
   form.addEventListener('submit', e => {
     e.preventDefault();
     const storeId = editing || $('sheetStore').value;
     const userId = $('sheetSpg').value;
-    if (!storeId) { App.toast('Pilih toko dulu.'); $('sheetStore')._combo.focus(); return; }
-    if (!userId) { App.toast('Pilih SPG dulu.'); $('sheetSpg')._combo.focus(); return; }
-    const monthly = App.parseNum($('sheetMonthly').value);
-    D.saveTargets([{ storeId, mk, userId, monthly, weekly: App.parseNum($('sheetWeekly').value), daily: App.parseNum($('sheetDaily').value) }], user.id);
+    if (!storeId) { App.toast('Pilih toko dulu.'); $('sheetStore')._combo.flash(); return; }
+    if (!userId) { App.toast('Pilih SPG dulu.'); $('sheetSpg')._combo.flash(); return; }
+    const monthly = App.parseNum($('sheetMonthly').value), weekly = App.parseNum($('sheetWeekly').value), daily = App.parseNum($('sheetDaily').value);
+    // Same rule as the server: daily ≤ weekly ≤ monthly
+    const bad = (weekly || daily) && !monthly ? 'Isi target bulanan dulu.'
+      : weekly > monthly ? 'Target mingguan tidak boleh lebih besar dari target bulanan.'
+      : daily > (weekly || monthly) ? `Target harian tidak boleh lebih besar dari target ${weekly ? 'mingguan' : 'bulanan'}.` : '';
+    if (bad) { App.toast(bad); $('manual').open = true; return; }
+    D.saveTargets([{ storeId, mk, userId, monthly, weekly, daily }], user.id);
     dlg.close();
     App.toast(`${D.store(storeId).name} → ${D.user(userId).name.split(' ')[0]}${monthly ? ' · ' + App.rpShort(monthly) : ''}`);
     render();

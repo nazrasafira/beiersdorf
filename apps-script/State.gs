@@ -72,8 +72,8 @@ function storeTargetsFor_(userIds, from) {
   const out = {}, ids = {};
   userIds.forEach(id => { ids[id] = true; });
   rows_('StoreTargets').forEach(t => {
-    if (!t.user_id) return;
     const key = t.store_id + '|' + t.month;
+    if (!t.user_id) { if (t.month >= from.slice(0, 7)) out[key] = { userId: null, released: true }; return; } // store released that month
     if (ids[t.user_id]) {
       out[key] = { userId: t.user_id, monthly: t.monthly || 0, weekly: t.weekly || null, daily: t.daily || null, setBy: t.set_by || null, setAt: t.set_at };
     } else if (t.month >= from.slice(0, 7)) {

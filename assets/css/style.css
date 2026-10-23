@@ -351,7 +351,7 @@ img.avatar { object-fit: cover; padding: 0; background: var(--blue-soft); }
 .podium .face .avatar { width: 64px; height: 64px; font-size: 20px; box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--ring, #E5E7EB); }
 .podium .p1 .face .avatar { width: 80px; height: 80px; }
 .podium .face .rank-badge { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); box-shadow: 0 0 0 2px #fff; }
-.podium .n { font-weight: 700; font-size: 14px; margin-top: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.podium .n { font-weight: 700; font-size: 14px; margin-top: 12px; line-height: 1.25; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .podium .s { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .podium .v { font-size: 20px; font-weight: 800; color: var(--blue); margin-top: 2px; }
 .podium .me { background: var(--blue-soft); }
@@ -734,3 +734,14 @@ button.rk:active { background: var(--soft); }
 .rep-detail .rows > * { padding: 10px 0; }
 .rep-detail .rows .grow span { white-space: normal; }
 @media (min-width: 900px) { .rep-list { grid-template-columns: 1fr 1fr; align-items: start; } }
+
+/* Daily recap form: team (Admin), dates, button — stacked on phones */
+#dxForm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+#dxForm .dx-team, #dxForm .btn { grid-column: 1 / -1; }
+#dxForm .field { margin: 0; }
+#dxForm .btn { min-height: 44px; }
+@media (min-width: 760px) { #dxForm { grid-template-columns: 2fr 1fr 1fr auto; } #dxForm .dx-team, #dxForm .btn { grid-column: auto; } }
+
+/* Target page on a month that is over: read only */
+body.tg-past .tg-foot, body.tg-past .tg-free .btn { display: none; }
+body.tg-past .tg-store { cursor: default; }

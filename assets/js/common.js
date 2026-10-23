@@ -20,7 +20,7 @@
     spg: [['spg/beranda.html', 'home', 'Beranda'], ['spg/laporan.html', 'edit', 'Penjualan'], ['spg/peringkat.html', 'trophy', 'Peringkat'], ['spg/riwayat.html', 'calendar', 'Riwayat']],
     // [href, icon, label, optional folder that also marks the item active]
     leader: [['leader/dashboard.html', 'grid', 'Dashboard'], ['leader/laporan.html', 'file', 'Laporan'], ['leader/target.html', 'target', 'Target'], ['leader/tim.html', 'users', 'Tim'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/'], ['leader/pengaturan.html', 'settings', 'Pengaturan']],
-    supervisor: [['supervisor/dashboard.html', 'map', 'Area'], ['leader/laporan.html', 'file', 'Laporan'], ['leader/target.html', 'target', 'Target'], ['leader/tim.html', 'users', 'SPG'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/'], ['leader/pengaturan.html', 'settings', 'Pengaturan']],
+    supervisor: [['supervisor/dashboard.html', 'map', 'Area'], ['leader/laporan.html', 'file', 'Laporan'], ['leader/target.html', 'target', 'Target'], ['leader/tim.html', 'users', 'Tim'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/'], ['leader/pengaturan.html', 'settings', 'Pengaturan']],
     admin: [['admin/pengguna.html', 'users', 'Pengguna'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/']],
   };
   // Server addresses (clean URLs on Laravel)
@@ -176,7 +176,7 @@
     return [top[1], top[0], top[2]].filter(Boolean).map(r => `
       <div class="p p${r.rank}${r.user.id === meId ? ' me' : ''}">
         <div class="face">${avatar(r.user)}${rankBadge(r.rank)}</div>
-        <div class="n">${esc(r.user.name.split(' ')[0])}</div>
+        <div class="n">${esc(r.user.name)}</div>
         <div class="s">${esc(sub ? sub(r) : Data.storeLabel(r.user))}</div>
         <div class="v">${pct(r.pct)}</div>
       </div>`).join('');

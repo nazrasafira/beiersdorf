@@ -47,6 +47,7 @@ Data.ready(function () {
     location.href = App.home(u);
   });
 
+  $('pwShow').addEventListener('change', e => { ['newPw', 'newPw2'].forEach(id => { $(id).type = e.target.checked ? 'text' : 'password'; }); });
   pwForm.addEventListener('submit', async e => {
     e.preventDefault();
     const pw = $('newPw').value, pw2 = $('newPw2').value;

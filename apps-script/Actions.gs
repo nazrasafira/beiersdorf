@@ -223,7 +223,8 @@ function actTargets_(req, me) {
   const add = [];
   checked.forEach(c => {
     if (c.cur) save_('StoreTargets', Object.assign(c.cur, c.vals));
-    else if (c.vals.user_id) add.push(Object.assign({ store_id: c.st.id, month: c.mk }, c.vals));
+    // A new row: an SPG, or a release of a store some team held before (so it stays free in later months)
+    else if (c.vals.user_id || lastHolderBefore_(c.st.id, c.mk)) add.push(Object.assign({ store_id: c.st.id, month: c.mk }, c.vals));
   });
   append_('StoreTargets', add);
   log_(me, 'atur', 'target', '', checked.length + ' toko · ' + checked[0].mk);

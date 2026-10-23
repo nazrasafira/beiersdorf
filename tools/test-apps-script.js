@@ -341,6 +341,43 @@ test('SPG schedule: own days and hours, set by their leader; recap uses them', (
   assert.equal(g.as('rina', 'report.dailyRecap', { from: '2026-10-13', to: '2026-10-13' }).data.rows.find(x => x.name === 'Sari Wulandari').cells.join(), 'MISSING');
 });
 
+test('store targets: past months locked, last month\'s team keeps its stores, daily ≤ weekly ≤ monthly', () => {
+  const g = app();
+  const save = (who, row) => g.as(who, 'targets.save', { rows: [Object.assign({ mk: '2026-11' }, row)] });
+  assert.equal(save('rina', { mk: '2026-09', storeId: 'st1', userId: 'u-sari', monthly: 1 }).status, 422, 'September is over');
+  // November not set yet: st1 stays with Rina's team (Sari held it in October)
+  const other = g.rows('Users').find(u => u.role === 'spg' && u.team_id === 't2' && u.active);
+  assert.equal(save('andi', { storeId: 'st1', userId: other.id, monthly: 1 }).status, 409);
+  assert.ok(save('rina', { storeId: 'st1', userId: null }).ok, 'released for November');
+  assert.deepEqual(g.as('rina', 'bootstrap').data.storeTargets['st1|2026-11'], { userId: null, released: true });
+  assert.ok(save('andi', { storeId: 'st1', userId: other.id, monthly: 1 }).ok, 'free after the release');
+  // Manual weekly / daily targets must fit
+  assert.equal(save('rina', { storeId: 'st2', userId: 'u-dewi', monthly: 50, weekly: 60 }).status, 422);
+  assert.equal(save('rina', { storeId: 'st2', userId: 'u-dewi', monthly: 50, weekly: 20, daily: 30 }).status, 422);
+  assert.equal(save('rina', { storeId: 'st2', userId: 'u-dewi', weekly: 20 }).status, 422, 'needs a monthly target');
+  assert.ok(save('rina', { storeId: 'st2', userId: 'u-dewi', monthly: 50, weekly: 20, daily: 5 }).ok);
+});
+
+test('accounts: deactivated login message, fix name/phone, start date, store names', () => {
+  const g = app();
+  assert.ok(g.as('rina', 'user.setActive', { userId: 'u-dewi', active: false }).ok);
+  assert.match(g.call({ action: 'login', phone: PHONE.dewi, password: 'spg123' }).error, /dinonaktifkan/);
+  assert.equal(g.call({ action: 'login', phone: PHONE.dewi, password: 'salah' }).error, 'Nomor HP atau password salah.', 'no hint without the password');
+  // Fix a typo in the name / phone
+  assert.ok(g.as('rina', 'user.update', { userId: 'u-sari', name: 'Sari W.', phone: '0813 0000 0001' }).ok);
+  assert.equal(g.as('rina', 'user.update', { userId: 'u-sari', name: 'Sari', phone: PHONE.rani }).status, 422, 'phone already used');
+  assert.equal(g.as('andi', 'user.update', { userId: 'u-sari', name: 'X', phone: '081311112222' }).status, 403);
+  assert.equal(g.as('sari', 'bootstrap').data.users.find(u => u.id === 'u-sari').name, 'Sari W.');
+  // A new SPG: days before the account existed are empty in the recap, not MISSING
+  const nu = g.as('rina', 'user.add', { role: 'spg', name: 'SPG Baru', phone: '081344445555', teamId: 't1' }).data.user;
+  assert.equal(nu.since, '2026-10-22');
+  const row = g.as('rina', 'report.dailyRecap', { from: '2026-10-20', to: '2026-10-22' }).data.rows.find(x => x.name === 'SPG Baru');
+  assert.equal(row.cells.join('|'), '||MISSING');
+  // Store names are unique; cities are written the same way
+  assert.equal(g.as('rina', 'store.save', { name: 'toko kemang', city: 'Jakarta Selatan' }).status, 422);
+  assert.equal(g.as('rina', 'store.save', { name: 'Toko Kemang 2', city: '  jakarta   selatan ' }).data.store.city, 'Jakarta Selatan');
+});
+
 test('daily recap: who may see what', () => {
   const g = app();
   assert.equal(g.as('sari', 'report.dailyRecap', { from: '2026-10-01', to: '2026-10-11' }).status, 403);

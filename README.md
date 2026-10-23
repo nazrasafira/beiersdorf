@@ -29,20 +29,20 @@ In demo mode (`backend: 'demo'`) changes are saved in your browser; clear the si
 | `spg/peringkat.html` — team leaderboard by % of target | SPG |
 | `spg/riwayat.html` — report history per month | SPG |
 | `leader/dashboard.html` — team summary, SPG ranking, SPGs scheduled today who have not started, sales per store/product, CSV and daily recap Excel | Leader, Manager |
-| `leader/laporan.html` — team reports, detail, unlock | Leader, Manager |
+| `leader/laporan.html` — team reports as cards (details, edit, lock/unlock), 20 per page | Leader, Manager |
 | `leader/target.html` — per month: which SPG holds each store and the store's target (auto weekly/daily, overrides); an SPG's target is the sum of their stores | Leader, Manager |
-| `leader/tim.html` — SPGs: add / deactivate / reset, **schedule per SPG** (working days and hours) | Leader, Manager |
+| `leader/tim.html` — SPGs: add, edit name/phone, deactivate, reset password, **schedule per SPG** (working days and hours) | Leader, Manager |
 | `leader/pengaturan.html` — team default working days (for SPGs without their own schedule), holidays, edit window | Leader, Manager |
 | `supervisor/dashboard.html` — Manager's area dashboard: team comparison, top SPGs | Manager |
 | `katalog/produk.html` — shared product catalog (add and edit any product) | Admin, Manager, Leader |
 | `katalog/toko.html` — shared store list (add and edit any store) | Admin, Manager, Leader |
-| `admin/pengguna.html` — add / deactivate / reset Managers and Team Leaders | Admin |
+| `admin/pengguna.html` — add / edit / deactivate / reset Managers and Team Leaders (warning before a second leader in a team), daily recap | Admin |
 
 See [`PLAN.md`](PLAN.md) for the product plan, [`IMPLEMENTATION.md`](IMPLEMENTATION.md) for how the prototype is built, [`IMPLEMENTATION-GOOGLE-SHEETS.md`](IMPLEMENTATION-GOOGLE-SHEETS.md) for the plan to run it on Google Sheets, and [`IMPLEMENTATION-WEB.md`](IMPLEMENTATION-WEB.md) for the Laravel + MySQL web version.
 
 ## Targets
 
-Targets are set **per store and month** (Target page). Each store is held by one SPG that month; an SPG may hold several stores, and their target is the sum of those stores' targets (daily = each store's monthly target over the working days of the SPG who holds it, unless overridden). A store held by an active SPG of another team can't be taken; a store becomes free again when its SPG is removed from it or deactivated. **Salin bulan lalu** copies last month's SPGs and targets.
+Targets are set **per store and month** (Target page). Each store is held by one SPG that month; an SPG may hold several stores, and their target is the sum of those stores' targets (daily = each store's monthly target over the working days of the SPG who holds it, unless overridden). A store held by an active SPG of another team can't be taken; a store becomes free again when its SPG is removed from it or deactivated. **Salin bulan lalu** copies last month's SPGs and targets. In a month nobody has set up yet, a store stays with the team that held it before until that team releases it (Lepas toko). Months that are over are read-only. Manual targets must fit: daily ≤ weekly ≤ monthly.
 
 ## Roles and schedules
 

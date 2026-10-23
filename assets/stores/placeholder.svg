@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240" role="img" aria-label="Toko">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240" role="img" aria-label="Belum ada foto toko">
 <rect width="320" height="240" fill="#EEF1F6"/>
 <ellipse cx="160" cy="196" rx="104" ry="8" fill="#000" opacity=".06"/>
 <rect x="76" y="100" width="168" height="92" rx="6" fill="#FFFFFF" stroke="#C9D2E3" stroke-width="3"/>
@@ -6,5 +6,5 @@
 <path d="M68 100 q14 18 28 0 q14 18 28 0 q14 18 28 0 q14 18 28 0 q14 18 28 0 q14 18 28 0 q14 18 28 0" fill="none" stroke="#C9D2E3" stroke-width="3" stroke-linejoin="round"/>
 <rect x="96" y="128" width="52" height="40" rx="4" fill="#EEF1F6" stroke="#C9D2E3" stroke-width="3"/>
 <rect x="172" y="128" width="44" height="64" rx="4" fill="#EEF1F6" stroke="#C9D2E3" stroke-width="3"/>
-<path d="M150 74 h20 M160 64 v20" stroke="#9AA6BD" stroke-width="5" stroke-linecap="round"/>
+<rect x="128" y="68" width="64" height="14" rx="4" fill="#E3E8F1"/>
 </svg>

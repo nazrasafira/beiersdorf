@@ -481,7 +481,7 @@
     rows.forEach(r => {
       if (!r.storeId) return; // per-SPG targets of the old version, left in an offline queue
       const key = r.storeId + '|' + r.mk;
-      if (!r.userId) delete state.storeTargets[key];
+      if (!r.userId) state.storeTargets[key] = { userId: null, released: true }; // released: free, also for the months after
       else state.storeTargets[key] = { userId: r.userId, monthly: r.monthly || 0, weekly: r.weekly || null, daily: r.daily || null, setBy: by, setAt: TODAY };
     });
     memo = {};

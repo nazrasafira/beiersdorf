@@ -6,7 +6,7 @@ Data.ready(function () {
   const teamId = App.teamId(user);
   const WEEK = [[1, 'Sen'], [2, 'Sel'], [3, 'Rab'], [4, 'Kam'], [5, 'Jum'], [6, 'Sab'], [0, 'Min']];
 
-  $('sub').textContent = 'Tim ' + D.team(teamId).name;
+  $('sub').textContent = 'SPG Tim ' + D.team(teamId).name;
 
   /* ----- One card per SPG: photo, phone, last store, schedule, actions ----- */
   function render() {
