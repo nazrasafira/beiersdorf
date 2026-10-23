@@ -18,12 +18,13 @@ Data.ready(function () {
           ${App.person(u, App.phoneFmt(u.phone) + (D.storeLabel(u) ? ' · ' + D.storeLabel(u) : ''))}
           ${u.active ? '<span class="pill ok">Aktif</span>' : '<span class="pill">Nonaktif</span>'}
         </div>
-        <button type="button" class="spg-sch" data-sch="${u.id}">
+        <button type="button" class="spg-sch" data-sch="${u.id}" aria-label="Atur jadwal ${App.esc(u.name)}">
           ${App.icon('clock')}
           <span class="grow"><b>${App.esc(D.scheduleLabel(u.id).split(' · ')[0])}</b><small>${[u.workStart && u.workEnd ? u.workStart + '–' + u.workEnd : '', D.hasOwnSchedule(u.id) ? 'Jadwal sendiri' : 'Ikut hari kerja tim'].filter(Boolean).join(' · ')}</small></span>
           <span class="btn ghost small">Atur jadwal</span>
         </button>
         <div class="spg-actions">
+          <button type="button" class="btn ghost small" data-edit="${u.id}">${App.icon('pencil')}Ubah</button>
           <button type="button" class="btn ghost small" data-photo="${u.id}">${App.icon('camera')}Foto</button>
           <button type="button" class="btn ghost small" data-reset="${u.id}">${App.icon('key')}Reset password</button>
           <button type="button" class="btn ghost small ${u.active ? 'danger' : ''}" data-id="${u.id}">${App.icon(u.active ? 'userX' : 'userCheck')}${u.active ? 'Nonaktifkan' : 'Aktifkan'}</button>
@@ -43,6 +44,8 @@ Data.ready(function () {
   $('list').addEventListener('click', async e => {
     const sch = e.target.closest('[data-sch]');
     if (sch) { openSchedule(sch.dataset.sch); return; }
+    const ed = e.target.closest('button[data-edit]');
+    if (ed) { if (await App.editPerson(D.user(ed.dataset.edit), user.id)) { App.toast('Data SPG disimpan.'); render(); } return; }
     const ph = e.target.closest('button[data-photo]');
     if (ph) {
       const photo = await App.pickImage('cover', 192);

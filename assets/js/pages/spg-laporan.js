@@ -25,8 +25,13 @@ Data.ready(function () {
     products.map(p => `<option value="${p.id}" data-img="${App.esc(App.productSrc(p))}">${App.esc(p.name)}</option>`).join('');
   App.combobox($('product'));
 
+  const MAX_QTY = 10000; // same limit as the server
   const qty = () => Math.max(1, Math.floor(+$('qty').value || 1));
-  const updateSubtotal = () => { $('subtotal').textContent = App.rp(qty() * App.parseNum($('price').value)); };
+  const qtyOk = () => { const q = Number($('qty').value); return Number.isInteger(q) && q >= 1 && q <= MAX_QTY; };
+  const updateSubtotal = () => {
+    $('qty').classList.toggle('attention', !qtyOk());
+    $('subtotal').textContent = qtyOk() ? App.rp(qty() * App.parseNum($('price').value)) : '–';
+  };
   $('product').addEventListener('change', () => {
     const p = D.product($('product').value);
     App.setMoney($('price'), p ? p.price : 0);
@@ -42,9 +47,11 @@ Data.ready(function () {
   $('entry').addEventListener('submit', e => {
     e.preventDefault();
     const productId = $('product').value;
-    if (!productId) { App.toast('Pilih produk dulu.'); $('product')._combo.focus(); return; }
+    if (!productId) { App.toast('Pilih produk dulu.'); $('product')._combo.flash(); return; }
+    const rawQty = Number($('qty').value);
+    if (!Number.isInteger(rawQty) || rawQty < 1 || rawQty > MAX_QTY) { App.toast(`Jumlah harus 1–${App.num(MAX_QTY)}.`); $('qty').focus(); return; }
     const price = App.parseNum($('price').value);
-    if (!(price > 0)) { App.toast('Isi harga yang benar.'); $('price').focus(); return; }
+    if (!(price > 0) || price > 1e9) { App.toast('Isi harga yang benar.'); $('price').focus(); return; }
 
     const before = isSpg && isToday ? D.level(D.progress(owner.id, 'day', date).pct) : null;
     const q = qty();
@@ -66,7 +73,7 @@ Data.ready(function () {
 
   /* ----- Shift controls ----- */
   $('startShift').addEventListener('click', async () => {
-    const storeId = await App.pickStore({ title: 'Mulai shift', action: 'Mulai shift', current: D.lastStoreId(owner.id), note: 'Pilih toko tempat kamu bertugas hari ini. Bisa diganti selama shift.' });
+    const storeId = await App.pickStore({ userId: owner.id, title: 'Mulai shift', action: 'Mulai shift', current: D.lastStoreId(owner.id), note: 'Pilih toko tempat kamu bertugas hari ini. Bisa diganti selama shift.' });
     if (!storeId) return;
     D.startShift(owner.id, storeId);
     App.toast('Shift dimulai di ' + D.store(storeId).name + '.');
@@ -74,7 +81,7 @@ Data.ready(function () {
   });
   $('switchStore').addEventListener('click', async () => {
     const sh = D.getShift(owner.id, date);
-    const storeId = await App.pickStore({ title: 'Ganti toko', action: 'Ganti', current: sh && sh.storeId, note: 'Penjualan berikutnya dicatat di toko ini.' });
+    const storeId = await App.pickStore({ userId: owner.id, title: 'Ganti toko', action: 'Ganti', current: sh && sh.storeId, note: 'Penjualan berikutnya dicatat di toko ini.' });
     if (!storeId || (sh && storeId === sh.storeId)) return;
     D.switchStore(owner.id, storeId);
     App.toast('Sekarang di ' + D.store(storeId).name + '.');
@@ -112,7 +119,10 @@ Data.ready(function () {
 
   $('list').addEventListener('click', async e => {
     const b = e.target.closest('[data-del]');
-    if (!b || !await App.confirm('Transaksi ini dihapus dari laporan.', { title: 'Hapus transaksi?', ok: 'Hapus', danger: true })) return;
+    if (!b) return;
+    const t = D.getTransactions(D.getReport(owner.id, date)).find(x => x.id === b.dataset.del);
+    const what = t ? `${t.qty} × ${D.product(t.productId).name} (${App.rp(t.qty * t.price)})` : 'Transaksi ini';
+    if (!await App.confirm(`${what} dihapus dari laporan.`, { title: 'Hapus transaksi?', ok: 'Hapus', danger: true })) return;
     D.removeSale(owner.id, date, b.dataset.del, user.id);
     render();
   });
@@ -146,6 +156,7 @@ Data.ready(function () {
     $('notes').hidden = !shiftPhotos.length;
     $('notePhotos').innerHTML = shiftPhotos.length ? App.notePhotos(shiftPhotos) : '';
 
+    $('dayTitle').textContent = isToday ? 'Hari ini' : App.dateShort(date);
     $('total').textContent = App.rp(report ? report.total : 0);
     $('count').textContent = report && report.noSales ? 'Tidak ada penjualan' : `${tx.length} transaksi`;
     $('list').innerHTML = tx.map(t => `

@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#ffffff">
 <title>Pengaturan</title>
 <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
-<link rel="stylesheet" href="../assets/css/style.css?v=20261023042420">
-<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261023042420","../")</script>
+<link rel="stylesheet" href="../assets/css/style.css?v=20261023053958">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261023053958","../")</script>
 </head>
 <body data-root="../">
 <main>
@@ -26,7 +26,8 @@
   </section>
   <section>
     <div class="actions" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Hari libur</h2><button type="button" class="btn ghost small" id="openAdd"><span data-icon="plus"></span>Tambah hari libur</button></div>
-    <div class="table-wrap"><table id="holidays"></table></div>
+    <p class="note" style="margin:-4px 0 10px">Hari libur langsung tersimpan.</p>
+    <div class="rows" id="holidays"></div>
   </section>
   <dialog class="modal" id="dlg" aria-labelledby="dlgTitle">
     <form id="hForm" autocomplete="off">
@@ -36,15 +37,15 @@
           <div class="field"><label for="hDate">Tanggal</label><input class="input" type="date" id="hDate" required></div>
           <div class="field"><label for="hName">Keterangan</label><input class="input" id="hName" required></div>
         </div>
-        <p><label class="check"><input type="checkbox" id="hWork"> Tetap hari kerja (toko buka)</label></p>
+        <p><label class="check"><input type="checkbox" id="hWork"> Toko tetap buka: SPG tetap kerja hari ini (hanya dicatat)</label></p>
       </div>
       <div class="modal-foot"><button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit" id="addHoliday">Tambah</button></div>
     </form>
   </dialog>
 </main>
-<script src="../assets/js/config.js?v=20261023042420"></script>
-<script src="../assets/js/data.js?v=20261023042420"></script>
-<script src="../assets/js/common.js?v=20261023042420"></script>
-<script src="../assets/js/pages/leader-pengaturan.js?v=20261023042420"></script>
+<script src="../assets/js/config.js?v=20261023053958"></script>
+<script src="../assets/js/data.js?v=20261023053958"></script>
+<script src="../assets/js/common.js?v=20261023053958"></script>
+<script src="../assets/js/pages/leader-pengaturan.js?v=20261023053958"></script>
 </body>
 </html>

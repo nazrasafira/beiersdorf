@@ -15,7 +15,8 @@ Data.ready(function () {
     const end = D.monthEnd(mk + '-01') < D.TODAY ? D.monthEnd(mk + '-01') : D.TODAY;
     let workDays = 0, sent = 0, total = 0;
 
-    $('list').innerHTML = D.eachDay(mk + '-01', end).reverse().map(d => {
+    const since = user.since || ''; // days before the account existed don't count
+    $('list').innerHTML = D.eachDay(mk + '-01', end).filter(d => !since || d >= since).reverse().map(d => {
       const working = D.isWorkingDayFor(user.id, d);
       const r = D.getReport(user.id, d);
       if (working) workDays++;

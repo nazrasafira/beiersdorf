@@ -34,7 +34,8 @@ Data.ready(function () {
     $('today').innerHTML = `<p class="muted">Hari ini libur.</p>`;
   } else {
     const next = D.nextLevel(day.pct);
-    const nextText = next ? `${lv.label} · ${App.rpK(next.min / 100 * day.target - day.actual)} lagi ke ${next.name}` : lv.label;
+    // No target (no store this month): no level, no "Rp … lagi"
+    const nextText = !day.target ? 'Belum ada target hari ini' : next ? `${lv.label} · ${App.rpK(next.min / 100 * day.target - day.actual)} lagi ke ${next.name}` : lv.label;
     let action;
     if (!shift) {
       action = `<p class="next">Shift belum dimulai</p><button type="button" class="btn block" id="start">Mulai shift</button>`;
@@ -46,12 +47,13 @@ Data.ready(function () {
       action = `<p class="next">Shift ${shift.start}–${shift.end} selesai</p><a class="btn ghost block" href="${App.page('laporan.html')}">Lihat penjualan hari ini</a>`;
     }
     $('today').innerHTML = `
-      ${App.ring(day.pct, `<div class="pct">${App.pct(day.pct)}</div><div class="lbl">target hari ini</div>`, `${App.pct(day.pct)} dari target hari ini`)}
-      <div class="amount">${App.rp(day.actual)} <span class="muted">dari ${App.rpK(day.target)}</span></div>
+      ${day.target ? App.ring(day.pct, `<div class="pct">${App.pct(day.pct)}</div><div class="lbl">target hari ini</div>`, `${App.pct(day.pct)} dari target hari ini`)
+        : App.ring(0, `<div class="pct" style="font-size:22px">–</div><div class="lbl">belum ada target</div>`, 'Belum ada target hari ini')}
+      <div class="amount">${App.rp(day.actual)} ${day.target ? `<span class="muted">dari ${App.rpK(day.target)}</span>` : '<span class="muted">terjual hari ini</span>'}</div>
       ${action}`;
     const start = $('start');
     if (start) start.addEventListener('click', async () => {
-      const storeId = await App.pickStore({ title: 'Mulai shift', action: 'Mulai shift', current: D.lastStoreId(user.id), note: 'Pilih toko tempat kamu bertugas hari ini. Bisa diganti selama shift.' });
+      const storeId = await App.pickStore({ userId: user.id, title: 'Mulai shift', action: 'Mulai shift', current: D.lastStoreId(user.id), note: 'Pilih toko tempat kamu bertugas hari ini. Bisa diganti selama shift.' });
       if (!storeId) return;
       D.startShift(user.id, storeId);
       location.href = App.page('laporan.html');
@@ -77,9 +79,9 @@ Data.ready(function () {
   /* ----- Week & month ----- */
   function progressRow(title, p) {
     return `<div class="progress">
-      <div class="top"><span>${title}</span><b>${App.pct(p.pct)}</b></div>
+      <div class="top"><span>${title}</span><b>${p.target ? App.pct(p.pct) : '–'}</b></div>
       ${App.bar(p.pct)}
-      <div class="small muted" style="margin-top:6px">${App.rpShort(p.actual)} dari ${App.rpShort(p.target)}</div>
+      <div class="small muted" style="margin-top:6px">${p.target ? `${App.rpShort(p.actual)} dari ${App.rpShort(p.target)}` : `${App.rpShort(p.actual)} · belum ada target`}</div>
     </div>`;
   }
   $('periods').innerHTML =

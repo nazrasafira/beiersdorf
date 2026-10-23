@@ -48,6 +48,7 @@
     x: '<path d="M18 6 6 18M6 6l12 12"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
     pencil: '<path d="M21.2 6.8a2.8 2.8 0 0 0-4-4L4 16v4h4Z"/><path d="m14.5 5.5 4 4"/>',
+    chevDown: '<path d="m6 9 6 6 6-6"/>',
     clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
     userCheck: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
@@ -406,7 +407,9 @@
     select.addEventListener('change', sync);
     new MutationObserver(sync).observe(select, { attributes: true, attributeFilter: ['disabled'] });
 
-    select._combo = { sync, focus: () => input.focus() };
+    // flash: point at an empty required field without opening the list (a second tap must not pick something)
+    const flash = () => { input.classList.add('attention'); input.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => input.classList.remove('attention'), 1800); };
+    select._combo = { sync, focus: () => input.focus(), flash };
     sync();
   }
   const enhanceSelects = (scope) => (scope || document).querySelectorAll('select').forEach(combobox);
@@ -519,6 +522,38 @@
     });
   }
 
+  /* ---------- Edit a person's name and phone (fix a typo); resolves true when saved ---------- */
+  function editPerson(u, by) {
+    return new Promise(resolve => {
+      const dlg = document.createElement('dialog');
+      dlg.className = 'modal';
+      dlg.setAttribute('aria-labelledby', 'editPersonTitle');
+      dlg.innerHTML = `<form autocomplete="off">
+        <div class="modal-head"><h3 id="editPersonTitle">Ubah data</h3><button type="button" class="icon-btn" data-close aria-label="Tutup">${icon('x')}</button></div>
+        <div class="modal-body">
+          <p class="error" hidden></p>
+          <div class="field"><label for="epName">Nama</label><input class="input" id="epName" required value="${esc(u.name)}"></div>
+          <div class="field"><label for="epPhone">No. HP (untuk login)</label><input class="input" id="epPhone" type="tel" inputmode="tel" required value="${esc(phoneFmt(u.phone))}"></div>
+          <p class="note" style="margin:0">Nomor HP dipakai untuk login. Password tidak berubah.</p>
+        </div>
+        <div class="modal-foot"><button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit">Simpan</button></div>
+      </form>`;
+      document.body.append(dlg);
+      let saved = false;
+      const form = dlg.querySelector('form'), err = dlg.querySelector('.error');
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const error = await busy(form, () => Data.updateUser(u.id, { name: form.epName.value, phone: form.epPhone.value }, by));
+        if (error) { err.textContent = error; err.hidden = false; return; }
+        saved = true;
+        dlg.close();
+      });
+      dlg.addEventListener('close', () => { dlg.remove(); resolve(saved); });
+      modal(dlg);
+      dlg.showModal();
+    });
+  }
+
   /* ---------- Store picker (start shift / switch store) ----------
    * Resolves with the chosen store id, or null when cancelled. */
   function pickStore(opts) {
@@ -527,13 +562,15 @@
       const dlg = document.createElement('dialog');
       dlg.className = 'modal';
       dlg.setAttribute('aria-labelledby', 'pickStoreTitle');
-      const list = Data.stores();
+      // The SPG's own stores this month first ("toko kamu"); another store needs a confirmation
+      const mine = opts.userId ? Data.heldStores(opts.userId, Data.monthKey(Data.TODAY)).map(t => t.storeId) : [];
+      const list = Data.stores().slice().sort((a, b) => (mine.includes(b.id) - mine.includes(a.id)) || a.name.localeCompare(b.name));
       dlg.innerHTML = `<form method="dialog" id="pickStoreForm">
         <div class="modal-head"><h3 id="pickStoreTitle">${esc(opts.title || 'Pilih toko')}</h3><button type="button" class="icon-btn" data-close aria-label="Tutup">${icon('x')}</button></div>
         <div class="modal-body">
           <div class="field"><label for="pickStoreSel">Toko</label>
             <select id="pickStoreSel" data-placeholder="Cari toko...">${'<option value=""></option>' + list.map(st =>
-              `<option value="${st.id}" ${st.id === opts.current ? 'selected' : ''}>${esc([st.name, st.city].filter(Boolean).join(' · '))}</option>`).join('')}</select>
+              `<option value="${st.id}" ${st.id === opts.current ? 'selected' : ''}>${esc([st.name, st.city].filter(Boolean).join(' · ') + (mine.includes(st.id) ? ' · toko kamu' : ''))}</option>`).join('')}</select>
           </div>
           ${opts.note ? `<p class="note" style="margin:0">${esc(opts.note)}</p>` : ''}
         </div>
@@ -541,10 +578,14 @@
       </form>`;
       document.body.append(dlg);
       let result = null;
-      dlg.querySelector('form').addEventListener('submit', e => {
+      dlg.querySelector('form').addEventListener('submit', async e => {
         e.preventDefault();
         const v = dlg.querySelector('select').value;
-        if (!v) { toast('Pilih toko dulu.'); return; }
+        if (!v) { toast('Pilih toko dulu.'); dlg.querySelector('select')._combo.flash(); return; }
+        if (mine.length && !mine.includes(v)) {
+          const names = mine.map(id => (Data.store(id) || {}).name).filter(Boolean).join(', ');
+          if (!await confirmBox(`${Data.store(v).name} bukan toko yang kamu pegang bulan ini (${names}). Tetap lanjut di toko ini?`, { title: 'Bukan tokomu', ok: 'Tetap lanjut' })) return;
+        }
         result = v;
         dlg.close();
       });
@@ -556,14 +597,33 @@
     });
   }
 
+  // Shown as a popover so it sits in the top layer, above any open dialog/sheet (else errors inside forms are hidden)
   function toast(msg) {
     let el = document.querySelector('.toast');
-    if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.append(el); }
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'toast';
+      el.setAttribute('role', 'status');
+      if ('popover' in el) el.popover = 'manual';
+      document.body.append(el);
+    }
     el.textContent = msg;
+    if (el.popover) { try { if (el.matches(':popover-open')) el.hidePopover(); el.showPopover(); } catch (e) { /* not supported */ } }
     el.classList.add('show');
     clearTimeout(el._t);
-    el._t = setTimeout(() => el.classList.remove('show'), 2400);
+    el._t = setTimeout(() => { el.classList.remove('show'); if (el.popover) setTimeout(() => { try { el.hidePopover(); } catch (e) { /* closed */ } }, 250); }, 2600);
   }
+
+  /* Browser form checks in Indonesian (they would otherwise appear in the browser's language) */
+  document.addEventListener('invalid', e => {
+    const f = e.target, v = f.validity;
+    if (!f.setCustomValidity) return;
+    f.setCustomValidity('');
+    const label = (f.labels && f.labels[0] ? f.labels[0].textContent.trim() : '') || 'Kolom ini';
+    f.setCustomValidity(v.valueMissing ? label + ' wajib diisi.' : v.rangeUnderflow ? 'Minimal ' + f.min + '.' : v.rangeOverflow ? 'Maksimal ' + f.max + '.'
+      : v.typeMismatch || v.patternMismatch ? 'Format ' + label.toLowerCase() + ' tidak sesuai.' : v.stepMismatch ? 'Angka tidak valid.' : v.tooShort ? 'Minimal ' + f.minLength + ' karakter.' : '');
+  }, true);
+  document.addEventListener('input', e => { if (e.target.setCustomValidity) e.target.setCustomValidity(''); }, true);
 
   // Disables the form's submit button while a save is running (it may wait for the server)
   async function busy(form, fn) {
@@ -607,7 +667,7 @@
   function dashHero(s, period) {
     const label = PERIOD_LABEL[period];
     let pace = '';
-    if (s.expected != null) {
+    if (s.expected != null && s.target > 0) {
       const diff = s.pct - s.expected;
       pace = diff >= 0 ? `<span class="pill ok">${pct1(diff)} di atas laju</span>` : `<span class="pill warn">${pct1(-diff)} di bawah laju</span>`;
     }
@@ -618,13 +678,13 @@
         <div class="dash-figs">
           <div class="l">Penjualan ${label}</div>
           <div class="v">${rpShort(s.actual)}</div>
-          <div class="s">dari target ${rpShort(s.target)}</div>
+          <div class="s">${s.target ? 'dari target ' + rpShort(s.target) : 'belum ada target'}</div>
           ${pace}
         </div>
       </div>
       <div class="dash-mini">
-        <div><span class="l">Mulai shift hari ini</span><b>${s.working === false ? 'Libur' : `${s.reported}/${s.due == null ? s.size : s.due}`}</b></div>
-        <div><span class="l">${left ? 'Kurang dari target' : 'Target'}</span><b>${left ? rpShort(left) : 'Tercapai'}</b></div>
+        <div><span class="l">Mulai shift hari ini</span><b>${!s.size ? 'Belum ada SPG' : s.working === false ? 'Libur' : `${s.reported}/${s.due == null ? s.size : s.due}`}</b></div>
+        <div><span class="l">${!s.target ? 'Target' : left ? 'Kurang dari target' : 'Target'}</span><b>${!s.target ? 'Belum diatur' : left ? rpShort(left) : 'Tercapai'}</b></div>
       </div>`;
   }
 
@@ -670,8 +730,10 @@
     const y = v => T + (H - T - B) * (1 - v / top);
     const slot = (W - L - R) / series.length;
     const bw = Math.max(2, Math.min(28, slot - 2)); // 2px gap between bars
-    const unit = top >= 1e9 ? [1e9, ' M'] : [1e6, ' jt'];
-    const tick = v => (v / unit[0]).toLocaleString('id-ID', { maximumFractionDigits: 1 }) + (v ? unit[1] : '');
+    const unit = top >= 1e9 ? [1e9, ' M'] : top >= 1e6 ? [1e6, ' jt'] : top >= 1e3 ? [1e3, ' rb'] : [1, ''];
+    // Enough decimals that every tick is different (0,05 jt, 0,1 jt, 0,15 jt …)
+    const digits = Math.min(3, Math.max(0, -Math.floor(Math.log10(step / unit[0]) + 1e-9)));
+    const tick = v => (v / unit[0]).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: digits }) + (v ? unit[1] : '');
     const every = Math.ceil(series.length / Math.max(4, Math.floor(W / 70)));
 
     let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik penjualan harian">`;
@@ -724,7 +786,7 @@
   }
 
   window.App = {
-    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
+    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, editPerson, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
     esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum, moneyInput, setMoney,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,

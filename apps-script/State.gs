@@ -52,6 +52,7 @@ const userOut_ = (u, withPhone) => ({
   id: u.id, name: u.name, role: u.role, teamId: u.team_id || null, areaId: u.area_id || null, homeStoreId: u.home_store_id || null,
   photo: u.photo, phone: withPhone ? u.phone : '', active: u.active, username: '',
   workDays: workDays_(u), workStart: u.work_start || '', workEnd: u.work_end || '',
+  since: String(u.created_at || '').slice(0, 10), // days before the account existed are not "not reported"
 });
 const teamOut_ = t => ({ id: t.id, name: t.name, areaId: t.area_id, leaderId: t.leader_id || null });
 const productOut_ = p => ({

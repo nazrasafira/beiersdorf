@@ -28,6 +28,7 @@ const actions_ = () => ({
   'user.resetPassword': [actUserReset_, true, true],
   'user.photo': [actUserPhoto_, true, true],
   'user.schedule': [actUserSchedule_, true, true],
+  'user.update': [actUserUpdate_, true, true],
   'product.save': [actProductSave_, true, true],
   'store.save': [actStoreSave_, true, true],
   'report.dailyRecap': [actDailyRecap_, true, false],
@@ -82,6 +83,8 @@ function log_(me, action, kind, subjectId, name) {
 const fail_ = (message, status) => { throw new ApiError(status || 422, message); };
 const isDate_ = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
 const isTime_ = v => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v || ''));
+// "jakarta  selatan" → "Jakarta Selatan" (city names typed by hand)
+const titleCase_ = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
 const str_ = (v, max) => String(v === undefined || v === null ? '' : v).trim().slice(0, max || 200);
 function int_(v, min, max, message) {
   const n = Number(v);

@@ -163,7 +163,7 @@ function importDemoData(source) {
     hashes[u.role] = hashes[u.role] || hashPassword_(DEFAULT_PASSWORD[u.role], salt);
     return {
       id: u.id, phone: u.phone, name: u.name, role: u.role, area_id: u.areaId || '', team_id: u.teamId || '', home_store_id: u.homeStoreId || '',
-      photo: u.photo || '', password_hash: hashes[u.role], salt, token_version: 0, must_change_password: false, active: u.active, created_at: stamp,
+      photo: u.photo || '', password_hash: hashes[u.role], salt, token_version: 0, must_change_password: false, active: u.active, created_at: '', // demo people: no start date
       work_days: (u.workDays || []).join(','), work_start: u.workStart || '', work_end: u.workEnd || '',
     };
   }));

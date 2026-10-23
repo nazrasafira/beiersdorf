@@ -4,11 +4,13 @@ function actLogin_(req) {
   if (!phone || !req.password) fail_('Isi nomor HP dan password.');
   if (loginBlocked_(phone)) fail_('Terlalu banyak percobaan. Coba lagi dalam 15 menit.', 429);
   const user = find_('Users', u => u.phone === phone);
-  const ok = !!user && user.active && checkPassword_(user, String(req.password));
+  const rightPassword = !!user && checkPassword_(user, String(req.password));
+  const ok = rightPassword && user.active;
   append_('LoginLog', [{ at: nowStamp_(), phone, success: ok }]);
   if (!ok) {
     loginFailed_(phone);
-    fail_('Nomor HP atau password salah.');
+    // Only someone who knows the password learns that the account is deactivated
+    fail_(rightPassword ? 'Akun kamu sudah dinonaktifkan. Hubungi Team Leader atau Manager.' : 'Nomor HP atau password salah.');
   }
   loginOk_(phone);
   return { token: makeToken_(user), state: buildState_(user) };
@@ -167,6 +169,20 @@ function actUnlock_(req, me) {
 }
 
 /* ---------- Targets and team settings ---------- */
+/** Holder of a store in the latest month before mk that has a row for it (null if none, or released). */
+function lastHolderBefore_(storeId, mk) {
+  let last = null;
+  rows_('StoreTargets').forEach(t => { if (t.store_id === storeId && t.month < mk && (!last || t.month > last.month)) last = t; });
+  return last && last.user_id ? byId_('Users', last.user_id) : null;
+}
+
+/** Manual weekly / daily targets must fit the monthly target: daily ≤ weekly ≤ monthly. */
+function checkTargetParts_(store, monthly, weekly, daily) {
+  if ((weekly || daily) && !monthly) fail_('Isi target bulanan ' + store + ' dulu.');
+  if (weekly && weekly > monthly) fail_('Target mingguan ' + store + ' lebih besar dari target bulanan.');
+  if (daily && daily > (weekly || monthly)) fail_('Target harian ' + store + ' lebih besar dari target ' + (weekly ? 'mingguan.' : 'bulanan.'));
+}
+
 /**
  * Store targets for a month: rows { storeId, mk, userId, monthly, weekly, daily }.
  * Each store is held by one SPG per month (userId null = no SPG); an SPG may hold several stores and their
@@ -180,6 +196,7 @@ function actTargets_(req, me) {
   const checked = rowsIn.map(r => {
     const mk = String(r.mk || '');
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mk)) fail_('Bulan tidak valid.');
+    if (mk < today_().slice(0, 7)) fail_('Target bulan yang sudah lewat tidak bisa diubah.');
     const st = byId_('Stores', r.storeId) || fail_('Toko tidak ditemukan.');
     if (seen[st.id + '|' + mk]) fail_('Toko ' + st.name + ' muncul dua kali.');
     seen[st.id + '|' + mk] = true;
@@ -188,6 +205,10 @@ function actTargets_(req, me) {
     const cur = find_('StoreTargets', t => t.store_id === st.id && t.month === mk);
     const curHolder = cur && cur.user_id ? byId_('Users', cur.user_id) : null;
     if (curHolder && curHolder.active && !canManageUser_(me, curHolder)) fail_('Toko ' + st.name + ' sudah dipegang SPG tim lain.', 409);
+    if (!cur) { // nobody set this month yet: the store stays with the team that held it in the latest earlier month
+      const last = lastHolderBefore_(st.id, mk);
+      if (last && last.active && !canManageUser_(me, last)) fail_('Toko ' + st.name + ' dipegang SPG tim lain bulan lalu. Minta tim itu melepasnya dulu.', 409);
+    }
     const vals = {
       user_id: holder ? holder.id : '',
       monthly: int_(r.monthly || 0, 0, 1e11, 'Target tidak valid.'),
@@ -196,6 +217,7 @@ function actTargets_(req, me) {
       set_by: me.id, set_at: today_(),
     };
     if (!holder && (vals.monthly || vals.weekly || vals.daily)) fail_('Pilih SPG untuk toko ' + st.name + '.');
+    checkTargetParts_(st.name, vals.monthly, vals.weekly || 0, vals.daily || 0);
     return { st, mk, cur, vals };
   });
   const add = [];
@@ -284,6 +306,19 @@ function actUserAdd_(req, me) {
   };
 }
 
+/** Fix a typo in the name or phone number of someone the user manages (the phone number is their login). */
+function actUserUpdate_(req, me) {
+  const u = managed_(me, req.userId);
+  const name = str_(req.name, 100), phone = normalizePhone_(req.phone);
+  if (!name || !phone) fail_('Nama dan nomor HP wajib diisi.');
+  if (!/^08\d{8,11}$/.test(phone)) fail_('Nomor HP tidak valid (contoh: 0812 3456 7890).');
+  if (find_('Users', x => x.phone === phone && x.id !== u.id)) fail_('Nomor HP sudah terdaftar.');
+  Object.assign(u, { name, phone });
+  save_('Users', u);
+  log_(me, 'ubah', 'pengguna', u.id, u.name);
+  return { user: userOut_(u, true) };
+}
+
 function managed_(me, id) {
   const u = byId_('Users', id);
   if (!canManageUser_(me, u)) fail_('Kamu tidak punya akses.', 403);
@@ -368,8 +403,9 @@ function actProductSave_(req, me) {
 
 function actStoreSave_(req, me) {
   const cur = catalogItem_('Stores', req, me, 'toko');
-  const name = str_(req.name, 150), city = str_(req.city, 100);
+  const name = str_(req.name, 150), city = titleCase_(str_(req.city, 100));
   if (!name || !city) fail_('Isi nama dan kota toko.');
+  if (find_('Stores', x => x.name.trim().toLowerCase() === name.toLowerCase() && (!cur || x.id !== cur.id))) fail_('Nama toko ' + name + ' sudah ada. Pakai nama lain (mis. tambahkan cabang/kota).');
   const area = me.area_id || (byId_('Teams', me.team_id) || {}).area_id || (rows_('Areas')[0] || {}).id || '';
   const s = cur || { id: newId_('st'), created_by: me.id, area_id: area, photo: '' };
   Object.assign(s, { name, chain: str_(req.chain, 100), city, address: str_(req.address, 255), active: req.active !== false, updated_by: me.id, updated_at: today_() });

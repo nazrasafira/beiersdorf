@@ -15,18 +15,22 @@ Data.ready(function () {
     $('dayCount').textContent = `${s.workingDays.length} hari kerja per minggu. Berlaku untuk SPG yang belum punya jadwal sendiri; jadwal per SPG (hari dan jam kerja) diatur di menu Tim.`;
   }
 
+  // Holidays: one row each; "Libur" or "Toko buka" is a button that switches it. Changes are saved at once.
   function renderHolidays() {
     s.holidays.sort((a, b) => a.date.localeCompare(b.date));
-    $('holidays').innerHTML = s.holidays.length ? `
-      <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Tetap hari kerja?</th><th></th></tr></thead>
-      <tbody>${s.holidays.map((h, i) => `<tr>
-        <td>${App.dateMid(h.date)}</td>
-        <td>${App.esc(h.name)}</td>
-        <td><label class="check"><input type="checkbox" data-work="${i}" ${h.working ? 'checked' : ''}> ${h.working ? 'Ya' : 'Tidak'}</label></td>
-        <td class="num">${App.iconBtn('trash', 'Hapus hari libur', `data-del="${i}"`, 'danger')}</td>
-      </tr>`).join('')}</tbody>`
-      : '<tbody><tr><td class="empty">Belum ada hari libur.</td></tr></tbody>';
-    App.tableTools($('holidays'), { placeholder: 'Cari hari libur...' });
+    $('holidays').innerHTML = s.holidays.map((h, i) => `<div>
+        <div class="grow"><b>${App.esc(h.name)}</b><span>${App.dateLong(h.date)}</span></div>
+        <button type="button" class="btn ghost small" data-work="${i}" aria-label="${h.working ? 'Toko buka, ubah jadi libur' : 'Libur, ubah jadi toko buka'}">${h.working ? 'Toko buka' : 'Libur'}</button>
+        ${App.iconBtn('trash', 'Hapus ' + h.name, `data-del="${i}"`, 'danger')}
+      </div>`).join('') || '<p class="empty">Belum ada hari libur.</p>';
+  }
+  // Save only the holidays (the other fields keep their own Simpan)
+  function saveHolidays(msg) {
+    const saved = D.getSettings(teamId);
+    saved.holidays = s.holidays.map(h => ({ ...h }));
+    D.saveSettings(teamId, saved);
+    App.toast(msg);
+    renderHolidays();
   }
 
   $('days').addEventListener('click', e => {
@@ -35,15 +39,27 @@ Data.ready(function () {
     const d = +b.dataset.d;
     s.workingDays = s.workingDays.includes(d) ? s.workingDays.filter(x => x !== d) : [...s.workingDays, d];
     renderDays();
+    markDirty();
   });
 
-  $('holidays').addEventListener('change', e => {
-    const i = e.target.dataset.work;
-    if (i != null) { s.holidays[i].working = e.target.checked; renderHolidays(); }
-  });
-  $('holidays').addEventListener('click', e => {
-    const b = e.target.closest('[data-del]');
-    if (b) { s.holidays.splice(+b.dataset.del, 1); renderHolidays(); }
+  // Working days, edit window and reminder are saved with Simpan: warn before leaving with unsaved changes
+  let dirty = false;
+  const markDirty = () => { dirty = true; $('save').textContent = 'Simpan perubahan'; };
+  ['editDays', 'reminder'].forEach(id => $(id).addEventListener('input', markDirty));
+  window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  $('holidays').addEventListener('click', async e => {
+    const w = e.target.closest('[data-work]'), b = e.target.closest('[data-del]');
+    if (w) {
+      const h = s.holidays[+w.dataset.work];
+      h.working = !h.working;
+      saveHolidays(`${h.name}: ${h.working ? 'toko buka, SPG tetap kerja' : 'libur'}.`);
+    } else if (b) {
+      const h = s.holidays[+b.dataset.del];
+      if (!await App.confirm(`${h.name} (${App.dateLong(h.date)}) dihapus dari daftar hari libur.`, { title: 'Hapus hari libur?', ok: 'Hapus', danger: true })) return;
+      s.holidays.splice(+b.dataset.del, 1);
+      saveHolidays('Hari libur dihapus.');
+    }
   });
 
   const dlg = App.modal($('dlg'));
@@ -55,8 +71,7 @@ Data.ready(function () {
     if (s.holidays.some(h => h.date === date)) { App.toast('Tanggal itu sudah ada di daftar.'); return; }
     s.holidays.push({ date, name, working: $('hWork').checked });
     dlg.close();
-    App.toast('Hari libur ditambahkan. Klik Simpan untuk menyimpan pengaturan.');
-    renderHolidays();
+    saveHolidays('Hari libur disimpan.');
   });
 
   $('editDays').value = s.editDays;
@@ -70,6 +85,8 @@ Data.ready(function () {
     s.reminder = $('reminder').value || '20:00';
     D.saveSettings(teamId, s);
     s = D.getSettings(teamId);
+    dirty = false;
+    $('save').textContent = 'Simpan';
     const mk = D.monthKey(D.TODAY);
     App.toast(`Pengaturan disimpan. ${App.monthName(mk)}: ${D.workingDaysInMonth(teamId, mk)} hari kerja`);
   });

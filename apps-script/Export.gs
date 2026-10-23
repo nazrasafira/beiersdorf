@@ -64,6 +64,7 @@ function dailyRecap_(me, req) {
       if (amount[k]) { total += amount[k]; return amount[k]; }
       if (noSales[k]) return 0;
       if (d > today) return '';
+      if (u.created_at && d < String(u.created_at).slice(0, 10)) return ''; // before the account existed
       return workingFor(u, d) ? 'MISSING' : 'OFF';
     });
     const t = target[u.id] || 0;

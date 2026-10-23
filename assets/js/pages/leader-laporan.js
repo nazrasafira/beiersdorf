@@ -27,12 +27,13 @@ Data.ready(function () {
 
   const hasPhotos = r => { const sh = D.getShift(r.userId, r.date); return !!(sh && sh.photos && sh.photos.length); };
 
-  const TT = { placeholder: 'Cari SPG, tanggal, toko...' };
+  const PAGE = 20; // reports per page
+  let page = 1;
 
   function render() {
     const ids = $('spg').value ? [$('spg').value] : spgs.map(u => u.id);
     let from = $('from').value || D.DATA_START, to = $('to').value || D.TODAY;
-    if (from > to) [from, to] = [to, from];
+    if (from > to) { [from, to] = [to, from]; $('from').value = from; $('to').value = to; } // keep the fields in order too
     const storeId = $('store').value;
     const storeName = id => (D.store(id) || {}).name || '';
     const storesOf = r => [...new Set(D.getTransactions(r).map(t => t.storeId))];
@@ -41,33 +42,37 @@ Data.ready(function () {
     const total = list.reduce((a, r) => a + r.total, 0);
     $('summary').innerHTML = `<b>${list.length}</b> laporan · Total <b>${App.rp(total)}</b>`;
 
-    if (!list.length) { $('table').innerHTML = '<tbody><tr><td class="empty">Tidak ada laporan pada filter ini.</td></tr></tbody>'; App.tableTools($('table'), TT); return; }
+    if (!list.length) { $('table').innerHTML = '<p class="empty">Tidak ada laporan pada filter ini.</p>'; $('pager').hidden = true; return; }
 
-    $('table').innerHTML = `
-      <thead><tr><th>Tanggal</th><th>SPG</th><th class="num">Transaksi</th><th class="num">Total (Rp)</th><th></th></tr></thead>
-      <tbody>${list.map(r => {
-        const u = D.user(r.userId);
-        const key = r.userId + '|' + r.date;
-        const lockedByTime = r.date < D.addDays(D.TODAY, -D.getSettings(teamId).editDays);
-        const lockBtn = lockedByTime
-          ? App.iconBtn(r.unlocked ? 'unlock' : 'lock', r.unlocked ? 'Terbuka untuk SPG. Klik untuk kunci lagi' : 'Terkunci. Klik untuk buka', `data-lock="${key}"`, r.unlocked ? 'primary' : '')
-          : '';
-        return `<tr class="click" data-key="${key}">
-            <td>${App.dateShort(r.date)}</td>
-            <td>${App.person(u, storesOf(r).map(storeName).join(', ') || storeName(D.storeFor(r.userId, r.date, '')))}</td>
-            <td class="num">${r.noSales ? '–' : D.getTransactions(r).length}</td>
-            <td class="num">${App.num(r.total)}</td>
-            <td class="num"><span class="icon-group">${hasPhotos(r) ? `<span class="icon-btn" title="Ada foto catatan" aria-label="Ada foto catatan">${App.icon('camera')}</span>` : ''}${App.iconLink(`${App.page('../spg/laporan.html')}?spg=${encodeURIComponent(r.userId)}&tanggal=${r.date}`, 'pencil', 'Ubah laporan')}${lockBtn}</span></td>
-          </tr>
-          <tr class="detail" data-detail="${key}" hidden><td colspan="5">
-            ${shiftLine(r)}
-            ${r.noSales ? '<i>Tidak ada penjualan.</i>' : `<table>
-              <thead><tr><th>Waktu</th><th>Toko</th><th>Produk</th><th class="num">Qty</th><th class="num">Harga</th><th class="num">Subtotal</th></tr></thead>
-              <tbody>${D.getTransactions(r).map(t => `<tr><td>${t.time || '–'}</td><td>${App.esc(storeName(t.storeId))}</td><td><span class="tx">${App.productImg(D.product(t.productId))}${App.esc(D.product(t.productId).name)}</span></td><td class="num">${t.qty}</td><td class="num">${App.num(t.price)}</td><td class="num">${App.num(t.qty * t.price)}</td></tr>`).join('')}</tbody>
-            </table>`}
-          </td></tr>`;
-      }).join('')}</tbody>`;
-    App.tableTools($('table'), TT);
+    // One card per SPG-day: date, SPG, stores, total; buttons to see the sales, edit, and lock/unlock
+    const [pf, pt, at] = App.pager($('pager'), { page, size: PAGE, total: list.length, label: 'laporan', onPage: n => { page = n; render(); $('summary').scrollIntoView({ block: 'start', behavior: 'smooth' }); } });
+    page = at;
+    $('table').innerHTML = list.slice(pf, pt).map(r => {
+      const u = D.user(r.userId);
+      const key = r.userId + '|' + r.date;
+      const tx = D.getTransactions(r);
+      const lockedByTime = r.date < D.addDays(D.TODAY, -D.getSettings(teamId).editDays);
+      const stores = storesOf(r).map(storeName).join(', ') || storeName(D.storeFor(r.userId, r.date, ''));
+      return `<div class="rep">
+        <div class="rep-top">
+          ${App.person(u, App.dateShort(r.date) + (stores ? ' · ' + stores : ''))}
+          <div class="rep-total"><b>${App.rpShort(r.total)}</b><small>${r.noSales ? 'tidak ada penjualan' : tx.length + ' transaksi'}</small></div>
+        </div>
+        <div class="rep-actions">
+          <button type="button" class="btn ghost small" data-toggle="${key}" aria-expanded="false">${App.icon('chevDown')}Rincian${hasPhotos(r) ? ' · foto' : ''}</button>
+          <a class="btn ghost small" href="${App.page('../spg/laporan.html')}?spg=${encodeURIComponent(r.userId)}&tanggal=${r.date}">${App.icon('pencil')}Ubah</a>
+          ${lockedByTime ? `<button type="button" class="btn ghost small ${r.unlocked ? '' : 'locked'}" data-lock="${key}">${App.icon(r.unlocked ? 'unlock' : 'lock')}${r.unlocked ? 'Kunci lagi' : 'Buka kunci'}</button>` : ''}
+        </div>
+        <div class="rep-detail" data-detail="${key}" hidden>
+          ${shiftLine(r)}
+          ${r.noSales ? '<p class="muted small">Tidak ada penjualan.</p>' : `<div class="rows">${tx.map(t => `<div>
+            ${App.productImg(D.product(t.productId))}
+            <div class="grow"><b>${App.esc(D.product(t.productId).name)}</b><span>${[t.time, App.esc(storeName(t.storeId))].filter(Boolean).join(' · ')} · ${t.qty} × ${App.num(t.price)}</span></div>
+            <div class="val">${App.num(t.qty * t.price)}</div>
+          </div>`).join('')}</div>`}
+        </div>
+      </div>`;
+    }).join('');
   }
 
   $('table').addEventListener('click', e => {
@@ -80,10 +85,13 @@ Data.ready(function () {
       render();
       return;
     }
-    if (e.target.closest('a')) return;
-    const tr = e.target.closest('tr.click');
-    if (tr) { const d = $('table').querySelector(`[data-detail="${tr.dataset.key}"]`); d.hidden = !d.hidden; }
+    const t = e.target.closest('[data-toggle]');
+    if (t) {
+      const d = $('table').querySelector(`[data-detail="${t.dataset.toggle}"]`);
+      d.hidden = !d.hidden;
+      t.setAttribute('aria-expanded', !d.hidden);
+    }
   });
-  ['spg', 'store', 'from', 'to'].forEach(id => $(id).addEventListener('change', render));
+  ['spg', 'store', 'from', 'to'].forEach(id => $(id).addEventListener('change', () => { page = 1; render(); }));
   render();
 });

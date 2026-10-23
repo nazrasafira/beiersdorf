@@ -525,7 +525,14 @@
     const u = user(userId);
     return memo.lastStore[userId] || (u && u.homeStoreId) || null;
   }
-  const storeLabel = u => { const st = u && store(lastStoreId(u.id)); return st ? st.name : ''; };
+  // The stores an SPG holds this month ("toko target"); without any, the store they last worked at
+  const storeLabel = u => {
+    if (!u) return '';
+    const held = heldStores(u.id, monthKey(TODAY)).map(t => (store(t.storeId) || {}).name).filter(Boolean);
+    if (held.length) return held.join(', ');
+    const st = store(lastStoreId(u.id));
+    return st ? 'terakhir di ' + st.name : '';
+  };
   // Store for a sale on a given date/time
   function storeFor(userId, date, time) {
     const sh = getShift(userId, date);
@@ -646,10 +653,12 @@
   const level = pct => LEVELS.find(l => pct >= l.min);
   const nextLevel = pct => LEVELS.slice().reverse().find(l => l.min > pct) || null;
 
-  function leaderboard(teamId, period, date) {
+  // withInactive: also deactivated SPGs who sold or held a store in the period (their sales still count for the team)
+  function leaderboard(teamId, period, date, withInactive) {
     date = date || TODAY;
-    return spgsOf(teamId)
+    return spgsOf(teamId, !!withInactive)
       .map(u => { const p = progress(u.id, period, date); return { user: u, ...p, level: level(p.pct) }; })
+      .filter(r => r.user.active || r.actual > 0 || r.target > 0)
       .sort((a, b) => b.pct - a.pct || b.actual - a.actual)
       .map((r, i) => ({ ...r, rank: i + 1 }));
   }
@@ -701,7 +710,7 @@
 
   function teamSummary(teamId, period, date) {
     date = date || TODAY;
-    const lb = leaderboard(teamId, period, date);
+    const lb = leaderboard(teamId, period, date, true);
     const [from, to] = range(period, date);
     const actual = lb.reduce((a, r) => a + r.actual, 0);
     const target = lb.reduce((a, r) => a + r.target, 0);
@@ -711,7 +720,7 @@
       expected = all ? workingDays(teamId, from, date).length / all * 100 : null;
     }
     // Today: only SPGs whose own schedule has today as a working day are expected to start a shift
-    const due = lb.filter(r => isWorkingDayFor(r.user.id, date));
+    const due = lb.filter(r => r.user.active && isWorkingDayFor(r.user.id, date));
     const working = due.length > 0;
     const missing = due.filter(r => !getShift(r.user.id, date) && !getReport(r.user.id, date)).map(r => r.user);
     return {
@@ -757,7 +766,7 @@
     if (!name || !phone) return 'Nama dan nomor HP wajib diisi.';
     if (!/^08\d{8,11}$/.test(phone)) return 'Nomor HP tidak valid (contoh: 0812 3456 7890).';
     if (state.users.some(u => normalizePhone(u.phone) === phone)) return 'Nomor HP sudah terdaftar.';
-    const u = { id: 'u' + Date.now().toString(36), username: '', password: DEFAULT_PW[role], name, role, phone, active: true, photo: '' };
+    const u = { id: 'u' + Date.now().toString(36), username: '', password: DEFAULT_PW[role], name, role, phone, active: true, photo: '', since: TODAY };
     if (role === 'spg') {
       const t = team(data.teamId);
       if (!t) return 'Pilih tim.';
@@ -784,6 +793,19 @@
     return null;
   }
   const addSpg = (data, by) => addUser({ ...data, role: 'spg' }, by);
+  // Fix a typo in a name or phone number (the phone number is the login)
+  function updateUser(userId, data, by) {
+    const u = user(userId);
+    if (!u || !canManageUser(user(by), u)) return 'Kamu tidak punya akses.';
+    const name = String(data.name || '').trim(), phone = normalizePhone(data.phone);
+    if (!name || !phone) return 'Nama dan nomor HP wajib diisi.';
+    if (!/^08\d{8,11}$/.test(phone)) return 'Nomor HP tidak valid (contoh: 0812 3456 7890).';
+    if (state.users.some(x => x.id !== u.id && normalizePhone(x.phone) === phone)) return 'Nomor HP sudah terdaftar.';
+    Object.assign(u, { name, phone });
+    log(by, 'ubah', 'pengguna', u.id, u.name);
+    persist();
+    return null;
+  }
   function resetPassword(userId, by) {
     const u = user(userId);
     if (!u || !canManageUser(user(by), u)) return null;
@@ -930,7 +952,13 @@
       }
       if (res.status === 401) { signedOut(); return; } // kept until they log in again
       saveOutbox(outbox().filter(x => x.id !== item.id));
-      if (!res.ok) notify('Tidak tersimpan: ' + res.data.message);
+      if (!res.ok) {
+        // Refused (e.g. invalid qty): the page already shows the change, so take the server's data again and reload
+        notify('Tidak tersimpan: ' + res.data.message);
+        const fresh = await call('bootstrap');
+        if (fresh.ok) { saveCache(Object.assign(fresh.data, { _at: Date.now() })); setTimeout(() => location.reload(), 1800); }
+        return;
+      }
     }
   }
   if (LIVE) window.addEventListener('online', () => flush());
@@ -1088,6 +1116,13 @@
       changed();
       return null;
     },
+    async updateUser(userId, data) {
+      const res = await call('user.update', { userId, name: data.name, phone: data.phone });
+      if (!res.ok) return res.data.message;
+      upsert(state.users, res.data.user);
+      changed();
+      return null;
+    },
     async resetPassword(userId) {
       const res = await call('user.resetPassword', { userId });
       if (!res.ok) { notify(res.data.message); return null; }
@@ -1150,7 +1185,7 @@
     progress, level, nextLevel, leaderboard, streak, teamSummary, areaSummary, dailySeries, chartRange,
     addSpg, setActive, setSchedule, scheduleLabel, hasOwnSchedule, isWorkingDayFor, workingDaysInMonthFor, getSettings, saveSettings, saveProduct, reset,
     getShift, startShift, endShift, switchStore, lastStoreId, storeLabel, storeFor, getTransactions, addSale, removeSale,
-    addUser, resetPassword, canManageUser, canAddCatalog, canEditCatalog, saveStore, stores, store, activity, storeTotals,
+    addUser, updateUser, resetPassword, canManageUser, canAddCatalog, canEditCatalog, saveStore, stores, store, activity, storeTotals,
     allUsers, setUserPhoto, normalizePhone, exportState, areas,
     dailyRecap: async () => ({ error: 'Rekap harian hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
   }, LIVE ? LIVE_API : {});
