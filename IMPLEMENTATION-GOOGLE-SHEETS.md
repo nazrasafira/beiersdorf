@@ -86,9 +86,9 @@ The app shows it via `https://drive.google.com/thumbnail?id=<id>&sz=w256`.
 | `login` | everyone | phone number + password → token + user profile |
 | `bootstrap` | all roles | everything the page needs for the user's scope: me, team(s), users, products, settings, holidays, targets (current + previous month), Daily rows (current + previous month), my/ team shifts today |
 | `sales.list` | owner / leader / supervisor | Sales rows for `{ user_id?, team_id?, from, to }` (report details, CSV export) |
-| `shift.start` | SPG (own) | starts today's shift at a chosen store (`store_id`, any active store) |
-| `shift.switchStore` | SPG (own) | moves the open shift to another store; new sales get that store |
-| `shift.end` | SPG (own) | closes today's shift |
+| `shift.start` | SPG (own) | starts the shift of `date` (today if left out; the offline queue may send it later) at a chosen store (`store_id`, any active store) |
+| `shift.switchStore` | SPG (own) | moves the open shift of `date` (today if left out) to another store; new sales get that store |
+| `shift.end` | SPG (own) | closes the shift of `date` (today if left out) |
 | `sale.add` | SPG (own, during shift or inside edit window), leader/supervisor | appends a Sale with the shift's current store, updates Daily; **idempotent** by client id |
 | `sale.remove` | same as above | soft-deletes a Sale, updates Daily |
 | `report.unlock` / `report.lock` | leader (team), supervisor | sets `Daily.unlocked` |

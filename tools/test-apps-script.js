@@ -122,6 +122,48 @@ test('ending a shift without sales reports no sales', () => {
   assert.equal(me.reports[me.me + '|2026-10-22'].noSales, true);
 });
 
+test('offline queue: a shift end sent after midnight still ends the shift it belongs to', () => {
+  const g = app();
+  assert.ok(g.as('rani', 'shift.start', { storeId: 'st1', time: '09:00', date: '2026-10-22' }).ok);
+  g.properties.DEMO_TODAY = '2026-10-23';
+  const end = { time: '21:00', photos: [JPG], date: '2026-10-22' };
+  const r = g.as('rani', 'shift.end', end);
+  assert.ok(r.ok, r.error);
+  assert.equal(r.data.shift.end, '21:00');
+  assert.equal(r.data.shift.photos.length, 1);
+  assert.equal(g.as('rani', 'shift.end', end).data.shift.photos.length, 1, 'a resend changes nothing');
+  const mine = g.rows('Shifts').filter(s => s.user_id === 'u-rani' && s.date >= '2026-10-22');
+  assert.deepEqual(Array.from(mine, s => [s.date, s.end]), [['2026-10-22', '21:00']]);
+  assert.equal(g.as('rani', 'bootstrap').data.reports['u-rani|2026-10-22'].noSales, true);
+});
+
+test('offline queue: a whole day sent the next day lands on that day', () => {
+  const g = app();
+  g.properties.DEMO_TODAY = '2026-10-23';
+  const date = '2026-10-22';
+  assert.ok(g.as('rani', 'shift.start', { storeId: 'st1', time: '09:00', date }).ok);
+  assert.ok(g.as('rani', 'shift.switchStore', { storeId: 'st2', time: '12:00', date }).ok);
+  const r = g.as('rani', 'sale.add', sale({ userId: 'u-rani', date, time: '14:00', storeId: 'st2' }));
+  assert.ok(r.ok, r.error);
+  assert.equal(r.data.time, '14:00', 'the sale keeps the time it was made');
+  assert.ok(g.as('rani', 'shift.end', { time: '21:00', photos: [JPG], date }).ok);
+  const mine = g.rows('Shifts').filter(s => s.user_id === 'u-rani' && s.date >= date);
+  assert.deepEqual(Array.from(mine, s => [s.date, s.start, s.end, s.store_id]), [[date, '09:00', '21:00', 'st2']]);
+  // The new day is still free to start
+  const today = g.as('rani', 'shift.start', { storeId: 'st1', time: '08:00', date: '2026-10-23' });
+  assert.equal(today.data.shift.start, '08:00');
+});
+
+test('shift date: optional for older pages, never in the future or weeks ago', () => {
+  const g = app();
+  assert.equal(g.as('rani', 'shift.start', { storeId: 'st1', date: '2026-10-23' }).status, 422, 'future');
+  assert.equal(g.as('rani', 'shift.start', { storeId: 'st1', date: 'kemarin' }).status, 422, 'not a date');
+  assert.equal(g.as('rani', 'shift.start', { storeId: 'st1', date: '2026-10-01' }).status, 422, 'too long ago');
+  assert.ok(g.as('rani', 'shift.start', { storeId: 'st1', time: '09:00' }).ok);
+  assert.ok(g.rows('Shifts').some(s => s.user_id === 'u-rani' && s.date === '2026-10-22'));
+  assert.ok(g.as('rani', 'shift.end', { time: '21:00', photos: [JPG] }).ok, 'no date: today');
+});
+
 test('SPG can edit any past day, but not the future', () => {
   const g = app();
   assert.ok(g.as('sari', 'sale.add', sale({ date: '2026-10-15', time: '' })).ok);

@@ -494,9 +494,10 @@
   /* ---------- Shifts & per-sale transactions ---------- */
   const nowTime = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const getShift = (userId, date) => (state.shifts || {})[userId + '|' + date] || null;
-  function startShift(userId, storeId, time) {
+  // date: the day the SPG did this; a queued write replayed after midnight still belongs to that day
+  function startShift(userId, storeId, time, date = TODAY) {
     state.shifts = state.shifts || {};
-    const key = userId + '|' + TODAY;
+    const key = userId + '|' + date;
     if (!state.shifts[key]) {
       const t = time || nowTime();
       state.shifts[key] = { start: t, end: null, storeId, visits: [{ storeId, from: t }] };
@@ -506,8 +507,8 @@
     return state.shifts[key];
   }
   // Move the open shift to another store; new sales get that store
-  function switchStore(userId, storeId, time) {
-    const sh = getShift(userId, TODAY);
+  function switchStore(userId, storeId, time, date = TODAY) {
+    const sh = getShift(userId, date);
     if (!sh || sh.end || sh.storeId === storeId) return sh;
     sh.storeId = storeId;
     (sh.visits = sh.visits || []).push({ storeId, from: time || nowTime() });
@@ -539,13 +540,13 @@
     return sh ? visitAt(sh, time) : lastStoreId(userId);
   }
   // photos: pictures of the SPG's handwritten sales notes, required when ending a shift
-  function endShift(userId, by, photos, time) {
-    const sh = getShift(userId, TODAY);
+  function endShift(userId, by, photos, time, date = TODAY) {
+    const sh = getShift(userId, date);
     if (!sh || sh.end) return sh;
     sh.end = time || nowTime();
     sh.photos = (photos || []).slice();
     // A shift with no sales still counts as a report: "no sales"
-    if (!getReport(userId, TODAY)) state.reports[userId + '|' + TODAY] = { ...emptyReport(userId, TODAY, by), noSales: true };
+    if (!getReport(userId, date)) state.reports[userId + '|' + date] = { ...emptyReport(userId, date, by), noSales: true };
     persist();
     return sh;
   }
@@ -956,9 +957,9 @@
 
   // Re-applies queued writes on top of server data (they may not have reached the server yet)
   const REPLAY = {
-    startShift: (u, st, t) => startShift(u, st, t),
-    switchStore: (u, st, t) => switchStore(u, st, t),
-    endShift: (u, by, photos, t) => endShift(u, by, photos, t),
+    startShift: (u, st, t, d) => startShift(u, st, t, d),
+    switchStore: (u, st, t, d) => switchStore(u, st, t, d),
+    endShift: (u, by, photos, t, d) => endShift(u, by, photos, t, d),
     addSale: (u, d, sale, by) => { if (!getTransactions(getReport(u, d)).some(t => t.id === sale.id)) addSale(u, d, sale, by); },
     removeSale: (u, d, id, by) => removeSale(u, d, id, by),
     setUnlocked: (u, d, v) => setUnlocked(u, d, v),
@@ -1038,17 +1039,17 @@
     // Queued writes
     startShift(userId, storeId) {
       const t = nowTime(), sh = startShift(userId, storeId, t);
-      enqueue('startShift', [userId, storeId, t], 'shift.start', { storeId, time: t });
+      enqueue('startShift', [userId, storeId, t, TODAY], 'shift.start', { storeId, time: t, date: TODAY });
       return sh;
     },
     switchStore(userId, storeId) {
       const t = nowTime(), sh = switchStore(userId, storeId, t);
-      enqueue('switchStore', [userId, storeId, t], 'shift.switchStore', { storeId, time: t });
+      enqueue('switchStore', [userId, storeId, t, TODAY], 'shift.switchStore', { storeId, time: t, date: TODAY });
       return sh;
     },
     endShift(userId, by, photos) {
       const t = nowTime(), sh = endShift(userId, by, photos, t);
-      enqueue('endShift', [userId, by, photos, t], 'shift.end', { time: t, photos });
+      enqueue('endShift', [userId, by, photos, t, TODAY], 'shift.end', { time: t, photos, date: TODAY });
       return sh;
     },
     addSale(userId, date, sale, by) {
