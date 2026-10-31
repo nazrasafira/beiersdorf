@@ -82,7 +82,7 @@ const salesOf = async (uid, date) => (await rows('Sales')).filter(s => s.user_id
   ok((await p.$$('#list [data-del]')).length === before + 1, 'next page shows the sale (cache kept in step)');
 
   await p.goto(B + 'spg/laporan.html?tanggal=2026-10-12'); await settle();
-  ok(await p.isHidden('#entry'), 'old day locked for SPG');
+  ok(await p.isVisible('#entry'), 'old day still editable for SPG');
 
   // Leader
   await login('0812 0000 0001', 'leader123');
@@ -100,14 +100,10 @@ const salesOf = async (uid, date) => (await rows('Sales')).filter(s => s.user_id
   ok(await until(async () => (await rows('StoreTargets')).find(t => t.store_id === 'st2' && t.month === '2026-10').user_id === 'u-sari'), 'store moved to another SPG');
 
   await p.goto(B + 'leader/laporan.html?spg=u-sari'); await settle();
-  const lockBtns = await p.$$('[data-lock]');
-  ok(lockBtns.length > 0, 'lock buttons present');
-  if (lockBtns.length) { await lockBtns[0].click(); await settle(); }
-  ok(await until(async () => (await rows('DayReports')).some(d => d.user_id === 'u-sari' && d.unlocked)), 'unlock saved');
 
   await p.goto(B + 'leader/pengaturan.html'); await settle();
-  await p.fill('#editDays', '3'); await p.click('#save'); await settle();
-  ok(await until(async () => (await rows('Settings')).find(s => s.team_id === 't1').edit_days === 3), 'settings saved');
+  await p.fill('#reminder', '19:30'); await p.click('#save'); await settle();
+  ok(await until(async () => (await rows('Settings')).find(s => s.team_id === 't1').reminder === '19:30'), 'settings saved');
 
   await p.goto(B + 'leader/tim.html'); await settle();
   await p.click('#openAdd'); await p.fill('#f-name', 'Tes Baru'); await p.fill('#f-phone', '0812 9999 0000');

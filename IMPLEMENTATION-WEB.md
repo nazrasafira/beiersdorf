@@ -113,7 +113,7 @@ All under `/api`, JSON, session cookie + CSRF (Sanctum SPA mode). Validation thr
 5. **First login / reset**: users get a temporary password and must change it (`must_change_password`). A Team Leader resets their team's SPGs, a Supervisor any SPG in the area; Admin resets Supervisors and Team Leaders.
 6. **Deactivate / reset** deletes that user's rows in `sessions`, logging them out on every device immediately.
 7. **Roles & scope** (Policies + a `role` middleware):
-   - SPG: only own shifts and sales; today needs an open shift, past days only inside the team's edit window or when unlocked.
+   - SPG: only own shifts and sales; today needs an open shift, any past day is allowed.
    - Team Leader: own team's SPGs (add / deactivate / reset), targets, settings, reports; add products and stores, edit the ones they added.
    - Supervisor: all teams in their area.
    - Admin: Supervisor and Team Leader accounts, all products and stores, all data (read).

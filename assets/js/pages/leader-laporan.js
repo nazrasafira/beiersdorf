@@ -51,7 +51,6 @@ Data.ready(function () {
       const u = D.user(r.userId);
       const key = r.userId + '|' + r.date;
       const tx = D.getTransactions(r);
-      const lockedByTime = r.date < D.addDays(D.TODAY, -D.getSettings(teamId).editDays);
       const stores = storesOf(r).map(storeName).join(', ') || storeName(D.storeFor(r.userId, r.date, ''));
       return `<div class="rep">
         <div class="rep-top">
@@ -61,7 +60,6 @@ Data.ready(function () {
         <div class="rep-actions">
           <button type="button" class="btn ghost small" data-toggle="${key}" aria-expanded="false">${App.icon('chevDown')}Rincian${hasPhotos(r) ? ' · foto' : ''}</button>
           <a class="btn ghost small" href="${App.page('../spg/laporan.html')}?spg=${encodeURIComponent(r.userId)}&tanggal=${r.date}">${App.icon('pencil')}Ubah</a>
-          ${lockedByTime ? `<button type="button" class="btn ghost small ${r.unlocked ? '' : 'locked'}" data-lock="${key}">${App.icon(r.unlocked ? 'unlock' : 'lock')}${r.unlocked ? 'Kunci lagi' : 'Buka kunci'}</button>` : ''}
         </div>
         <div class="rep-detail" data-detail="${key}" hidden>
           ${shiftLine(r)}
@@ -76,15 +74,6 @@ Data.ready(function () {
   }
 
   $('table').addEventListener('click', e => {
-    const lock = e.target.closest('[data-lock]');
-    if (lock) {
-      const [uid, date] = lock.dataset.lock.split('|');
-      const r = D.getReport(uid, date);
-      D.setUnlocked(uid, date, !r.unlocked);
-      App.toast(r.unlocked ? 'Laporan dibuka, SPG bisa mengubah' : 'Laporan dikunci lagi');
-      render();
-      return;
-    }
     const t = e.target.closest('[data-toggle]');
     if (t) {
       const d = $('table').querySelector(`[data-detail="${t.dataset.toggle}"]`);

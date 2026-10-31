@@ -57,14 +57,6 @@ function isWorkingDayFor_(u, date, settings, holidays) {
 
 const dayReport_ = (userId, date) => find_('DayReports', r => r.user_id === userId && r.date === date);
 
-/** Locked for the SPG: older than the team's edit window and not unlocked by a leader. */
-function isLocked_(owner, date) {
-  const d = dayReport_(owner.id, date);
-  if (d && d.unlocked) return false;
-  return date < addDays_(today_(), -settingsFor_(owner.team_id).editDays);
-}
-
 function canEditDay_(me, owner, date) {
-  if (date > today_() || !canView_(me, owner)) return false;
-  return me.role === 'spg' ? !isLocked_(owner, date) : true;
+  return date <= today_() && canView_(me, owner);
 }

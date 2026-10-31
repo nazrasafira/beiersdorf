@@ -122,12 +122,10 @@ test('ending a shift without sales reports no sales', () => {
   assert.equal(me.reports[me.me + '|2026-10-22'].noSales, true);
 });
 
-test('edit window and unlock', () => {
+test('SPG can edit any past day, but not the future', () => {
   const g = app();
-  const old = sale({ date: '2026-10-15', time: '' });
-  assert.equal(g.as('sari', 'sale.add', old).status, 403);
-  assert.ok(g.as('rina', 'report.unlock', { userId: 'u-sari', date: '2026-10-15', unlocked: true }).ok);
-  assert.ok(g.as('sari', 'sale.add', old).ok);
+  assert.ok(g.as('sari', 'sale.add', sale({ date: '2026-10-15', time: '' })).ok);
+  assert.ok(g.as('sari', 'sale.add', sale({ date: '2025-01-15', time: '' })).ok, 'older than the data sent to the page');
   assert.equal(g.as('sari', 'sale.add', sale({ date: '2026-10-23' })).status, 403, 'future');
 });
 

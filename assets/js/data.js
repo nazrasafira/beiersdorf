@@ -608,18 +608,9 @@
     r.unlocked = !!value;
     persist();
   }
-  // Locked for the SPG: older than the team's edit window and not unlocked by a leader
-  function isLocked(userId, date) {
-    const u = user(userId);
-    const r = getReport(userId, date);
-    if (r && r.unlocked) return false;
-    return date < addDays(TODAY, -state.settings[u.teamId].editDays);
-  }
   function canEdit(viewer, ownerId, date) {
     const owner = user(ownerId);
-    if (date > TODAY || !canView(viewer, owner)) return false;
-    if (viewer.role === 'spg') return !isLocked(ownerId, date);
-    return true;
+    return date <= TODAY && canView(viewer, owner);
   }
   function listReports({ userIds, from, to }) {
     const out = [];
@@ -1181,7 +1172,7 @@
     user, team, teams, area, spgsOf, products, product, canView,
     isWorkingDay, workingDays, workingDaysInMonth,
     targetRow, dailyTarget, periodTarget, targetPreview, saveTargets, storeTarget, heldStores, storeDailyTarget,
-    getReport, saveReport, setUnlocked, isLocked, canEdit, listReports,
+    getReport, saveReport, setUnlocked, canEdit, listReports,
     progress, level, nextLevel, leaderboard, streak, teamSummary, areaSummary, dailySeries, chartRange,
     addSpg, setActive, setSchedule, scheduleLabel, hasOwnSchedule, isWorkingDayFor, workingDaysInMonthFor, getSettings, saveSettings, saveProduct, reset,
     getShift, startShift, endShift, switchStore, lastStoreId, storeLabel, storeFor, getTransactions, addSale, removeSale,

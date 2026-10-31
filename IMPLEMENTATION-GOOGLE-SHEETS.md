@@ -119,7 +119,7 @@ Every action: verify token → load user → **check role and scope** → do the
 ## 6. Data rules enforced by the script
 
 - SPG writes only **their own** shifts and sales.
-- `sale.add` for **today** requires an open shift; for a past day it must be inside the team's edit window (default 2 days) or the day must be unlocked.
+- `sale.add` for **today** requires an open shift; any past day is allowed, future days are not.
 - Prices: the sale stores the price actually charged; product price changes never alter past sales.
 - Team Leader: only SPGs, targets, settings and reports of **their team**. Supervisor: all teams in **their area**. Admin: Supervisors, Team Leaders, products and stores (see table below).
 - A sale always carries the store of the shift at that moment; switching store mid-shift is allowed.

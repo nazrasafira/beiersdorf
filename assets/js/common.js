@@ -563,23 +563,17 @@
     });
   }
 
-  // Past days an SPG may still fill in: the team's edit window, up to yesterday. Null when the window is 0 days.
-  function otherDateRange(user) {
-    const days = Data.getSettings(user.teamId).editDays;
-    return days > 0 ? { min: Data.addDays(Data.TODAY, -days), max: Data.addDays(Data.TODAY, -1) } : null;
-  }
-  // Asks for a past day inside that window and opens its sales page
-  function pickOtherDate(user, current) {
-    const range = otherDateRange(user);
-    if (!range) return;
+  // Asks for any past day and opens its sales page
+  function pickOtherDate(current) {
+    const max = Data.addDays(Data.TODAY, -1);
     const dlg = document.createElement('dialog');
     dlg.className = 'modal';
     dlg.setAttribute('aria-labelledby', 'pickDateTitle');
     dlg.innerHTML = `<form>
       <div class="modal-head"><h3 id="pickDateTitle">Input tanggal lain</h3><button type="button" class="icon-btn" data-close aria-label="Tutup">${icon('x')}</button></div>
       <div class="modal-body">
-        <div class="field"><label for="pickDateInput">Tanggal</label><input class="input" id="pickDateInput" type="date" min="${range.min}" max="${range.max}" value="${current || range.max}" required></div>
-        <p class="note" style="margin:0">Untuk penjualan yang belum tercatat. Bisa sampai ${esc(dateLong(range.min))}.</p>
+        <div class="field"><label for="pickDateInput">Tanggal</label><input class="input" id="pickDateInput" type="date" max="${max}" value="${current || max}" required></div>
+        <p class="note" style="margin:0">Untuk penjualan yang belum tercatat.</p>
       </div>
       <div class="modal-foot"><button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit">Lanjut</button></div>
     </form>`;
@@ -587,7 +581,7 @@
     dlg.querySelector('form').addEventListener('submit', e => {
       e.preventDefault();
       const v = dlg.querySelector('input').value;
-      if (!v || v < range.min || v > range.max) { toast('Pilih tanggal dalam batas yang boleh diubah.'); return; }
+      if (!v || v > max) { toast('Pilih tanggal yang sudah lewat.'); return; }
       location.href = root + Data.page('spg/laporan.html') + '?tanggal=' + v;
     });
     dlg.addEventListener('close', () => dlg.remove());
@@ -827,7 +821,7 @@
   }
 
   window.App = {
-    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, editPerson, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, otherDateRange, pickOtherDate, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
+    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, editPerson, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, pickOtherDate, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
     esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum, moneyInput, setMoney,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,

@@ -45,7 +45,7 @@ Data.ready(function () {
   // Working days, edit window and reminder are saved with Simpan: warn before leaving with unsaved changes
   let dirty = false;
   const markDirty = () => { dirty = true; $('save').textContent = 'Simpan perubahan'; };
-  ['editDays', 'reminder'].forEach(id => $(id).addEventListener('input', markDirty));
+  $('reminder').addEventListener('input', markDirty);
   window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
   $('holidays').addEventListener('click', async e => {
@@ -74,14 +74,10 @@ Data.ready(function () {
     saveHolidays('Hari libur disimpan.');
   });
 
-  $('editDays').value = s.editDays;
   $('reminder').value = s.reminder;
 
   $('save').addEventListener('click', () => {
     if (!s.workingDays.length) { App.toast('Pilih minimal 1 hari kerja.'); return; }
-    const ed = Math.floor(+$('editDays').value);
-    if (!(ed >= 0 && ed <= 14)) { App.toast('Batas ubah laporan harus 0–14 hari.'); return; }
-    s.editDays = ed;
     s.reminder = $('reminder').value || '20:00';
     D.saveSettings(teamId, s);
     s = D.getSettings(teamId);

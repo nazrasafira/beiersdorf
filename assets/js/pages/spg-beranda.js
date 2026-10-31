@@ -31,7 +31,7 @@ Data.ready(function () {
   const shift = D.getShift(user.id, today);
 
   if (!D.isWorkingDayFor(user.id, today) && !shift) {
-    $('today').innerHTML = `<p class="muted">Hari ini libur.</p>`;
+    $('today').innerHTML = `<p class="muted">Hari ini libur. Kalau tetap bertugas, mulai shift di sini.</p><button type="button" class="btn block" id="start">Mulai shift</button>`;
   } else {
     const next = D.nextLevel(day.pct);
     // No target (no store this month): no level, no "Rp … lagi"
@@ -51,17 +51,17 @@ Data.ready(function () {
         : App.ring(0, `<div class="pct" style="font-size:22px">–</div><div class="lbl">belum ada target</div>`, 'Belum ada target hari ini')}
       <div class="amount">${App.rp(day.actual)} ${day.target ? `<span class="muted">dari ${App.rpK(day.target)}</span>` : '<span class="muted">terjual hari ini</span>'}</div>
       ${action}`;
-    const start = $('start');
-    if (start) start.addEventListener('click', async () => {
-      const storeId = await App.pickStore({ userId: user.id, title: 'Mulai shift', action: 'Mulai shift', current: D.lastStoreId(user.id), note: 'Pilih toko tempat kamu bertugas hari ini. Bisa diganti selama shift.' });
-      if (!storeId) return;
-      D.startShift(user.id, storeId);
-      location.href = App.page('laporan.html');
-    });
   }
+  const start = $('start');
+  if (start) start.addEventListener('click', async () => {
+    const storeId = await App.pickStore({ userId: user.id, title: 'Mulai shift', action: 'Mulai shift', current: D.lastStoreId(user.id), note: 'Pilih toko tempat kamu bertugas hari ini. Bisa diganti selama shift.' });
+    if (!storeId) return;
+    D.startShift(user.id, storeId);
+    location.href = App.page('laporan.html');
+  });
 
-  $('otherDate').hidden = !App.otherDateRange(user);
-  $('otherDate').addEventListener('click', () => App.pickOtherDate(user));
+  $('otherDate').hidden = false;
+  $('otherDate').addEventListener('click', () => App.pickOtherDate());
 
   /* ----- Rank & streak ----- */
   const lb = D.leaderboard(user.teamId, 'month', today);

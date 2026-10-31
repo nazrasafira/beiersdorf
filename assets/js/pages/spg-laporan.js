@@ -14,16 +14,12 @@ Data.ready(function () {
   let date = App.param('tanggal') || D.TODAY;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > D.TODAY) date = D.TODAY;
   const isToday = date === D.TODAY;
-  const editDays = D.getSettings(owner.teamId).editDays;
 
   $('sub').textContent = (isSpg ? '' : owner.name + ' · ') + App.dateLong(date);
   if (!isToday && isSpg) $('back').hidden = false;
-  if (isSpg && App.otherDateRange(user)) {
+  if (isSpg) {
     $('otherDate').hidden = false;
-    $('otherDate').addEventListener('click', () => {
-      const r = App.otherDateRange(user);
-      App.pickOtherDate(user, date >= r.min && date <= r.max ? date : null);
-    });
+    $('otherDate').addEventListener('click', () => App.pickOtherDate(isToday ? null : date));
   }
 
   /* ----- Product entry ----- */
@@ -165,9 +161,9 @@ Data.ready(function () {
 
     $('entry').hidden = !canAdd;
     $('saleStoreField').hidden = !!shift;
-    $('locked').hidden = canEdit;
-    $('locked').textContent = `Laporan ini terkunci karena sudah lebih dari ${editDays} hari.`;
     $('late').hidden = !(canAdd && (!isToday || (shift && shift.end)));
+    // The page only loads data from DATA_START on, so sales already recorded for an older day aren't listed
+    $('late').textContent = date < D.DATA_START ? 'Tambah penjualan yang terlewat. Penjualan lama di tanggal ini tidak ditampilkan di sini.' : 'Tambah penjualan yang terlewat.';
 
     const shiftPhotos = (shift && shift.photos) || [];
     $('notes').hidden = !shiftPhotos.length;

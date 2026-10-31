@@ -25,14 +25,14 @@ Data.ready(function () {
       let status, value = '';
       if (r) {
         const t = D.dailyTarget(user.id, d);
-        status = D.isLocked(user.id, d) ? `<span class="pill">${App.icon('lock')} Terkunci</span>` : `<span class="pill ok">${App.icon('check')} Terkirim</span>`;
+        status = `<span class="pill ok">${App.icon('check')} Terkirim</span>`;
         value = `<b>${App.rp(r.total)}</b>${t ? `<span>${App.pct(r.total / t * 100)} dari target</span>` : ''}`;
       } else if (!working) {
         status = '<span class="pill">Libur</span>';
       } else {
         status = d === D.TODAY ? '<span class="pill warn">Belum ada</span>' : '<span class="pill bad">Tidak lapor</span>';
       }
-      const clickable = r || (working && !D.isLocked(user.id, d));
+      const clickable = r || working;
       const tag = clickable ? 'a' : 'div';
       return `<${tag} ${clickable ? `href="${App.page('laporan.html')}?tanggal=${d}"` : ''}>
         <div class="grow"><b>${App.dateShort(d)}</b><div class="status">${status}</div></div>
