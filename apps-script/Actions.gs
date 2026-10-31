@@ -35,22 +35,30 @@ function actChangePassword_(req, me) {
   return { token: makeToken_(me) };
 }
 
-/* ---------- Shifts (SPG, today). The phone sends its own time: calls may arrive late from the offline queue. ---------- */
+/* ---------- Shifts (SPG). The phone sends its own date and time: calls may arrive late, even days later, from the offline queue. ---------- */
 function shiftInput_(req) {
   const st = byId_('Stores', req.storeId);
   if (!st || !st.active) fail_('Toko tidak ditemukan.');
   return { storeId: st.id, time: isTime_(req.time) ? req.time : nowTime_() };
 }
-const todayShift_ = me => find_('Shifts', s => s.user_id === me.id && s.date === today_());
+/** Day a shift call belongs to. Pages from before the date was sent mean today. */
+function shiftDate_(req) {
+  if (req.date === undefined || req.date === null) return today_();
+  const date = String(req.date);
+  if (!isDate_(date) || date > today_() || date < addDays_(today_(), -14)) fail_('Tanggal shift tidak valid.');
+  return date;
+}
+const shiftOn_ = (me, date) => find_('Shifts', s => s.user_id === me.id && s.date === date);
 const photosOf_ = shift => rows_('ShiftPhotos').filter(p => p.shift_id === shift.id).map(p => p.url);
 const visitsOf_ = shift => rows_('StoreVisits').filter(v => v.shift_id === shift.id).map(v => ({ storeId: v.store_id, from: v.from_time }));
 
 function actShiftStart_(req, me) {
   if (me.role !== 'spg') fail_('Hanya SPG yang memulai shift.', 403);
   const inp = shiftInput_(req);
-  let sh = todayShift_(me);
+  const date = shiftDate_(req);
+  let sh = shiftOn_(me, date);
   if (!sh) {
-    sh = { id: newId_('sh'), user_id: me.id, date: today_(), start: inp.time, end: '', store_id: inp.storeId };
+    sh = { id: newId_('sh'), user_id: me.id, date, start: inp.time, end: '', store_id: inp.storeId };
     append_('Shifts', [sh]);
     append_('StoreVisits', [{ shift_id: sh.id, store_id: inp.storeId, from_time: inp.time }]);
   }
@@ -59,7 +67,7 @@ function actShiftStart_(req, me) {
 
 function actShiftSwitch_(req, me) {
   const inp = shiftInput_(req);
-  const sh = todayShift_(me);
+  const sh = shiftOn_(me, shiftDate_(req));
   if (!sh || sh.end) fail_('Tidak ada shift yang berjalan.');
   if (sh.store_id !== inp.storeId) {
     sh.store_id = inp.storeId;
@@ -71,7 +79,7 @@ function actShiftSwitch_(req, me) {
 
 /** Ending a shift needs 1–4 photos of the SPG's handwritten sales notes (saved in Drive). */
 function actShiftEnd_(req, me) {
-  const sh = todayShift_(me);
+  const sh = shiftOn_(me, shiftDate_(req));
   if (!sh) fail_('Tidak ada shift yang berjalan.');
   if (!sh.end) { // already ended (e.g. resent from the offline queue): nothing to do
     const photos = Array.isArray(req.photos) ? req.photos : [];
@@ -131,8 +139,8 @@ function actSaleAdd_(req, me) {
   const isToday = date === today_();
   const shift = find_('Shifts', s => s.user_id === owner.id && s.date === date);
   if (me.role === 'spg' && isToday && !shift) fail_('Mulai shift dulu sebelum mencatat penjualan.');
-  // Sales of today get the (phone's) time; sales added afterwards for a past day have none
-  const time = isToday ? (isTime_(req.time) ? req.time : nowTime_()) : '';
+  // The phone's time, also when it arrives late from the offline queue; sales added afterwards for a past day have none
+  const time = isTime_(req.time) ? req.time : isToday ? nowTime_() : '';
   const storeId = byId_('Stores', req.storeId) ? String(req.storeId) : shift ? storeAt_(shift, time) : lastStoreId_(owner);
 
   append_('Sales', [{
