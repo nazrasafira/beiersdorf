@@ -794,3 +794,73 @@ body.tg-past .tg-store { cursor: default; }
 body.login { display: flex; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; }
 body.login .login-box { width: 100%; margin: 0; padding: 24px 20px; }
 body.login .login-box form { margin: 0; }
+
+/* Laporan tabs Sell In & Actual and Pencapaian: one toolbar, a row of totals, one list */
+.ax-tabs { margin-bottom: 20px; }
+.rp-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 20px; }
+.rp-gap { flex: 1; }
+.rp-period { display: flex; align-items: center; gap: 4px; }
+.rp-period b { min-width: 118px; text-align: center; font-size: 15px; }
+.rp-toolbar .tt-search { flex: 1 1 100%; max-width: none; }
+.rp-date { margin: 0; flex: 1 1 130px; }
+.rp-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.rp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.rp-stats > div { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.rp-stats span, .rp-stats small { display: block; color: var(--muted); font-size: 12px; }
+.rp-stats b { display: block; font-size: 15px; margin: 3px 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.rp-foot { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.rp-foot > :first-child { flex: 1 1 280px; margin: 0; }
+.rp-foot .note { margin: 0 0 4px; }
+.rp-stats .ach-dot { display: inline-block; vertical-align: 2px; }
+.num-warn { color: var(--warn); }
+
+/* Sell In & Actual: on a phone one card per store, on a wide screen one table row */
+.ax-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.ax-row.ax-headrow { display: none; }
+.ax-store { grid-column: 1 / -1; min-width: 0; }
+.ax-store b, .ax-store small { display: block; }
+.ax-store small { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.ax-cell > label, .ax-cell > .ax-lbl { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+.ax-cell .input { height: 40px; }
+.ax-num { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
+.ax-num small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.ax-note { grid-column: 1 / -1; }
+.ax-foot { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; background: #fff; border-top: 1px solid var(--line); }
+.ax-foot[hidden] { display: none; }
+
+/* Pencapaian: on a phone name and Ach on one line, the numbers below */
+.ach-row { display: grid; grid-template-columns: 22px 1fr auto; gap: 4px 8px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.ach-rank { color: var(--muted); font-size: 12px; }
+.ach-name { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.ach-name small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.ach-pct { grid-row: 1; grid-column: 3; display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ach-figs { grid-column: 2 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ach-val { font-size: 13px; font-variant-numeric: tabular-nums; }
+.ach-val small { display: block; color: var(--muted); font-size: 11px; }
+.ach-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.ach-dot.hi { background: #3B82B5; }
+.ach-dot.mid { background: #EFB8AB; }
+.ach-dot.lo { background: #DC4C4C; }
+.ach-headrow { display: none; }
+
+@media (min-width: 760px) {
+  .rp-toolbar { align-items: center; }
+  .rp-toolbar .tt-search { flex: 0 1 220px; }
+  .rp-date { flex: 0 0 150px; display: flex; align-items: center; gap: 8px; }
+  .rp-date label { margin: 0; white-space: nowrap; }
+  .rp-stats { grid-template-columns: repeat(4, 1fr); }
+  .rp-stats b { font-size: 18px; }
+  .ax-row { grid-template-columns: minmax(180px, 1.5fr) 150px 150px 120px 130px minmax(120px, 1fr); align-items: center; gap: 12px; padding: 10px 8px; }
+  .ax-row:not(.ax-headrow):hover { background: var(--soft); }
+  .ax-row.ax-headrow, .ach-headrow { display: grid; padding: 8px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 600; background: none; }
+  .ax-store, .ax-note { grid-column: auto; }
+  .ax-cell > label, .ax-cell > .ax-lbl { display: none; }
+  .ax-num { text-align: right; }
+  .ax-headrow span:nth-child(4), .ax-headrow span:nth-child(5) { text-align: right; }
+  .ach-row { grid-template-columns: 28px minmax(200px, 1fr) 150px 150px 90px; gap: 12px; padding: 12px 8px; }
+  .ach-figs { display: contents; }
+  .ach-figs .ach-val { text-align: right; font-size: 14px; }
+  .ach-pct { grid-row: auto; grid-column: auto; }
+  .ach-val small { display: none; }
+  .ach-row:not(.ach-headrow):hover { background: var(--soft); }
+}

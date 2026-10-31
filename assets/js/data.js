@@ -1128,6 +1128,18 @@
       return null;
     },
     // Daily recap numbers for the Excel export (apps-script/Export.gs): { teams, days, offDays, rows } or { error }
+    async achievementReport({ teamId, from, to }) {
+      const res = await call('report.achievement', { teamId, from, to });
+      return res.ok ? res.data : { error: res.data.message };
+    },
+    async actualsReport({ teamId, periodType, start }) {
+      const res = await call('actuals.report', { teamId, periodType, start });
+      return res.ok ? res.data : { error: res.data.message };
+    },
+    async saveActuals({ teamId, periodType, start, rows }) {
+      const res = await call('actuals.save', { teamId, periodType, start, rows });
+      return res.ok ? res.data : { error: res.data.message };
+    },
     async dailyRecap({ from, to, teamId }) {
       const res = await call('report.dailyRecap', { from, to, teamId: teamId || null });
       return res.ok ? res.data : { error: res.data.message };
@@ -1180,5 +1192,8 @@
     addUser, updateUser, resetPassword, canManageUser, canAddCatalog, canEditCatalog, saveStore, stores, store, activity, storeTotals,
     allUsers, setUserPhoto, normalizePhone, exportState, areas,
     dailyRecap: async () => ({ error: 'Rekap harian hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    achievementReport: async () => ({ error: 'Pencapaian hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    actualsReport: async () => ({ error: 'Sell In & Actual hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    saveActuals: async () => ({ error: 'Sell In & Actual hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
   }, LIVE ? LIVE_API : {});
 })();

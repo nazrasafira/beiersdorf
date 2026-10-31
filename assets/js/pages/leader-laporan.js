@@ -82,5 +82,28 @@ Data.ready(function () {
     }
   });
   ['spg', 'store', 'from', 'to'].forEach(id => $(id).addEventListener('change', () => { page = 1; render(); }));
-  render();
+
+  /* ----- Tabs: Penjualan SPG, Sell In & Actual, Pencapaian ----- */
+  const aktual = window.AktualTab(teamId);
+  const pencapaian = window.PencapaianTab(teamId, D.team(teamId).name);
+  let tab = 'sales';
+  function showTab(k) {
+    tab = k;
+    $('mainTabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+    document.querySelectorAll('[data-pane=sales]').forEach(el => { el.hidden = k !== 'sales'; });
+    $('actualPane').hidden = k !== 'aktual';
+    $('pencapaianPane').hidden = k !== 'pencapaian';
+    if (k === 'aktual') aktual.open();
+    else if (k === 'pencapaian') pencapaian.open();
+    else render(); // the chart needs a visible page to measure
+    const q = new URLSearchParams(location.search);
+    if (k !== 'sales') q.set('tab', k); else q.delete('tab');
+    history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+  }
+  $('mainTabs').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-k]');
+    if (!b || b.dataset.k === tab || (tab === 'aktual' && !await aktual.leave())) return;
+    showTab(b.dataset.k);
+  });
+  showTab(['aktual', 'pencapaian'].includes(App.param('tab')) ? App.param('tab') : 'sales');
 });

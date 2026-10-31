@@ -32,6 +32,9 @@ const actions_ = () => ({
   'product.save': [actProductSave_, true, true],
   'store.save': [actStoreSave_, true, true],
   'report.dailyRecap': [actDailyRecap_, true, false],
+  'actuals.report': [actActualsReport_, true, false],
+  'report.achievement': [actAchievement_, true, false],
+  'actuals.save': [actActualsSave_, true, true],
 });
 // Allowed while the user still has to choose a new password
 const BEFORE_NEW_PASSWORD = ['bootstrap', 'password.change'];

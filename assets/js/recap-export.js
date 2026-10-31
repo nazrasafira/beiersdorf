@@ -84,5 +84,45 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  window.RecapExport = { build, download };
+  // Laporan, tab Pencapaian: one sheet per SPG and one per store, with Ach colored like the page (r: action report.achievement)
+  async function buildAchievement(r) {
+    const ExcelJS = await loadExcelJs();
+    const wb = new ExcelJS.Workbook();
+    const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + argb } });
+    const thin = { style: 'thin', color: { argb: 'FF000000' } }, border = { top: thin, left: thin, bottom: thin, right: thin };
+    const sheet = (title, label, rows) => {
+      const ws = wb.addWorksheet(title, { views: [{ state: 'frozen', ySplit: 1 }] });
+      [6, 32, 18, 18, 9, 18, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+      ['No', label, 'TARGET', 'OFFTAKE', 'Ach%', 'Dari actual toko', 'Dari laporan SPG'].forEach((h, i) => {
+        Object.assign(ws.getCell(1, i + 1), { value: h, border, font: { bold: true, color: { argb: i === 2 || i === 3 ? 'FF000000' : 'FFFFFFFF' } }, fill: fill(i === 2 || i === 3 ? '92D050' : '001489'), alignment: { horizontal: 'center', vertical: 'middle', wrapText: true } });
+      });
+      ws.getRow(1).height = 32;
+      const put = (n, x, style) => {
+        const row = ws.addRow([n, x.name, x.target, x.offtake, x.ach, x.fromActual, x.fromSpg]);
+        row.eachCell({ includeEmpty: true }, (c, col) => {
+          c.border = border;
+          if (col === 3 || col === 4 || col > 5) c.numFmt = '#,##0';
+          if (col === 5) { c.numFmt = '0%'; if (x.ach !== null) c.fill = fill(x.ach >= 1 ? '9DC3E6' : x.ach >= 0.9 ? 'F8CBAD' : 'FF7C80'); }
+          if (style) Object.assign(c, style);
+        });
+      };
+      rows.forEach((x, i) => put(i + 1, x));
+      const sum = k => rows.reduce((a, x) => a + x[k], 0), target = sum('target'), offtake = sum('offtake');
+      put('', { name: 'Total', target, offtake, ach: target > 0 ? offtake / target : null, fromActual: sum('fromActual'), fromSpg: sum('fromSpg') }, { font: { bold: true } });
+      const last = ws.lastRow;
+      [1, 2, 3, 4].forEach(c => { last.getCell(c).fill = fill('FFD966'); });
+    };
+    sheet('Per SPG', 'SPG', r.spgs);
+    sheet('Per Toko', 'Toko', r.stores);
+    return wb.xlsx.writeBuffer();
+  }
+  async function downloadAchievement(r, teamName) {
+    const buf = await buildAchievement(r);
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: `Pencapaian Tim ${teamName} ${r.from} sd ${r.to}.xlsx` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  window.RecapExport = { build, download, buildAchievement, downloadAchievement };
 })();

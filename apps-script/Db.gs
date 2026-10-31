@@ -16,13 +16,15 @@ const TABLES = {
   StoreVisits: ['shift_id', 'store_id', 'from_time'],
   ShiftPhotos: ['shift_id', 'url', 'at'], // photos of the SPG's handwritten notes, taken when ending a shift
   Sales: ['id', 'user_id', 'date', 'time', 'store_id', 'product_id', 'qty', 'price', 'subtotal', 'created_by', 'created_at', 'deleted'],
+  // Rupiah per store for a month or a week, typed in from the reports of Nivea and the store (see Actuals.gs)
+  StoreActuals: ['id', 'store_id', 'period_type', 'period_start', 'period_end', 'sell_in', 'actual', 'note', 'entered_by', 'entered_at'],
   DayReports: ['user_id', 'date', 'no_sales', 'unlocked', 'unlocked_by'],
   Settings: ['team_id', 'working_days', 'edit_days', 'reminder'],
   Holidays: ['team_id', 'date', 'name', 'working'],
   Activity: ['at', 'by', 'action', 'kind', 'subject_id', 'name'],
   LoginLog: ['at', 'phone', 'success'],
 };
-const NUM_COLS = ['price', 'qty', 'subtotal', 'monthly', 'weekly', 'daily', 'edit_days', 'token_version'];
+const NUM_COLS = ['price', 'qty', 'subtotal', 'monthly', 'weekly', 'daily', 'edit_days', 'token_version', 'sell_in', 'actual'];
 const BOOL_COLS = ['active', 'must_change_password', 'deleted', 'no_sales', 'unlocked', 'working', 'success'];
 const TZ = 'Asia/Jakarta';
 

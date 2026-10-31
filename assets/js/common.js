@@ -327,7 +327,9 @@
           `<option value="${x.id}" ${x.id === current ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`;
       box.querySelector('select').addEventListener('change', e => {
         lsSet('lspg-team', e.target.value);
-        location.search = '?tim=' + e.target.value;
+        const q = new URLSearchParams(location.search);
+        q.set('tim', e.target.value);
+        location.search = q; // stays on the same tab of the page
       });
       document.querySelector('main').prepend(box);
       combobox(box.querySelector('select'));

@@ -6,13 +6,14 @@
 <meta name="theme-color" content="#ffffff">
 <title>Laporan</title>
 <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
-<link rel="stylesheet" href="../assets/css/style.css?v=20261031195709">
-<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261031195709","../")</script>
+<link rel="stylesheet" href="../assets/css/style.css?v=20261031204031">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261031204031","../")</script>
 </head>
 <body data-root="../">
 <main>
   <div class="page-head"><div><h1>Laporan</h1><p class="sub" id="sub"></p></div></div>
-  <section>
+  <div class="tabs ax-tabs" id="mainTabs" role="tablist" aria-label="Jenis laporan"><button type="button" data-k="sales" class="on">Penjualan SPG</button><button type="button" data-k="aktual">Sell In &amp; Actual</button><button type="button" data-k="pencapaian">Pencapaian</button></div>
+  <section data-pane="sales">
   <div class="form-grid">
     <div class="field"><label for="spg">SPG</label><select class="input" id="spg"></select></div>
     <div class="field"><label for="store">Toko</label><select class="input" id="store"></select></div>
@@ -20,20 +21,66 @@
     <div class="field"><label for="to">Sampai</label><input class="input" type="date" id="to"></div>
   </div>
   </section>
-  <section>
+  <section data-pane="sales">
     <h2>Tren penjualan</h2>
     <div id="trend"></div>
     <div class="legend"><span><i></i>Penjualan</span><span><i class="dash"></i>Target</span></div>
   </section>
-  <section>
+  <section data-pane="sales">
     <p class="small muted" id="summary" style="margin-top:0"></p>
     <div class="rep-list" id="table"></div>
     <nav class="shop-pager" id="pager" aria-label="Halaman"></nav>
   </section>
+  <div id="actualPane" hidden>
+    <div class="rp-toolbar">
+      <div class="rp-period">
+        <button type="button" class="icon-btn" id="prev" aria-label="Periode sebelumnya"><span data-icon="left"></span></button>
+        <b id="axPeriod"></b>
+        <button type="button" class="icon-btn" id="next" aria-label="Periode berikutnya"><span data-icon="right"></span></button>
+      </div>
+      <div class="tabs" id="type" role="tablist" aria-label="Periode"><button type="button" data-k="month" class="on">Bulan</button><button type="button" data-k="week">Minggu</button></div>
+      <span class="rp-gap"></span>
+      <div class="tabs" id="scope" role="tablist" aria-label="Toko"><button type="button" data-k="team" class="on">Toko tim</button><button type="button" data-k="all">Semua area</button></div>
+      <label class="tt-search"><span data-icon="search"></span><input type="search" class="input" id="search" placeholder="Cari toko..." aria-label="Cari toko"></label>
+    </div>
+    <p class="notice" id="axNoArea" hidden></p>
+    <div class="rp-stats" id="axSummary"></div>
+    <form id="inputForm" autocomplete="off" hidden>
+      <div class="ax-row ax-headrow" aria-hidden="true"><span>Toko</span><span>Sell in</span><span>Actual</span><span>Sell out SPG</span><span>Selisih</span><span>Catatan</span></div>
+      <div id="inputs"></div>
+      <div class="ax-foot" id="axFoot" hidden><span class="small" id="dirtyText"></span><button class="btn" type="submit" id="save">Simpan</button></div>
+    </form>
+    <p class="empty" id="axStatus" role="status"></p>
+    <div class="rp-foot">
+      <p class="note">Isi sell in dan actual dari laporan yang kamu terima. Selisih = sell out SPG − actual, ditandai bila lebih dari 10%. Ini hanya petunjuk, karena harga di laporan toko bisa berbeda.</p>
+      <button type="button" class="btn ghost small" id="csv"><span data-icon="download"></span>Unduh CSV</button>
+    </div>
+  </div>
+  <div id="pencapaianPane" hidden>
+    <div class="rp-toolbar">
+      <div class="field rp-date"><label for="achFrom">Dari</label><input class="input" type="date" id="achFrom"></div>
+      <div class="field rp-date"><label for="achTo">Sampai</label><input class="input" type="date" id="achTo"></div>
+      <div class="rp-presets" id="achPresets"><button type="button" class="btn ghost small" data-p="month">Bulan ini</button><button type="button" class="btn ghost small" data-p="quarter">3 bulan</button><button type="button" class="btn ghost small" data-p="year">Tahun ini</button></div>
+      <span class="rp-gap"></span>
+      <div class="tabs" id="achBy" role="tablist" aria-label="Lihat per"><button type="button" data-k="spgs" class="on">Per SPG</button><button type="button" data-k="stores">Per toko</button></div>
+    </div>
+    <div class="rp-stats" id="achStats"></div>
+    <div id="achList"></div>
+    <div class="rp-foot">
+      <div>
+        <p class="note" id="achNote"></p>
+        <p class="note" id="achExcluded" hidden></p>
+      </div>
+      <button type="button" class="btn ghost small" id="achExcel" hidden><span data-icon="download"></span>Unduh Excel</button>
+    </div>
+  </div>
 </main>
-<script src="../assets/js/config.js?v=20261031195709"></script>
-<script src="../assets/js/data.js?v=20261031195709"></script>
-<script src="../assets/js/common.js?v=20261031195709"></script>
-<script src="../assets/js/pages/leader-laporan.js?v=20261031195709"></script>
+<script src="../assets/js/config.js?v=20261031204031"></script>
+<script src="../assets/js/data.js?v=20261031204031"></script>
+<script src="../assets/js/common.js?v=20261031204031"></script>
+<script src="../assets/js/recap-export.js?v=20261031204031"></script>
+<script src="../assets/js/pages/leader-pencapaian.js?v=20261031204031"></script>
+<script src="../assets/js/pages/leader-aktual.js?v=20261031204031"></script>
+<script src="../assets/js/pages/leader-laporan.js?v=20261031204031"></script>
 </body>
 </html>
