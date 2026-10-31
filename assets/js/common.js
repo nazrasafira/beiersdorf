@@ -267,6 +267,7 @@
     }
     const here = location.pathname;
     const isOn = (href, folder) => here.endsWith('/' + href) || (!!folder && here.includes('/' + folder));
+    const canEditOwnPhoto = user.role === 'leader' || user.role === 'manager';
     const top = document.createElement('header');
     top.className = 'topbar';
     top.innerHTML = `
@@ -275,7 +276,7 @@
         ${user.role === 'spg' ? '' : `<nav class="mainnav" id="mainnav" aria-label="Menu utama">${NAV[user.role].map(([href, ic, label, folder]) =>
           `<a href="${root + href}" class="${isOn(href, folder) ? 'on' : ''}" ${isOn(href, folder) ? 'aria-current="page"' : ''}>${icon(ic)}<span>${label}</span></a>`).join('')}</nav>`}
         <div class="user">
-          ${avatar(user, 'sm')}
+          ${canEditOwnPhoto ? `<button type="button" class="photo-edit top-photo" aria-label="Ganti foto profil" title="Ganti foto profil">${avatar(user, 'sm')}<span class="cam">${icon('camera')}</span></button>` : avatar(user, 'sm')}
           <span class="name"><b>${esc(user.name)}</b><small>${ROLE_LABEL[user.role]}</small></span>
           <button class="logout icon-btn" type="button" aria-label="Keluar" title="Keluar">${icon('logout')}</button>
           ${user.role === 'spg' ? '' : `<button class="icon-btn menu-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mainnav">${icon('menu')}</button>`}
@@ -289,6 +290,14 @@
       btn.disabled = true;
       await Data.logout();
       location.href = root + Data.page('index.html');
+    });
+    if (canEditOwnPhoto) top.querySelector('.top-photo').addEventListener('click', async e => {
+      const img = e.currentTarget.querySelector('img');
+      const photo = await pickImage('cover', 192);
+      if (!photo) return;
+      Data.setUserPhoto(user.id, photo);
+      img.src = photo;
+      toast('Foto profil diperbarui.');
     });
     document.body.prepend(top);
 

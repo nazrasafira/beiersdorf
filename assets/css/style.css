@@ -745,3 +745,9 @@ button.rk:active { background: var(--soft); }
 /* Target page on a month that is over: read only */
 body.tg-past .tg-foot, body.tg-past .tg-free .btn { display: none; }
 body.tg-past .tg-store { cursor: default; }
+
+/* Own photo in the top bar */
+.top-photo { flex: none; }
+.top-photo .cam { width: 16px; height: 16px; right: -4px; bottom: -4px; border-width: 1px; }
+.top-photo .cam .icon { width: 9px; height: 9px; }
+
