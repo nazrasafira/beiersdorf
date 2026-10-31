@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Terima kasih</title>
+<link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+<link rel="stylesheet" href="../assets/css/style.css?v=20261023163550">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261023163550","../")</script>
+</head>
+<body data-root="../">
+<main>
+  <section class="thanks" id="thanks" hidden>
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+    <svg class="thanks-check" viewBox="0 0 96 96" aria-hidden="true">
+      <circle class="thanks-circle" cx="48" cy="48" r="44"></circle>
+      <path class="thanks-tick" d="M28 50l14 14 26-30"></path>
+    </svg>
+    <h1>Terima kasih!</h1>
+    <p class="muted">Shift kamu hari ini sudah selesai. Selamat beristirahat.</p>
+    <dl class="thanks-summary" id="summary"></dl>
+    <p class="note" id="sending" role="status" hidden></p>
+    <a class="btn block" id="home">Kembali ke Beranda</a>
+    <a class="btn ghost block" id="sales">Lihat penjualan hari ini</a>
+  </section>
+</main>
+<script src="../assets/js/config.js?v=20261023163550"></script>
+<script src="../assets/js/data.js?v=20261023163550"></script>
+<script src="../assets/js/common.js?v=20261023163550"></script>
+<script src="../assets/js/pages/spg-terima-kasih.js?v=20261023163550"></script>
+</body>
+</html>

@@ -113,8 +113,7 @@ Data.ready(function () {
     if (!photos.length) { App.toast('Foto catatan penjualan dulu.'); return; }
     D.endShift(owner.id, user.id, photos);
     endDlg.close();
-    App.toast('Shift selesai. Foto catatan tersimpan.');
-    render();
+    location.href = App.page('terima-kasih.html');
   });
 
   $('list').addEventListener('click', async e => {

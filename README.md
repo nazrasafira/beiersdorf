@@ -26,6 +26,7 @@ In demo mode (`backend: 'demo'`) changes are saved in your browser; clear the si
 | `index.html` — Masuk | everyone |
 | `spg/beranda.html` — big daily % ring, level, rank, streak, week/month progress | SPG |
 | `spg/laporan.html` — Penjualan: start shift at a chosen store, switch store, record each sale, end shift | SPG (Leader/Manager can edit too) |
+| `spg/terima-kasih.html` — thank-you page with the day's summary after ending a shift | SPG |
 | `spg/peringkat.html` — team leaderboard by % of target | SPG |
 | `spg/riwayat.html` — report history per month | SPG |
 | `leader/dashboard.html` — team summary, SPG ranking, SPGs scheduled today who have not started, sales per store/product, CSV and daily recap Excel | Leader, Manager |
