@@ -24,7 +24,15 @@ gas.ctx.setupSheet();
 console.log(gas.ctx.importDemoData('file://' + path.join(__dirname, 'fixtures', 'demo-data.json')));
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
-const CONFIG = "window.APP_CONFIG = { backend: 'sheets', url: '/exec' };\n";
+// Quick logins for the login page. Only this local config has them, so they never reach the published site.
+const DEV_LOGINS = [
+  { label: 'Admin', phone: '0811 0000 0001', password: 'admin123' },
+  { label: 'Manager', phone: '0811 0000 0002', password: 'manager123' },
+  { label: 'Team Leader', phone: '0812 0000 0001', password: 'leader123' },
+  { label: 'SPG', phone: '0813 0000 0001', password: 'spg123' },
+  { label: 'SPG, tanpa shift 20 Okt', phone: '0815 8587 9832', password: 'spg123' },
+];
+const CONFIG = `window.APP_CONFIG = ${JSON.stringify({ backend: 'sheets', url: '/exec', devLogins: DEV_LOGINS })};\n`;
 
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');

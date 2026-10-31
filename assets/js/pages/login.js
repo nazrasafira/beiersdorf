@@ -7,6 +7,7 @@ Data.ready(function () {
   // After a password reset the server asks for a new password before anything else
   function askNewPassword(u) {
     form.hidden = true;
+    $('devLogins').hidden = true;
     $('pwName').textContent = u.name.split(' ')[0];
     pwForm.hidden = false;
     $('newPw').focus();
@@ -32,6 +33,22 @@ Data.ready(function () {
     form.password.focus();
   });
   const err = $('err');
+
+  // Local dev server only (tools/sheets-dev-server.js): buttons that fill in a test account
+  const devLogins = Data.CONFIG.devLogins || [];
+  if (devLogins.length && !form.hidden) {
+    $('devLogins').innerHTML = `<p class="muted small">Akun lokal</p>` +
+      devLogins.map((a, i) => `<button type="button" class="btn ghost small" data-login="${i}">${App.esc(a.label)}</button>`).join('');
+    $('devLogins').hidden = false;
+    $('devLogins').addEventListener('click', e => {
+      const b = e.target.closest('[data-login]');
+      if (!b) return;
+      const a = devLogins[+b.dataset.login];
+      form.phone.value = a.phone;
+      form.password.value = a.password;
+      err.hidden = true;
+    });
+  }
 
   form.addEventListener('submit', async e => {
     e.preventDefault();

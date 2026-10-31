@@ -782,3 +782,12 @@ body.tg-past .tg-store { cursor: default; }
   .confetti { display: none; }
 }
 
+/* Local dev server only: test accounts below the login form */
+.dev-logins { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; }
+.dev-logins[hidden] { display: none; }
+.dev-logins p { width: 100%; margin: 0; text-align: center; }
+
+/* Login page: everything centered on the screen, both ways */
+body.login { display: flex; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; }
+body.login .login-box { width: 100%; margin: 0; padding: 24px 20px; }
+body.login .login-box form { margin: 0; }
