@@ -20,6 +20,7 @@
     <p class="muted">Mulai shift untuk mencatat penjualan.</p>
     <button type="button" class="btn block" id="startShift">Mulai shift</button>
   </section>
+  <button type="button" class="btn ghost block other-date" id="otherDate" hidden><span data-icon="calendar"></span>Input tanggal lain</button>
 
   <p class="muted small" id="shift" hidden></p>
   <div class="store-bar" id="storeBar" hidden>
@@ -30,6 +31,7 @@
 
   <form id="entry" class="entry" autocomplete="off" hidden>
     <p class="note" id="late" hidden style="margin:0 0 12px">Tambah penjualan yang terlewat.</p>
+    <div class="field" id="saleStoreField" hidden><label for="saleStore">Toko</label><select id="saleStore" data-placeholder="Cari toko..."></select></div>
     <div class="field"><label for="product">Produk</label><select id="product" data-placeholder="Cari produk..."></select></div>
     <div id="preview" class="center" hidden style="margin:-4px 0 12px"></div>
     <div class="entry-row">

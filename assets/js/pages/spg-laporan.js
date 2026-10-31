@@ -18,12 +18,27 @@ Data.ready(function () {
 
   $('sub').textContent = (isSpg ? '' : owner.name + ' · ') + App.dateLong(date);
   if (!isToday && isSpg) $('back').hidden = false;
+  if (isSpg && App.otherDateRange(user)) {
+    $('otherDate').hidden = false;
+    $('otherDate').addEventListener('click', () => {
+      const r = App.otherDateRange(user);
+      App.pickOtherDate(user, date >= r.min && date <= r.max ? date : null);
+    });
+  }
 
   /* ----- Product entry ----- */
   const products = D.products();
   $('product').innerHTML = '<option value=""></option>' +
     products.map(p => `<option value="${p.id}" data-img="${App.esc(App.productSrc(p))}">${App.esc(p.name)}</option>`).join('');
   App.combobox($('product'));
+
+  // A day without a shift has no store of its own, so the sale says where it was made. The SPG's own stores come first.
+  const mine = D.heldStores(owner.id, D.monthKey(date)).map(t => t.storeId);
+  const lastStore = D.lastStoreId(owner.id);
+  $('saleStore').innerHTML = '<option value=""></option>' + D.stores().slice()
+    .sort((a, b) => (mine.includes(b.id) - mine.includes(a.id)) || a.name.localeCompare(b.name))
+    .map(st => `<option value="${st.id}" ${st.id === lastStore ? 'selected' : ''}>${App.esc([st.name, st.city].filter(Boolean).join(' · ') + (mine.includes(st.id) ? ' · toko kamu' : ''))}</option>`).join('');
+  App.combobox($('saleStore'));
 
   const MAX_QTY = 10000; // same limit as the server
   const qty = () => Math.max(1, Math.floor(+$('qty').value || 1));
@@ -52,10 +67,12 @@ Data.ready(function () {
     if (!Number.isInteger(rawQty) || rawQty < 1 || rawQty > MAX_QTY) { App.toast(`Jumlah harus 1–${App.num(MAX_QTY)}.`); $('qty').focus(); return; }
     const price = App.parseNum($('price').value);
     if (!(price > 0) || price > 1e9) { App.toast('Isi harga yang benar.'); $('price').focus(); return; }
+    const noShift = !D.getShift(owner.id, date);
+    if (noShift && !$('saleStore').value) { App.toast('Pilih toko dulu.'); $('saleStore')._combo.flash(); return; }
 
     const before = isSpg && isToday ? D.level(D.progress(owner.id, 'day', date).pct) : null;
     const q = qty();
-    D.addSale(owner.id, date, { productId, qty: q, price }, user.id);
+    D.addSale(owner.id, date, Object.assign({ productId, qty: q, price }, noShift ? { storeId: $('saleStore').value } : {}), user.id);
     let msg = `Tersimpan: ${q} × ${D.product(productId).name}`;
     if (before) {
       const after = D.level(D.progress(owner.id, 'day', date).pct);
@@ -147,6 +164,7 @@ Data.ready(function () {
     $('switchStore').hidden = !(isSpg && isToday && shift && !shift.end);
 
     $('entry').hidden = !canAdd;
+    $('saleStoreField').hidden = !!shift;
     $('locked').hidden = canEdit;
     $('locked').textContent = `Laporan ini terkunci karena sudah lebih dari ${editDays} hari.`;
     $('late').hidden = !(canAdd && (!isToday || (shift && shift.end)));

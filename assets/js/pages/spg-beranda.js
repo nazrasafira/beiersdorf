@@ -60,6 +60,9 @@ Data.ready(function () {
     });
   }
 
+  $('otherDate').hidden = !App.otherDateRange(user);
+  $('otherDate').addEventListener('click', () => App.pickOtherDate(user));
+
   /* ----- Rank & streak ----- */
   const lb = D.leaderboard(user.teamId, 'month', today);
   const me = lb.find(r => r.user.id === user.id);
