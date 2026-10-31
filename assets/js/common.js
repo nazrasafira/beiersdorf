@@ -429,6 +429,28 @@
    * Call after every (re)render of a table: App.tableTools(tableEl, { placeholder, pageSize }).
    * Controls are created once per table and keep their search text and page across re-renders.
    * Rows with class "detail" belong to the row above them and follow its visibility. */
+  /* Pages a list that is already drawn: only the rows of the current page stay visible, and the pager appears below the list when needed.
+   * const pg = App.pagedList(el, { label, size, rows }); after each (re)render: pg.apply(row => matches). pg.reset() goes back to page 1. */
+  function pagedList(el, opts) {
+    const nav = document.createElement('nav');
+    nav.className = 'shop-pager';
+    nav.setAttribute('aria-label', 'Halaman');
+    nav.hidden = true;
+    el.after(nav);
+    let page = 1, match = null;
+    function apply(fn, jump) {
+      if (fn !== undefined) match = fn;
+      const rows = [...(opts.rows ? el.querySelectorAll(opts.rows) : el.children)].filter(r => !r.classList.contains('empty'));
+      const on = rows.filter(r => !match || match(r));
+      const [from, to, at] = pager(nav, { page, size: opts.size || 20, total: on.length, label: opts.label, onPage: n => { page = n; apply(undefined, true); } });
+      page = at;
+      rows.forEach(r => { r.hidden = true; });
+      on.slice(from, to).forEach(r => { r.hidden = false; });
+      if (jump) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      return on.length;
+    }
+    return { apply, reset() { page = 1; } };
+  }
   function tableTools(table, opts) {
     if (!table) return;
     opts = opts || {};
@@ -823,7 +845,7 @@
   }
 
   window.App = {
-    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, editPerson, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, pickOtherDate, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
+    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, editPerson, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, pickOtherDate, pagedList, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
     esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum, moneyInput, setMoney,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,

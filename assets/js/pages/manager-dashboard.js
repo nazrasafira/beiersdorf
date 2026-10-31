@@ -5,6 +5,7 @@ Data.ready(function () {
   const D = Data, $ = id => document.getElementById(id);
   const SHOW = 5; // top SPGs shown before "Lihat semua"
   let period = 'month', allSpgs = false;
+  const pagedSpgs = App.pagedList($('spgs'), { label: 'SPG' });
 
   function render() {
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.p === period));
@@ -45,6 +46,7 @@ Data.ready(function () {
           <span class="meta"><span>${App.rpShort(r.actual)} / ${App.rpShort(r.target)} · Tim ${App.esc(D.team(r.user.teamId).name)}</span></span>
         </span>
       </div>`).join('') || '<p class="empty">Belum ada SPG.</p>';
+    pagedSpgs.apply();
     $('spgsMore').hidden = a.topSpgs.length <= SHOW;
     $('spgsMore').textContent = allSpgs ? 'Tampilkan lebih sedikit' : `Lihat semua ${a.topSpgs.length} SPG`;
   }
@@ -53,7 +55,7 @@ Data.ready(function () {
     const b = e.target.closest('[data-id]');
     if (b) location.href = App.page('../leader/dashboard.html') + '?tim=' + b.dataset.id;
   });
-  $('spgsMore').addEventListener('click', () => { allSpgs = !allSpgs; render(); });
+  $('spgsMore').addEventListener('click', () => { allSpgs = !allSpgs; pagedSpgs.reset(); render(); });
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { period = b.dataset.p; render(); } });
   render();
 });

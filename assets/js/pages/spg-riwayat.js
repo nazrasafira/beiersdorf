@@ -7,6 +7,8 @@ Data.ready(function () {
   let mk = App.param('bulan') || lastMonth;
   if (mk < firstMonth || mk > lastMonth) mk = lastMonth;
 
+  const paged = App.pagedList($('list'), { label: 'hari', size: 15 });
+
   function render() {
     $('month').textContent = App.monthName(mk);
     $('prev').disabled = mk <= firstMonth;
@@ -39,12 +41,13 @@ Data.ready(function () {
         <div class="val">${value}</div>
       </${tag}>`;
     }).join('');
+    paged.apply();
 
     App.trendChart($('trend'), D.dailySeries([user.id], [user.teamId], mk + '-01', end));
     $('summary').textContent = `${sent} dari ${workDays} hari kerja dilaporkan · Total ${App.rp(total)}`;
   }
 
-  $('prev').addEventListener('click', () => { mk = D.addMonths(mk, -1); render(); });
-  $('next').addEventListener('click', () => { mk = D.addMonths(mk, 1); render(); });
+  $('prev').addEventListener('click', () => { mk = D.addMonths(mk, -1); paged.reset(); render(); });
+  $('next').addEventListener('click', () => { mk = D.addMonths(mk, 1); paged.reset(); render(); });
   render();
 });

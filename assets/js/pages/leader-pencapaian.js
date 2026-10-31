@@ -4,6 +4,7 @@ window.PencapaianTab = function (teamId, teamName) {
   'use strict';
   const D = Data, $ = id => document.getElementById(id);
   let by = 'spgs', data = null, seq = 0;
+  const paged = App.pagedList($('achList'), { label: 'baris', rows: '.ach-row:not(.ach-headrow)' });
 
   const dot = ach => (ach === null ? '' : `<i class="ach-dot ${ach >= 1 ? 'hi' : ach >= 0.9 ? 'mid' : 'lo'}"></i>`);
   const achText = ach => (ach === null ? '–' : Math.round(ach * 100) + '%');
@@ -28,6 +29,7 @@ window.PencapaianTab = function (teamId, teamName) {
         ${figs(r)}
         <span class="ach-pct">${dot(r.ach)}${achText(r.ach)}</span>
       </div>`).join('') : '<p class="empty">Belum ada data di rentang ini.</p>';
+    paged.apply();
     $('achExcel').hidden = !rows.length;
     $('achNote').textContent = 'Offtake memakai actual toko bila sudah diisi di Sell In & Actual, dan laporan SPG bila belum. Toko dan bulan tanpa target tidak dihitung.';
     $('achExcluded').hidden = !data.excluded;
@@ -38,6 +40,7 @@ window.PencapaianTab = function (teamId, teamName) {
     if (!from || !to) return;
     if (from > to) { [from, to] = [to, from]; $('achFrom').value = from; $('achTo').value = to; }
     const mine = ++seq;
+    paged.reset();
     $('achStats').innerHTML = '';
     $('achList').innerHTML = '<p class="empty">Memuat...</p>';
     $('achExcel').hidden = true;
@@ -65,6 +68,7 @@ window.PencapaianTab = function (teamId, teamName) {
     if (!b) return;
     by = b.dataset.k;
     $('achBy').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    paged.reset();
     if (data) render();
   });
   $('achExcel').addEventListener('click', async () => {

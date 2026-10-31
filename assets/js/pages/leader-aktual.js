@@ -9,6 +9,7 @@ window.AktualTab = function (teamId) {
   let start = D.monthStart(D.TODAY);
   let data = null, seq = 0;
   const dirty = new Set();
+  const paged = App.pagedList($('inputs'), { label: 'toko' }); // rows on other pages keep what was typed
 
   const money = n => (n === null || n === undefined ? '–' : App.rp(n));
   const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '') + App.rp(Math.abs(n));
@@ -74,12 +75,7 @@ window.AktualTab = function (teamId) {
   }
   function applyFilter() {
     if (!data) return;
-    let count = 0;
-    $('inputs').querySelectorAll('.ax-row').forEach(row => {
-      const ok = matches(data.rows[+row.dataset.i]);
-      row.hidden = !ok;
-      if (ok) count++;
-    });
+    const count = paged.apply(row => matches(data.rows[+row.dataset.i]));
     $('inputForm').hidden = !count;
     $('axStatus').hidden = count > 0;
     $('axStatus').textContent = scope === 'team' && !$('search').value ? 'Belum ada toko tim di periode ini. Lihat Semua area.' : 'Tidak ada toko yang cocok.';
@@ -138,20 +134,20 @@ window.AktualTab = function (teamId) {
   }
   window.addEventListener('beforeunload', e => { if (dirty.size) e.preventDefault(); });
   const onTab = (id, fn) => $(id).addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) fn(b.dataset.k); });
-  onTab('scope', k => { scope = k; setTabs('scope', k); applyFilter(); });
+  onTab('scope', k => { scope = k; setTabs('scope', k); paged.reset(); applyFilter(); });
   onTab('type', async k => {
     if (k === type || !await leaveOk()) return;
     if (k === 'month') start = D.monthStart(start);
     else start = D.monthKey(start) === D.monthKey(D.TODAY) ? D.weekStart(D.TODAY) : firstMonday(start);
-    type = k; setTabs('type', k); load();
+    type = k; setTabs('type', k); paged.reset(); load();
   });
   function firstMonday(monthFirst) {
     const w = D.weekStart(monthFirst);
     return w < monthFirst ? D.addDays(w, 7) : w;
   }
-  $('prev').addEventListener('click', async () => { if (await leaveOk()) { start = step(-1); load(); } });
-  $('next').addEventListener('click', async () => { if (step(1) <= D.TODAY && await leaveOk()) { start = step(1); load(); } });
-  $('search').addEventListener('input', applyFilter);
+  $('prev').addEventListener('click', async () => { if (await leaveOk()) { start = step(-1); paged.reset(); load(); } });
+  $('next').addEventListener('click', async () => { if (step(1) <= D.TODAY && await leaveOk()) { start = step(1); paged.reset(); load(); } });
+  $('search').addEventListener('input', () => { paged.reset(); applyFilter(); });
 
   return {
     open() { if (!data) load(); },

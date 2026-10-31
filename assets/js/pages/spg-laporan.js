@@ -81,6 +81,7 @@ Data.ready(function () {
     $('product').dispatchEvent(new Event('change'));
     $('qty').value = 1;
     updateSubtotal();
+    pagedTx.reset(); // the new sale is on top of the first page
     render();
   });
 
@@ -140,6 +141,7 @@ Data.ready(function () {
   });
 
   /* ----- Render ----- */
+  const pagedTx = App.pagedList($('list'), { label: 'transaksi' });
   function render() {
     const shift = D.getShift(owner.id, date);
     const report = D.getReport(owner.id, date);
@@ -178,6 +180,7 @@ Data.ready(function () {
         <div class="grow"><b>${App.esc(D.product(t.productId).name)}</b><span>${t.time ? t.time + ' · ' : ''}${t.qty} × ${App.rp(t.price)}${manyStores && D.store(t.storeId) ? ' · ' + App.esc(D.store(t.storeId).name) : ''}</span></div>
         <div class="val">${App.rp(t.qty * t.price)}</div>${canEdit && report.transactions ? App.iconBtn('trash', 'Hapus transaksi', `data-del="${t.id}"`, 'danger') : ''}
       </div>`).join('') || (needsShift ? '' : '<p class="empty">Belum ada penjualan.</p>');
+    pagedTx.apply();
   }
 
   updateSubtotal();

@@ -8,6 +8,8 @@ Data.ready(function () {
   if (!/^\d{4}-\d{2}$/.test(mk)) mk = D.monthKey(D.TODAY);
 
   const place = st => [st.chain, st.city].filter(Boolean).join(' · ');
+  const pagedFree = App.pagedList($('free'), { label: 'toko', rows: '[data-name]' });
+  const pagedTaken = App.pagedList($('taken'), { label: 'toko' });
   const photo = u => App.imgSrc((u && u.photo) || 'assets/avatars/default.svg');
 
   // Who holds a store in a month. "taken" = an active SPG of another team (can't be given out from here).
@@ -96,17 +98,18 @@ Data.ready(function () {
       return `<div><div class="grow"><b>${App.esc(st.name)}</b><span>${App.esc(place(st))}</span></div>
         <span class="small muted">${h ? `${App.esc(h.name)} · Tim ${App.esc((D.team(h.teamId) || {}).name || '')}` : 'SPG tim lain'}${ho.fromMonth ? ` (sejak ${App.monthName(ho.fromMonth)})` : ''}</span></div>`;
     }).join('');
+    pagedTaken.apply();
   }
   const firstWorkingDay = userId => D.eachDay(mk + '-01', D.monthEnd(mk + '-01')).find(d => D.isWorkingDayFor(userId, d)) || mk + '-01';
 
   function filterFree() {
     const q = $('freeSearch').value.trim().toLowerCase();
-    $('free').querySelectorAll('[data-name]').forEach(b => { b.hidden = !!q && !b.dataset.name.includes(q); });
+    pagedFree.apply(b => !q || (b.dataset.name || '').includes(q));
   }
-  $('freeSearch').addEventListener('input', filterFree);
+  $('freeSearch').addEventListener('input', () => { pagedFree.reset(); filterFree(); });
 
-  $('prev').addEventListener('click', () => { mk = D.addMonths(mk, -1); render(); });
-  $('next').addEventListener('click', () => { mk = D.addMonths(mk, 1); render(); });
+  $('prev').addEventListener('click', () => { mk = D.addMonths(mk, -1); pagedFree.reset(); pagedTaken.reset(); render(); });
+  $('next').addEventListener('click', () => { mk = D.addMonths(mk, 1); pagedFree.reset(); pagedTaken.reset(); render(); });
 
   /* ---------- Sheet: give a store to an SPG and set its target ---------- */
   const dlg = App.modal($('sheet'));

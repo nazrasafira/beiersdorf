@@ -8,6 +8,7 @@ Data.ready(function () {
 
   $('sub').textContent = 'SPG Tim ' + D.team(teamId).name;
 
+  const paged = App.pagedList($('list'), { label: 'SPG' });
   /* ----- One card per SPG: photo, phone, last store, schedule, actions ----- */
   function render() {
     const list = D.spgsOf(teamId, true).sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name));
@@ -35,11 +36,10 @@ Data.ready(function () {
 
   function filter() {
     const q = $('q').value.trim().toLowerCase();
-    let shown = 0;
-    $('list').querySelectorAll('[data-text]').forEach(c => { c.hidden = !!q && !c.dataset.text.includes(q); shown += !c.hidden; });
+    const shown = paged.apply(c => !q || c.dataset.text.includes(q));
     $('none').hidden = !q || shown > 0;
   }
-  $('q').addEventListener('input', filter);
+  $('q').addEventListener('input', () => { paged.reset(); filter(); });
 
   $('list').addEventListener('click', async e => {
     const sch = e.target.closest('[data-sch]');

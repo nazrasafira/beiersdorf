@@ -11,6 +11,7 @@ Data.ready(function () {
 
   const SHOW = 5; // rows shown before "Lihat semua"
   let allSpgs = false, allSplit = false, split = 'stores';
+  const pagedSplit = App.pagedList($('split'), { label: 'baris', size: 10 });
 
   function shiftStatus(id, working) {
     const sh = D.getShift(id, D.TODAY);
@@ -82,6 +83,7 @@ Data.ready(function () {
           <span class="meta"><span>${App.esc(x.sub)}</span></span>
         </span>
       </div>`).join('') || '<p class="empty">Belum ada penjualan.</p>';
+    pagedSplit.apply();
     moreBtn($('splitMore'), items.length, allSplit, split === 'stores' ? 'toko' : 'produk');
 
     $('exportSub').textContent = `Semua transaksi ${App.PERIOD_LABEL[period]} (${App.dateShort(from)} – ${App.dateShort(end)})`;
@@ -92,8 +94,8 @@ Data.ready(function () {
     if (b) location.href = App.page('laporan.html') + '?spg=' + encodeURIComponent(b.dataset.id);
   });
   $('spgsMore').addEventListener('click', () => { allSpgs = !allSpgs; render(); });
-  $('splitMore').addEventListener('click', () => { allSplit = !allSplit; render(); });
-  $('splitTabs').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) { split = b.dataset.k; allSplit = false; render(); } });
+  $('splitMore').addEventListener('click', () => { allSplit = !allSplit; pagedSplit.reset(); render(); });
+  $('splitTabs').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) { pagedSplit.reset(); split = b.dataset.k; allSplit = false; render(); } });
 
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { period = b.dataset.p; render(); } });
 

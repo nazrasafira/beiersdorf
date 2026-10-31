@@ -11,6 +11,7 @@ Data.ready(function () {
     const a = D.area(u.areaId); return a ? 'Area ' + a.name : '-';
   }
 
+  const paged = App.pagedList($('table'), { label: 'pengguna' });
   /* ----- One card per Manager / Team Leader (phone first) ----- */
   function render() {
     const list = D.allUsers().filter(u => u.role === 'leader' || u.role === 'manager')
@@ -34,11 +35,10 @@ Data.ready(function () {
   }
   function filter() {
     const q = $('q').value.trim().toLowerCase();
-    let shown = 0;
-    $('table').querySelectorAll('[data-text]').forEach(c => { c.hidden = !!q && !c.dataset.text.includes(q); shown += !c.hidden; });
+    const shown = paged.apply(c => !q || c.dataset.text.includes(q));
     $('none').hidden = !q || shown > 0;
   }
-  $('q').addEventListener('input', filter);
+  $('q').addEventListener('input', () => { paged.reset(); filter(); });
 
   $('table').addEventListener('click', async e => {
     const ed = e.target.closest('[data-edit]'), ph = e.target.closest('[data-photo]'), rs = e.target.closest('[data-reset]'), ac = e.target.closest('[data-active]');
