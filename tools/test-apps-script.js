@@ -171,65 +171,68 @@ test('SPG can edit any past day, but not the future', () => {
   assert.equal(g.as('sari', 'sale.add', sale({ date: '2026-10-23' })).status, 403, 'future');
 });
 
-test('sell in and actual: saved per period, sell out from the sales of the same dates', () => {
+const heldBy = (g, user, month) => Array.from(g.rows('StoreTargets').filter(t => t.user_id === user && t.month === month), t => t.store_id);
+
+test('sell in comes from the Team Leader, per month, next to the sell out of that month', () => {
   const g = app();
-  const month = { teamId: 't1', periodType: 'month', start: '2026-10-01' };
-  const before = g.as('rina', 'actuals.report', month);
+  const q = { teamId: 't1', month: '2026-10' };
+  const before = g.as('rina', 'actuals.report', q);
   assert.ok(before.ok, before.error);
   const row = before.data.rows.find(r => r.storeId === 'st1');
-  assert.equal(row.actual, null);
-  assert.equal(row.held, true);
-  const expected = g.rows('Sales').filter(s => s.store_id === 'st1' && !s.deleted && s.date >= '2026-10-01' && s.date <= '2026-10-31').reduce((a, s) => a + s.subtotal, 0);
+  assert.deepEqual([row.sellIn, row.actual, row.held], [null, null, true]);
+  const expected = g.rows('Sales').filter(s => s.store_id === 'st1' && !s.deleted && s.date.startsWith('2026-10')).reduce((a, s) => a + s.subtotal, 0);
   assert.equal(row.sellOut, expected);
-  assert.ok(before.data.rows.some(r => !r.held), 'other stores of the area are listed too');
   assert.ok(before.data.rows.findIndex(r => !r.held) > before.data.rows.findLastIndex(r => r.held), 'own stores first');
 
-  const saved = g.as('rina', 'actuals.save', { ...month, rows: [{ storeId: 'st1', sellIn: 5000000, actual: 4000000, note: 'setelah diskon' }] });
-  assert.ok(saved.ok, saved.error);
-  const after = saved.data.rows.find(r => r.storeId === 'st1');
-  assert.deepEqual([after.sellIn, after.actual, after.note, after.enteredBy], [5000000, 4000000, 'setelah diskon', 'Rina Agustina']);
-  assert.equal(g.as('rina', 'actuals.save', { ...month, rows: [{ storeId: 'st1', sellIn: 5000000, actual: 4500000, note: '' }] }).ok, true);
+  assert.equal(g.as('rina', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st1', sellIn: 5000000 }] }).data.rows.find(r => r.storeId === 'st1').sellIn, 5000000);
+  assert.ok(g.as('rina', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st1', sellIn: 6000000 }] }).ok);
   assert.equal(g.rows('StoreActuals').length, 1, 'saving again corrects the row');
-  assert.equal(g.rows('StoreActuals')[0].actual, 4500000);
-  assert.ok(g.rows('Activity').some(a => a.kind === 'sell in & actual' && a.name.includes('4000000 → 4500000')), 'change is logged');
-  assert.ok(g.as('rina', 'actuals.save', { ...month, rows: [{ storeId: 'st1', sellIn: null, actual: null }] }).ok);
-  assert.equal(g.rows('StoreActuals').length, 0, 'emptying a store removes its row');
+  assert.equal(g.rows('StoreActuals')[0].sell_in, 6000000);
+  assert.equal(g.rows('StoreActuals')[0].sell_in_by, 'u-rina');
+  assert.ok(g.rows('Activity').some(a => a.kind === 'sell in' && a.name.includes('5000000 → 6000000')), 'change is logged');
+
+  assert.equal(g.as('rina', 'actuals.report', { ...q, month: '2026-11' }).status, 422, 'not started yet');
+  assert.equal(g.as('rina', 'actuals.report', { ...q, month: '2026-13' }).status, 422);
+  assert.equal(g.as('rina', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st2', sellIn: -5 }] }).status, 422);
 });
 
-test('sell in and actual: a store-month is either monthly or weekly', () => {
+test('actual comes from the SPG holding the store, per month, and the leader sees it', () => {
   const g = app();
-  const week = start => ({ teamId: 't1', periodType: 'week', start });
-  const month = { teamId: 't1', periodType: 'month', start: '2026-10-01' };
-  assert.ok(g.as('rina', 'actuals.save', { ...week('2026-10-05'), rows: [{ storeId: 'st1', sellIn: 100, actual: 1000 }] }).ok);
-  assert.ok(g.as('rina', 'actuals.save', { ...week('2026-10-12'), rows: [{ storeId: 'st1', actual: 2000 }] }).ok);
-  assert.equal(g.as('rina', 'actuals.save', { ...month, rows: [{ storeId: 'st1', actual: 9 }] }).status, 422);
-  const r = g.as('rina', 'actuals.report', month).data.rows.find(x => x.storeId === 'st1');
-  assert.deepEqual([r.mode, r.weeks, r.sellIn, r.actual, r.from, r.to], ['weeks', 2, 100, 3000, '2026-10-05', '2026-10-18']);
-  const expected = g.rows('Sales').filter(s => s.store_id === 'st1' && !s.deleted && s.date >= '2026-10-05' && s.date <= '2026-10-18').reduce((a, s) => a + s.subtotal, 0);
-  assert.equal(r.sellOut, expected, 'only the entered weeks');
+  const month = '2026-10', store = heldBy(g, 'u-sari', month)[0], other = g.rows('Stores').find(s => !heldBy(g, 'u-sari', month).includes(s.id)).id;
+  const mine = g.as('sari', 'actuals.mine', { month });
+  assert.ok(mine.ok, mine.error);
+  assert.deepEqual(Array.from(mine.data.rows, r => r.storeId).sort(), heldBy(g, 'u-sari', month).sort(), 'only their own stores');
 
-  assert.ok(g.as('rina', 'actuals.save', { ...month, rows: [{ storeId: 'st2', actual: 7 }] }).ok);
-  assert.equal(g.as('rina', 'actuals.save', { ...week('2026-10-05'), rows: [{ storeId: 'st2', actual: 1 }] }).status, 422);
-  assert.equal(g.as('rina', 'actuals.report', week('2026-10-05')).data.rows.find(x => x.storeId === 'st2').mode, 'month');
-  assert.equal(g.as('rina', 'actuals.report', week('2026-10-06')).status, 422, 'weeks start on Monday');
-  assert.equal(g.as('rina', 'actuals.report', week('2026-10-26')).status, 422, 'not started yet');
-  assert.equal(g.as('rina', 'actuals.report', { ...month, start: '2026-10-02' }).status, 422);
+  const saved = g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, actual: 4000000, note: 'setelah diskon' }] });
+  assert.ok(saved.ok, saved.error);
+  assert.deepEqual([saved.data.rows.find(r => r.storeId === store).actual, saved.data.rows.find(r => r.storeId === store).note], [4000000, 'setelah diskon']);
+  const seen = g.as('rina', 'actuals.report', { teamId: 't1', month }).data.rows.find(r => r.storeId === store);
+  assert.deepEqual([seen.actual, seen.note, seen.actualBy], [4000000, 'setelah diskon', 'Sari Wulandari']);
+
+  // Sell in and actual sit on one row and don't overwrite each other
+  assert.ok(g.as('rina', 'actuals.sellIn', { teamId: 't1', month, rows: [{ storeId: store, sellIn: 9 }] }).ok);
+  assert.ok(g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, actual: 4500000, note: '' }] }).ok);
+  const row = g.rows('StoreActuals').find(e => e.store_id === store);
+  assert.deepEqual([row.sell_in, row.actual], [9, 4500000]);
+
+  assert.equal(g.as('sari', 'actuals.save', { month, rows: [{ storeId: other, actual: 1 }] }).status, 403, 'not their store');
+  assert.equal(g.as('sari', 'actuals.save', { month: '2026-11', rows: [{ storeId: store, actual: 1 }] }).status, 422);
 });
 
-test('sell in and actual: leaders and managers only, inside their area', () => {
+test('sell in and actual: each role only touches its own number', () => {
   const g = app();
-  const q = { teamId: 't1', periodType: 'month', start: '2026-10-01' };
+  const q = { teamId: 't1', month: '2026-10' };
   assert.equal(g.as('sari', 'actuals.report', q).status, 403);
-  assert.equal(g.as('sari', 'actuals.save', { ...q, rows: [{ storeId: 'st1', actual: 1 }] }).status, 403);
+  assert.equal(g.as('sari', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st1', sellIn: 1 }] }).status, 403);
+  assert.equal(g.as('rina', 'actuals.save', { month: q.month, rows: [{ storeId: 'st1', actual: 1 }] }).status, 403);
+  assert.equal(g.as('rina', 'actuals.mine', { month: q.month }).status, 403);
   assert.equal(g.as('admin', 'actuals.report', q).status, 403);
   assert.equal(g.as('andi', 'actuals.report', q).status, 403, 'another team');
-  assert.ok(g.as('budi', 'actuals.report', q).ok, 'manager of the area');
-  assert.ok(g.as('budi', 'actuals.save', { ...q, rows: [{ storeId: 'st1', actual: 1 }] }).ok);
+  assert.ok(g.as('budi', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st1', sellIn: 1 }] }).ok, 'manager of the area');
   const far = g.rows('Stores').find(s => s.id === 'st2');
   far.area_id = 'elsewhere';
   g.ctx.save_('Stores', far);
-  assert.equal(g.as('rina', 'actuals.save', { ...q, rows: [{ storeId: 'st2', actual: 1 }] }).status, 403, 'store outside the area');
-  assert.equal(g.as('rina', 'actuals.save', { ...q, rows: [{ storeId: 'st3', actual: -5 }] }).status, 422);
+  assert.equal(g.as('rina', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st2', sellIn: 1 }] }).status, 403, 'store outside the area');
 });
 
 const salesOf = (g, store, from, to) => g.rows('Sales').filter(s => s.store_id === store && !s.deleted && s.date >= from && s.date <= to).reduce((a, s) => a + s.subtotal, 0);
@@ -260,21 +263,19 @@ test('achievement: any date range, a partial month counts by working days, month
   assert.equal(after.excluded - r.data.excluded, sepSold);
 });
 
-test('achievement: an entered actual replaces the sales of its days, other days keep the SPG sales', () => {
+test('achievement: an actual from the SPG replaces the sales of its month, other months keep the SPG sales', () => {
   const g = app();
-  const week = { teamId: 't1', periodType: 'week', start: '2026-10-05' };
-  assert.ok(g.as('rina', 'actuals.save', { ...week, rows: [{ storeId: 'st1', actual: 7000000 }] }).ok);
-  const q = { teamId: 't1', from: '2026-10-01', to: '2026-10-22' };
-  const before = salesOf(g, 'st1', q.from, q.to), weekSold = salesOf(g, 'st1', '2026-10-05', '2026-10-11');
+  const store = heldBy(g, 'u-sari', '2026-09')[0];
+  assert.ok(g.as('sari', 'actuals.save', { month: '2026-09', rows: [{ storeId: store, actual: 30000000 }] }).ok);
+  const q = { teamId: 't1', from: '2026-09-01', to: '2026-10-22' };
   const data = g.as('rina', 'report.achievement', q).data;
-  const row = data.stores.find(s => s.id === 'st1');
-  assert.equal(row.fromActual, 7000000);
-  assert.equal(row.fromSpg, before - weekSold);
-  assert.equal(row.offtake, 7000000 + before - weekSold);
-  const holderId = g.rows('StoreTargets').find(t => t.store_id === 'st1' && t.month === '2026-10').user_id;
-  assert.equal(data.spgs.find(s => s.id === holderId).fromActual, 7000000, 'credited to the SPG holding the store');
-  const part = g.as('rina', 'report.achievement', { ...q, from: '2026-10-05', to: '2026-10-07' }).data.stores.find(s => s.id === 'st1');
-  assert.equal(part.fromActual, 3000000, 'part of the period, evenly per day');
+  const row = data.stores.find(s => s.id === store);
+  assert.equal(row.fromActual, 30000000);
+  assert.equal(row.fromSpg, salesOf(g, store, '2026-10-01', '2026-10-22'));
+  assert.equal(row.offtake, 30000000 + row.fromSpg);
+  assert.equal(data.spgs.find(s => s.id === 'u-sari').fromActual, 30000000, 'credited to the SPG holding the store');
+  const part = g.as('rina', 'report.achievement', { ...q, from: '2026-09-01', to: '2026-09-03' }).data.stores.find(s => s.id === store);
+  assert.equal(part.fromActual, 3000000, 'part of the month, evenly per day');
 });
 
 test('achievement: leaders and managers only, valid dates, not the future', () => {

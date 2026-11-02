@@ -28,9 +28,9 @@ In demo mode (`backend: 'demo'`) changes are saved in your browser; clear the si
 | `spg/laporan.html` — Penjualan: start shift at a chosen store, switch store, record each sale, end shift; add missed sales for any past day (Input tanggal lain) | SPG (Leader/Manager can edit too) |
 | `spg/terima-kasih.html` — thank-you page with the day's summary after ending a shift | SPG |
 | `spg/peringkat.html` — team leaderboard by % of target | SPG |
-| `spg/riwayat.html` — report history per month | SPG |
+| `spg/riwayat.html` — report history per month; enter the store's sell out once a month for each store held | SPG |
 | `leader/dashboard.html` — team summary, SPG ranking, SPGs scheduled today who have not started, sales per store/product, CSV and daily recap Excel | Leader, Manager |
-| `leader/laporan.html` — team reports as cards (details, edit), 20 per page; tab Sell In & Actual: type in sell in and the store's actual per store, per month or per week, and compare them with the SPGs' sell out; tab Pencapaian: target, offtake (the store's actual where entered, otherwise SPG sales) and Ach% of a date range per SPG and per store, with Excel download | Leader, Manager |
+| `leader/laporan.html` — tab Penjualan: team reports grouped per day or per SPG, opening into transactions (details, edit); tab Sell In & Offtake: type in sell in per store and month, see which stores are done, and compare the offtake entered by the SPG with daily sales; tab Pencapaian: target, offtake (the SPG's monthly figure where entered, otherwise daily sales) and Ach% of a date range per SPG and per store, with Excel download | Leader, Manager |
 | `leader/target.html` — per month: which SPG holds each store and the store's target (auto weekly/daily, overrides); an SPG's target is the sum of their stores | Leader, Manager |
 | `leader/tim.html` — SPGs: add, edit name/phone, deactivate, reset password, **schedule per SPG** (working days and hours) | Leader, Manager |
 | `leader/pengaturan.html` — team default working days (for SPGs without their own schedule), holidays, edit window | Leader, Manager |

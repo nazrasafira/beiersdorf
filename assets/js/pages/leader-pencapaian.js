@@ -8,7 +8,7 @@ window.PencapaianTab = function (teamId, teamName) {
 
   const dot = ach => (ach === null ? '' : `<i class="ach-dot ${ach >= 1 ? 'hi' : ach >= 0.9 ? 'mid' : 'lo'}"></i>`);
   const achText = ach => (ach === null ? '–' : Math.round(ach * 100) + '%');
-  const source = r => (!r.offtake ? '' : r.fromActual && r.fromSpg ? 'Actual + laporan SPG' : r.fromActual ? 'Actual toko' : 'Laporan SPG');
+  const source = r => (!r.offtake ? '' : r.fromActual && r.fromSpg ? 'Laporan toko + penjualan harian' : r.fromActual ? 'Laporan toko' : 'Penjualan harian');
 
   function render() {
     const rows = data[by];
@@ -19,7 +19,7 @@ window.PencapaianTab = function (teamId, teamName) {
       ['Target', App.rp(target), ''],
       ['Offtake', App.rp(offtake), ''],
       ['Pencapaian', `${dot(ach)} ${achText(ach)}`, ach === null ? 'belum ada target' : ach >= 1 ? 'tercapai' : `kurang ${App.rp(target - offtake)}`],
-      ['Pakai actual toko', `${fromActual} dari ${rows.length}`, by === 'spgs' ? 'SPG' : 'toko'],
+      ['Pakai laporan toko', `${fromActual} dari ${rows.length}`, by === 'spgs' ? 'SPG' : 'toko'],
     ].map(([k, v, s]) => `<div><span>${k}</span><b>${v}</b>${s ? `<small>${App.esc(s)}</small>` : ''}</div>`).join('');
     const figs = r => `<div class="ach-figs"><span class="ach-val"><small>Target</small>${App.num(r.target)}</span><span class="ach-val"><small>Offtake</small>${App.num(r.offtake)}</span></div>`;
     $('achList').innerHTML = rows.length ? `<div class="ach-row ach-headrow" aria-hidden="true"><span class="ach-rank">#</span><span class="ach-name" style="font-weight:600">${by === 'spgs' ? 'SPG' : 'Toko'}</span><div class="ach-figs"><span class="ach-val">Target</span><span class="ach-val">Offtake</span></div><span class="ach-pct">Ach%</span></div>` +
@@ -31,7 +31,7 @@ window.PencapaianTab = function (teamId, teamName) {
       </div>`).join('') : '<p class="empty">Belum ada data di rentang ini.</p>';
     paged.apply();
     $('achExcel').hidden = !rows.length;
-    $('achNote').textContent = 'Offtake memakai actual toko bila sudah diisi di Sell In & Actual, dan laporan SPG bila belum. Toko dan bulan tanpa target tidak dihitung.';
+    $('achNote').textContent = 'Offtake memakai laporan toko bulanan yang diisi SPG, dan penjualan harian bila belum diisi. Toko dan bulan tanpa target tidak dihitung.';
     $('achExcluded').hidden = !data.excluded;
     $('achExcluded').textContent = `${App.rp(data.excluded)} penjualan tim terjadi di toko dan bulan tanpa target.`;
   }

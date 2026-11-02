@@ -12,6 +12,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { load } = require('./gas-mock');
+const { seedDummyData } = require('./dummy-data');
 
 const arg = (name, def) => { const i = process.argv.indexOf('--' + name); return i > 0 ? process.argv[i + 1] : def; };
 const PORT = +arg('port', 8790);
@@ -22,6 +23,7 @@ const ROOT = path.join(__dirname, '..');
 const gas = load(TODAY === 'real' ? {} : { DEMO_TODAY: TODAY }, { quiet: !process.argv.includes('--verbose') });
 gas.ctx.setupSheet();
 console.log(gas.ctx.importDemoData('file://' + path.join(__dirname, 'fixtures', 'demo-data.json')));
+console.log(seedDummyData(gas.ctx));
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 // Quick logins for the login page. Only this local config has them, so they never reach the published site.

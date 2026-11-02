@@ -6,13 +6,13 @@
 <meta name="theme-color" content="#ffffff">
 <title>Laporan</title>
 <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
-<link rel="stylesheet" href="../assets/css/style.css?v=20261031204450">
-<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261031204450","../")</script>
+<link rel="stylesheet" href="../assets/css/style.css?v=20261102140921">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261102140921","../")</script>
 </head>
 <body data-root="../">
 <main>
   <div class="page-head"><div><h1>Laporan</h1><p class="sub" id="sub"></p></div></div>
-  <div class="tabs ax-tabs" id="mainTabs" role="tablist" aria-label="Jenis laporan"><button type="button" data-k="sales" class="on">Penjualan SPG</button><button type="button" data-k="aktual">Sell In &amp; Actual</button><button type="button" data-k="pencapaian">Pencapaian</button></div>
+  <div class="tabs ax-tabs" id="mainTabs" role="tablist" aria-label="Jenis laporan"><button type="button" data-k="sales" class="on">Penjualan</button><button type="button" data-k="aktual">Sell In &amp; Offtake</button><button type="button" data-k="pencapaian">Pencapaian</button></div>
   <section data-pane="sales">
   <div class="form-grid">
     <div class="field"><label for="spg">SPG</label><select class="input" id="spg"></select></div>
@@ -20,6 +20,7 @@
     <div class="field"><label for="from">Dari</label><input class="input" type="date" id="from"></div>
     <div class="field"><label for="to">Sampai</label><input class="input" type="date" id="to"></div>
   </div>
+  <div class="rp-presets" id="salesPresets" style="margin-top:10px"><button type="button" class="btn ghost small" data-p="today">Hari ini</button><button type="button" class="btn ghost small" data-p="week">Minggu ini</button><button type="button" class="btn ghost small" data-p="month">Bulan ini</button></div>
   </section>
   <section data-pane="sales">
     <h2>Tren penjualan</h2>
@@ -27,33 +28,40 @@
     <div class="legend"><span><i></i>Penjualan</span><span><i class="dash"></i>Target</span></div>
   </section>
   <section data-pane="sales">
-    <p class="small muted" id="summary" style="margin-top:0"></p>
-    <div class="rep-list" id="table"></div>
+    <div class="rp-stats" id="salesStats"></div>
+    <div class="tabs sd-view" id="salesView" role="tablist" aria-label="Lihat per"><button type="button" data-k="day" class="on">Per hari</button><button type="button" data-k="spg">Per SPG</button></div>
+    <p class="note" style="margin:0 0 12px">Satu laporan harian = satu SPG dalam satu hari. Ketuk baris untuk melihat rinciannya.</p>
+    <div id="table"></div>
     <nav class="shop-pager" id="pager" aria-label="Halaman"></nav>
   </section>
   <div id="actualPane" hidden>
     <div class="rp-toolbar">
       <div class="rp-period">
-        <button type="button" class="icon-btn" id="prev" aria-label="Periode sebelumnya"><span data-icon="left"></span></button>
+        <button type="button" class="icon-btn" id="prev" aria-label="Bulan sebelumnya"><span data-icon="left"></span></button>
         <b id="axPeriod"></b>
-        <button type="button" class="icon-btn" id="next" aria-label="Periode berikutnya"><span data-icon="right"></span></button>
+        <button type="button" class="icon-btn" id="next" aria-label="Bulan berikutnya"><span data-icon="right"></span></button>
       </div>
-      <div class="tabs" id="type" role="tablist" aria-label="Periode"><button type="button" data-k="month" class="on">Bulan</button><button type="button" data-k="week">Minggu</button></div>
       <span class="rp-gap"></span>
-      <div class="tabs" id="scope" role="tablist" aria-label="Toko"><button type="button" data-k="team" class="on">Toko tim</button><button type="button" data-k="all">Semua area</button></div>
-      <label class="tt-search"><span data-icon="search"></span><input type="search" class="input" id="search" placeholder="Cari toko..." aria-label="Cari toko"></label>
+      <div class="tabs ax-scope" id="scope" role="tablist" aria-label="Toko"><button type="button" data-k="team" class="on">Toko tim</button><button type="button" data-k="all">Semua area</button></div>
+      <label class="tt-search"><span data-icon="search"></span><input type="search" class="input" id="search" placeholder="Cari..." aria-label="Cari toko atau SPG"></label>
     </div>
     <p class="notice" id="axNoArea" hidden></p>
-    <div class="rp-stats" id="axSummary"></div>
-    <form id="inputForm" autocomplete="off" hidden>
-      <div class="ax-row ax-headrow" aria-hidden="true"><span>Toko</span><span>Sell in</span><span>Actual</span><span>Sell out SPG</span><span>Selisih</span><span>Catatan</span></div>
-      <div id="inputs"></div>
-      <div class="ax-foot" id="axFoot" hidden><span class="small" id="dirtyText"></span><button class="btn" type="submit" id="save">Simpan</button></div>
-    </form>
+    <div id="axBody" hidden>
+      <div class="ax-progress" id="axProgress"></div>
+      <div class="tabs ax-filter" id="axFilter" role="tablist" aria-label="Status"><button type="button" data-k="all" class="on">Semua <span></span></button><button type="button" data-k="sellIn">Belum isi sell in <span></span></button><button type="button" data-k="waiting">Menunggu SPG <span></span></button><button type="button" data-k="done">Lengkap <span></span></button></div>
+      <form id="inputForm" autocomplete="off">
+        <div id="axTable">
+          <div class="ax-row ax-headrow" aria-hidden="true"><span>Toko</span><span>Status</span><span>Sell in</span><span>Offtake</span><span>Penjualan harian</span><span>Selisih</span></div>
+          <div id="inputs"></div>
+        </div>
+        <div class="ax-foot" id="axFoot" hidden><span class="small" id="dirtyText"></span><button class="btn" type="submit" id="save">Simpan</button></div>
+      </form>
+    </div>
     <p class="empty" id="axStatus" role="status"></p>
+    <div class="ax-totals" id="axTotals"></div>
     <div class="rp-foot">
-      <p class="note">Isi sell in dan actual dari laporan yang kamu terima. Selisih = sell out SPG − actual, ditandai bila lebih dari 10%. Ini hanya petunjuk, karena harga di laporan toko bisa berbeda.</p>
-      <button type="button" class="btn ghost small" id="csv"><span data-icon="download"></span>Unduh CSV</button>
+      <p class="note">Team Leader mengisi sell in. Offtake diisi SPG setiap bulan dari laporan toko. Selisih = penjualan harian − offtake, ditandai bila lebih dari 10%. Ini hanya petunjuk, karena harga di laporan toko bisa berbeda.</p>
+      <button type="button" class="btn ghost small" id="axExcel"><span data-icon="download"></span>Unduh Excel</button>
     </div>
   </div>
   <div id="pencapaianPane" hidden>
@@ -75,12 +83,12 @@
     </div>
   </div>
 </main>
-<script src="../assets/js/config.js?v=20261031204450"></script>
-<script src="../assets/js/data.js?v=20261031204450"></script>
-<script src="../assets/js/common.js?v=20261031204450"></script>
-<script src="../assets/js/recap-export.js?v=20261031204450"></script>
-<script src="../assets/js/pages/leader-pencapaian.js?v=20261031204450"></script>
-<script src="../assets/js/pages/leader-aktual.js?v=20261031204450"></script>
-<script src="../assets/js/pages/leader-laporan.js?v=20261031204450"></script>
+<script src="../assets/js/config.js?v=20261102140921"></script>
+<script src="../assets/js/data.js?v=20261102140921"></script>
+<script src="../assets/js/common.js?v=20261102140921"></script>
+<script src="../assets/js/recap-export.js?v=20261102140921"></script>
+<script src="../assets/js/pages/leader-pencapaian.js?v=20261102140921"></script>
+<script src="../assets/js/pages/leader-aktual.js?v=20261102140921"></script>
+<script src="../assets/js/pages/leader-laporan.js?v=20261102140921"></script>
 </body>
 </html>

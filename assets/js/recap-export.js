@@ -84,45 +84,114 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // Laporan, tab Pencapaian: one sheet per SPG and one per store, with Ach colored like the page (r: action report.achievement)
-  async function buildAchievement(r) {
-    const ExcelJS = await loadExcelJs();
-    const wb = new ExcelJS.Workbook();
+  /* Ranking tables in the team's layout: blue name and % columns, green number columns with a second header line,
+   * a colored dot next to the %, numbered rows and a yellow total. t: { nameHeader, numbered, cols: [{ title, sub, key }], pctHeader, rows, total };
+   * each row: { name, [key], pct, dot }, dot: 'hi' | 'mid' | 'lo' | null. Returns the first free column to the right. */
+  const DOTS = { hi: '5B9BD5', mid: 'F4B6A6', lo: 'FF5050' };
+  function rankTable(ws, top, left, t) {
     const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + argb } });
     const thin = { style: 'thin', color: { argb: 'FF000000' } }, border = { top: thin, left: thin, bottom: thin, right: thin };
-    const sheet = (title, label, rows) => {
-      const ws = wb.addWorksheet(title, { views: [{ state: 'frozen', ySplit: 1 }] });
-      [6, 32, 18, 18, 9, 18, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
-      ['No', label, 'TARGET', 'OFFTAKE', 'Ach%', 'Dari actual toko', 'Dari laporan SPG'].forEach((h, i) => {
-        Object.assign(ws.getCell(1, i + 1), { value: h, border, font: { bold: true, color: { argb: i === 2 || i === 3 ? 'FF000000' : 'FFFFFFFF' } }, fill: fill(i === 2 || i === 3 ? '92D050' : '001489'), alignment: { horizontal: 'center', vertical: 'middle', wrapText: true } });
-      });
-      ws.getRow(1).height = 32;
-      const put = (n, x, style) => {
-        const row = ws.addRow([n, x.name, x.target, x.offtake, x.ach, x.fromActual, x.fromSpg]);
-        row.eachCell({ includeEmpty: true }, (c, col) => {
-          c.border = border;
-          if (col === 3 || col === 4 || col > 5) c.numFmt = '#,##0';
-          if (col === 5) { c.numFmt = '0%'; if (x.ach !== null) c.fill = fill(x.ach >= 1 ? '9DC3E6' : x.ach >= 0.9 ? 'F8CBAD' : 'FF7C80'); }
-          if (style) Object.assign(c, style);
-        });
-      };
-      rows.forEach((x, i) => put(i + 1, x));
-      const sum = k => rows.reduce((a, x) => a + x[k], 0), target = sum('target'), offtake = sum('offtake');
-      put('', { name: 'Total', target, offtake, ach: target > 0 ? offtake / target : null, fromActual: sum('fromActual'), fromSpg: sum('fromSpg') }, { font: { bold: true } });
-      const last = ws.lastRow;
-      [1, 2, 3, 4].forEach(c => { last.getCell(c).fill = fill('FFD966'); });
+    const center = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    const blue = { fill: fill('001489'), font: { bold: true, color: { argb: 'FFFFFF00' } }, alignment: center, border };
+    const green = { fill: fill('92D050'), font: { bold: true }, alignment: center, border };
+    const numCol = t.numbered ? left : null, nameCol = left + (t.numbered ? 1 : 0), firstNum = nameCol + 1;
+    const dotCol = firstNum + t.cols.length, pctCol = dotCol + 1;
+    const header = (row, col, value, style) => Object.assign(ws.getCell(row, col), { value }, style);
+
+    if (t.numbered) ws.getColumn(numCol).width = 4;
+    ws.getColumn(nameCol).width = 30;
+    header(top, nameCol, t.nameHeader, blue);
+    ws.mergeCells(top, nameCol, top + 1, nameCol);
+    t.cols.forEach((c, i) => {
+      ws.getColumn(firstNum + i).width = 17;
+      header(top, firstNum + i, c.title, green);
+      header(top + 1, firstNum + i, c.sub, green);
+    });
+    ws.getColumn(dotCol).width = 3;
+    ws.getColumn(pctCol).width = 8;
+    header(top, dotCol, t.pctHeader, blue);
+    ws.getCell(top, pctCol).border = border;
+    ws.mergeCells(top, dotCol, top + 1, pctCol);
+    ws.getRow(top).height = 22;
+    ws.getRow(top + 1).height = 30;
+
+    const put = (rowNo, x, total) => {
+      const style = total ? { fill: fill('FFC000'), font: { bold: true } } : {};
+      Object.assign(ws.getCell(rowNo, nameCol), { value: x.name, border }, style);
+      t.cols.forEach((c, i) => Object.assign(ws.getCell(rowNo, firstNum + i), { value: x[c.key] === undefined ? null : x[c.key], numFmt: '#,##0', border }, style));
+      Object.assign(ws.getCell(rowNo, dotCol), { value: x.dot ? '●' : null, border: { top: thin, left: thin, bottom: thin }, alignment: { horizontal: 'center' } }, style);
+      if (x.dot) ws.getCell(rowNo, dotCol).font = { size: 14, color: { argb: 'FF' + DOTS[x.dot] } };
+      Object.assign(ws.getCell(rowNo, pctCol), { value: x.pct === null ? null : x.pct, numFmt: '0%', border: { top: thin, bottom: thin, right: thin }, alignment: { horizontal: 'right' } }, style);
     };
-    sheet('Per SPG', 'SPG', r.spgs);
-    sheet('Per Toko', 'Toko', r.stores);
-    return wb.xlsx.writeBuffer();
+    t.rows.forEach((x, i) => {
+      if (t.numbered) Object.assign(ws.getCell(top + 2 + i, numCol), { value: i + 1, alignment: { horizontal: 'right' } });
+      put(top + 2 + i, x);
+    });
+    put(top + 2 + t.rows.length, t.total, true);
+    return pctCol + 2;
   }
-  async function downloadAchievement(r, teamName) {
-    const buf = await buildAchievement(r);
+  async function saveWorkbook(wb, name) {
+    const buf = await wb.xlsx.writeBuffer();
     const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: `Pencapaian Tim ${teamName} ${r.from} sd ${r.to}.xlsx` });
+    const a = Object.assign(document.createElement('a'), { href: url, download: name });
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const shortDate = d => `${+d.slice(8, 10)} ${MONTHS[+d.slice(5, 7) - 1]}`;
+  const rangeLabel = (from, to) => (from.slice(5) === '01-01' && from.slice(0, 4) === to.slice(0, 4)
+    ? 'FULL YEAR ' + from.slice(2, 4)
+    : `${shortDate(from)} – ${shortDate(to)} ${to.slice(2, 4)}`);
+  const achDot = ach => (ach === null ? null : ach >= 1 ? 'hi' : ach >= 0.9 ? 'mid' : 'lo');
 
-  window.RecapExport = { build, download, buildAchievement, downloadAchievement };
+  // Laporan, tab Pencapaian: the SPG table and, to its right, the store table (r: action report.achievement)
+  async function buildAchievement(r) {
+    const ExcelJS = await loadExcelJs();
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Pencapaian', { views: [{ showGridLines: false }] });
+    const sub = rangeLabel(r.from, r.to);
+    const table = (nameHeader, numbered, rows) => {
+      const target = rows.reduce((a, x) => a + x.target, 0), offtake = rows.reduce((a, x) => a + x.offtake, 0), pct = target > 0 ? offtake / target : null;
+      return {
+        nameHeader, numbered, pctHeader: 'Ach%',
+        cols: [{ title: 'TARGET', sub, key: 'target' }, { title: 'OFFTAKE', sub, key: 'offtake' }],
+        rows: rows.map(x => ({ name: x.name, target: x.target, offtake: x.offtake, pct: x.ach, dot: achDot(x.ach) })),
+        total: { name: 'Total', target, offtake, pct, dot: achDot(pct) },
+      };
+    };
+    ws.getColumn(1).width = 3;
+    const next = rankTable(ws, 2, 2, table('SPG', false, r.spgs));
+    rankTable(ws, 2, next, table('Store', true, r.stores));
+    return wb;
+  }
+  async function downloadAchievement(r, teamName) {
+    await saveWorkbook(await buildAchievement(r), `Pencapaian Tim ${teamName} ${r.from} sd ${r.to}.xlsx`);
+  }
+
+  // Laporan, tab Sell In & Offtake: stores of one month, closest match between daily sales and offtake first, not yet entered last
+  async function buildSellIn(rows, month) {
+    const ExcelJS = await loadExcelJs();
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Sell In & Offtake', { views: [{ showGridLines: false }] });
+    const sub = `${MONTHS[+month.slice(5, 7) - 1]} ${month.slice(2, 4)}`;
+    const pctOf = x => (x.actual ? x.sellOut / x.actual : null);
+    const dotOf = p => (p === null ? null : Math.abs(p - 1) <= 0.1 ? 'hi' : 'lo');
+    const sorted = rows.slice().sort((a, b) => (pctOf(b) === null ? -1 : pctOf(b)) - (pctOf(a) === null ? -1 : pctOf(a)) || String(a.name).localeCompare(String(b.name)));
+    const sum = (list, k) => list.reduce((a, x) => a + (x[k] || 0), 0);
+    const filled = rows.filter(x => x.actual);
+    const totalPct = filled.length ? sum(filled, 'sellOut') / sum(filled, 'actual') : null;
+    ws.getColumn(1).width = 3;
+    rankTable(ws, 2, 2, {
+      nameHeader: 'Store', numbered: true, pctHeader: 'Harian / Offtake',
+      cols: [{ title: 'SELL IN', sub, key: 'sellIn' }, { title: 'OFFTAKE', sub, key: 'actual' }, { title: 'PENJUALAN HARIAN', sub, key: 'sellOut' }, { title: 'SELISIH', sub, key: 'gap' }],
+      rows: sorted.map(x => ({ name: x.name, sellIn: x.sellIn, actual: x.actual, sellOut: x.sellOut, gap: x.actual ? x.sellOut - x.actual : null, pct: pctOf(x), dot: dotOf(pctOf(x)) })),
+      total: { name: 'Total', sellIn: sum(rows, 'sellIn'), actual: sum(filled, 'actual'), sellOut: sum(rows, 'sellOut'), gap: filled.length ? sum(filled, 'sellOut') - sum(filled, 'actual') : null, pct: totalPct, dot: dotOf(totalPct) },
+    });
+    return wb;
+  }
+  async function downloadSellIn(rows, month, teamName) {
+    await saveWorkbook(await buildSellIn(rows, month), `Sell In Offtake Tim ${teamName} ${month}.xlsx`);
+  }
+
+  window.RecapExport = { build, download, buildAchievement, downloadAchievement, buildSellIn, downloadSellIn };
 })();

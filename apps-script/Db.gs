@@ -16,8 +16,8 @@ const TABLES = {
   StoreVisits: ['shift_id', 'store_id', 'from_time'],
   ShiftPhotos: ['shift_id', 'url', 'at'], // photos of the SPG's handwritten notes, taken when ending a shift
   Sales: ['id', 'user_id', 'date', 'time', 'store_id', 'product_id', 'qty', 'price', 'subtotal', 'created_by', 'created_at', 'deleted'],
-  // Rupiah per store for a month or a week, typed in from the reports of Nivea and the store (see Actuals.gs)
-  StoreActuals: ['id', 'store_id', 'period_type', 'period_start', 'period_end', 'sell_in', 'actual', 'note', 'entered_by', 'entered_at'],
+  // Rupiah per store and month: sell in from the Team Leader or Manager, actual from the SPG holding the store (see Actuals.gs)
+  StoreActuals: ['id', 'store_id', 'month', 'sell_in', 'sell_in_by', 'sell_in_at', 'actual', 'actual_by', 'actual_at', 'note'],
   DayReports: ['user_id', 'date', 'no_sales', 'unlocked', 'unlocked_by'],
   Settings: ['team_id', 'working_days', 'edit_days', 'reminder'],
   Holidays: ['team_id', 'date', 'name', 'working'],

@@ -1132,12 +1132,20 @@
       const res = await call('report.achievement', { teamId, from, to });
       return res.ok ? res.data : { error: res.data.message };
     },
-    async actualsReport({ teamId, periodType, start }) {
-      const res = await call('actuals.report', { teamId, periodType, start });
+    async actualsReport({ teamId, month }) {
+      const res = await call('actuals.report', { teamId, month });
       return res.ok ? res.data : { error: res.data.message };
     },
-    async saveActuals({ teamId, periodType, start, rows }) {
-      const res = await call('actuals.save', { teamId, periodType, start, rows });
+    async saveSellIn({ teamId, month, rows }) {
+      const res = await call('actuals.sellIn', { teamId, month, rows });
+      return res.ok ? res.data : { error: res.data.message };
+    },
+    async myActuals({ month }) {
+      const res = await call('actuals.mine', { month });
+      return res.ok ? res.data : { error: res.data.message };
+    },
+    async saveActuals({ month, rows }) {
+      const res = await call('actuals.save', { month, rows });
       return res.ok ? res.data : { error: res.data.message };
     },
     async dailyRecap({ from, to, teamId }) {
@@ -1193,7 +1201,9 @@
     allUsers, setUserPhoto, normalizePhone, exportState, areas,
     dailyRecap: async () => ({ error: 'Rekap harian hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
     achievementReport: async () => ({ error: 'Pencapaian hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
-    actualsReport: async () => ({ error: 'Sell In & Actual hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
-    saveActuals: async () => ({ error: 'Sell In & Actual hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    actualsReport: async () => ({ error: 'Sell In & Offtake hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    saveActuals: async () => ({ error: 'Sell In & Offtake hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    saveSellIn: async () => ({ error: 'Sell In & Offtake hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    myActuals: async () => ({ error: 'Sell out hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
   }, LIVE ? LIVE_API : {});
 })();

@@ -772,7 +772,8 @@
   }
 
   /* ---------- Sales trend chart: one bar per day + dashed daily-target line ---------- */
-  function trendChart(el, series) {
+  function trendChart(el, series, onPick) { // onPick(date): a click on a bar
+    if (onPick) el._onPick = onPick;
     if (!series.length) { el.innerHTML = '<p class="empty">Belum ada data.</p>'; return; }
     // Draw at the real width so labels stay readable on phones; redraw when the width changes.
     if (!el._chartResize) {
@@ -823,7 +824,7 @@
         tip.style.left = Math.min(Math.max(left, 60), box.width - 60) + 'px';
       };
       h.addEventListener('mouseenter', show);
-      h.addEventListener('click', show);
+      h.addEventListener('click', () => { show(); if (el._onPick) el._onPick(series[+h.dataset.i].date); });
     });
     svg.addEventListener('mouseleave', () => { tip.hidden = true; });
   }

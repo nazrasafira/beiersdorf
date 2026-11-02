@@ -1,7 +1,7 @@
 /**
  * Achievement of a date range per SPG and per store, best first (the page shows it, Laporan tab Pencapaian).
  * Target = the monthly store targets; a month only partly in the range counts by its working days in the range.
- * Offtake = the store's actual where the Team Leader or Manager entered one (spread evenly over the days of its period,
+ * Offtake = the store's actual where the SPG entered one (spread evenly over the days of its period,
  * and credited to the SPG holding the store that month), otherwise the sales the SPGs reported.
  * A store-month without a target counts for neither, or sales without a target would inflate Ach.
  */
@@ -64,12 +64,13 @@ function actAchievement_(req, me) {
   // Days with an entered actual replace the SPGs' sales of those days. A period still running counts up to today.
   const covered = {};
   rows_('StoreActuals').forEach(a => {
-    if (a.actual === null || a.actual === undefined || a.period_start > to || a.period_end < from) return;
-    const end = a.period_end < today ? a.period_end : today;
+    const first = a.month + '-01', last = monthLastDay_(first);
+    if (a.actual === null || a.actual === undefined || first > to || last < from) return;
+    const end = last < today ? last : today;
     let days = 0;
-    for (let d = a.period_start; d <= end; d = addDays_(d, 1)) days++;
+    for (let d = first; d <= end; d = addDays_(d, 1)) days++;
     if (!days) return;
-    for (let d = a.period_start; d <= end; d = addDays_(d, 1)) {
+    for (let d = first; d <= end; d = addDays_(d, 1)) {
       covered[a.store_id + '|' + d] = true;
       if (d < from || d > to) continue;
       const u = holder[a.store_id + '|' + d.slice(0, 7)];
