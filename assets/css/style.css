@@ -950,3 +950,10 @@ body.login .login-box form { margin: 0; }
 .sd-row { padding: 10px 0; border-radius: 0; }
 .sd-item .rep-detail { margin: 0 0 12px; }
 .sd-missing { margin: 8px 0 4px; font-size: 13px; color: var(--warn); }
+
+/* Loading: a spinner over the page until its data is in, and next to "Memuat..." */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px; border: 2px solid var(--line); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+body.page-loading::before { content: ''; position: fixed; inset: 0; z-index: 90; background: rgba(255, 255, 255, .85); }
+body.page-loading::after { content: ''; position: fixed; z-index: 91; left: 50%; top: 45%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border: 3px solid var(--line); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spinner, body.page-loading::after { animation-duration: 2s; } }

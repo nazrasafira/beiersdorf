@@ -41,7 +41,7 @@ window.AktualTab = function (teamId, teamName) {
     $('next').disabled = month >= D.monthKey(D.TODAY);
     $('axBody').hidden = true;
     $('axStatus').hidden = false;
-    $('axStatus').textContent = 'Memuat...';
+    $('axStatus').innerHTML = App.loadingText;
     const res = await D.actualsReport({ teamId, month });
     if (mine !== seq) return;
     if (res.error) { $('axStatus').textContent = res.error; return; }

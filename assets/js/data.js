@@ -1004,7 +1004,9 @@
   function ready(cb) {
     if (!LIVE) { cb(); return; }
     if (!loading) loading = loadLive();
-    loading.then(cb);
+    // A spinner when loading takes a moment (data on this phone is shown at once, without one)
+    const spinner = setTimeout(() => document.body.classList.add('page-loading'), 150);
+    loading.then(() => { clearTimeout(spinner); document.body.classList.remove('page-loading'); cb(); });
   }
 
   const upsert = (list, item) => { const i = list.findIndex(x => x.id === item.id); if (i >= 0) list[i] = item; else list.push(item); };

@@ -431,6 +431,8 @@
    * Rows with class "detail" belong to the row above them and follow its visibility. */
   /* Pages a list that is already drawn: only the rows of the current page stay visible, and the pager appears below the list when needed.
    * const pg = App.pagedList(el, { label, size, rows }); after each (re)render: pg.apply(row => matches). pg.reset() goes back to page 1. */
+  const loadingText = '<span class="spinner" aria-hidden="true"></span>Memuat...';
+
   function pagedList(el, opts) {
     const nav = document.createElement('nav');
     nav.className = 'shop-pager';
@@ -846,7 +848,7 @@
   }
 
   window.App = {
-    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, editPerson, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, pickOtherDate, pagedList, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
+    root, HOME, ROLE_LABEL, page, init, dailyExportHtml, dailyExport, teamId, toast, busy, modal, pager, editPerson, confirm: confirmBox, dashHero, PERIOD_LABEL, pickStore, pickOtherDate, pagedList, loadingText, tableTools, combobox, enhanceSelects, ring, animateRings, bar, trendChart, downloadCsv, icon, iconBtn, iconLink, avatar, person, rankBadge, podium, productImg, productSrc, storeSrc, pickImage, pickPhoto, notePhotos, viewPhoto, imgSrc, levelIcon, levelBadge,
     esc, num, rp, rpK, phoneFmt, rpShort, pct, pct1, dateLong, dateShort, dateMid, monthName, param, parseNum, moneyInput, setMoney,
     home: user => root + HOME[user.role],
     BRAND_LOGO, logoImg,

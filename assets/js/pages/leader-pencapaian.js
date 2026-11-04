@@ -42,7 +42,7 @@ window.PencapaianTab = function (teamId, teamName) {
     const mine = ++seq;
     paged.reset();
     $('achStats').innerHTML = '';
-    $('achList').innerHTML = '<p class="empty">Memuat...</p>';
+    $('achList').innerHTML = `<p class="empty">${App.loadingText}</p>`;
     $('achExcel').hidden = true;
     const res = await D.achievementReport({ teamId, from, to });
     if (mine !== seq) return;
