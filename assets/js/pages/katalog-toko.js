@@ -80,6 +80,7 @@ Data.ready(function () {
     form.chain.value = s ? s.chain || '' : '';
     form.city.value = s ? s.city : '';
     form.address.value = s ? s.address || '' : '';
+    form.code.value = s ? s.code || '' : '';
     form.active.checked = s ? s.active : true;
     image = s ? s.image || '' : '';
     showImage();
@@ -107,7 +108,7 @@ Data.ready(function () {
     e.preventDefault();
     const name = form.name.value.trim(), cityName = form.city.value.trim();
     if (!name || !cityName) { App.toast('Isi nama toko dan kota.'); return; }
-    const error = await App.busy(form, () => D.saveStore({ id: form.id.value || undefined, name, chain: form.chain.value.trim(), city: cityName, address: form.address.value.trim(), areaId: user.areaId || (D.areas()[0] || {}).id, active: form.active.checked, image: image || '' }, user.id));
+    const error = await App.busy(form, () => D.saveStore({ id: form.id.value || undefined, name, chain: form.chain.value.trim(), city: cityName, address: form.address.value.trim(), code: form.code.value.trim(), areaId: user.areaId || (D.areas()[0] || {}).id, active: form.active.checked, image: image || '' }, user.id));
     if (error) { App.toast(error); return; }
     App.toast('Toko disimpan.');
     dlg.close();

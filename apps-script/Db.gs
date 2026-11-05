@@ -5,26 +5,27 @@
  */
 const TABLES = {
   // work_days / work_start / work_end: the SPG's own schedule ("1,2,3" with 0 = Sunday, "10:00", "19:00"); empty = the team's working days
-  Users: ['id', 'phone', 'name', 'role', 'area_id', 'team_id', 'home_store_id', 'photo', 'password_hash', 'salt', 'token_version', 'must_change_password', 'active', 'created_at', 'work_days', 'work_start', 'work_end'],
+  Users: ['id', 'phone', 'name', 'role', 'area_id', 'team_id', 'home_store_id', 'photo', 'password_hash', 'salt', 'token_version', 'must_change_password', 'active', 'created_at', 'work_days', 'work_start', 'work_end', 'nma_code'],
   Areas: ['id', 'name'],
   Teams: ['id', 'name', 'area_id', 'leader_id'],
   Products: ['id', 'name', 'sku', 'price', 'photo', 'active', 'created_by', 'updated_by', 'updated_at', 'brand', 'barcode'],
-  Stores: ['id', 'name', 'chain', 'city', 'address', 'area_id', 'active', 'created_by', 'updated_by', 'updated_at', 'photo'],
+  Stores: ['id', 'name', 'chain', 'city', 'address', 'area_id', 'active', 'created_by', 'updated_by', 'updated_at', 'photo', 'code'],
   // Targets are per store and month; user_id = the SPG holding the store that month (one SPG per store)
   StoreTargets: ['store_id', 'month', 'user_id', 'monthly', 'weekly', 'daily', 'set_by', 'set_at'],
   Shifts: ['id', 'user_id', 'date', 'start', 'end', 'store_id'],
   StoreVisits: ['shift_id', 'store_id', 'from_time'],
   ShiftPhotos: ['shift_id', 'url', 'at'], // photos of the SPG's handwritten notes, taken when ending a shift
   Sales: ['id', 'user_id', 'date', 'time', 'store_id', 'product_id', 'qty', 'price', 'subtotal', 'created_by', 'created_at', 'deleted'],
-  // Rupiah per store and month: sell in from the Team Leader or Manager, actual from the SPG holding the store (see Actuals.gs)
-  StoreActuals: ['id', 'store_id', 'month', 'sell_in', 'sell_in_by', 'sell_in_at', 'actual', 'actual_by', 'actual_at', 'note'],
+  // Per store and month: sell in (rupiah) from the Team Leader or Manager; the SPG's sell out lines in sell_out_items
+  // (JSON [[id, productId, qty, price], ...]), with sell_out = their rupiah total (see Actuals.gs). Was StoreActuals.
+  SellInSellOut: ['id', 'store_id', 'month', 'sell_in', 'sell_in_by', 'sell_in_at', 'sell_out', 'sell_out_by', 'sell_out_at', 'note', 'sell_out_items'],
   DayReports: ['user_id', 'date', 'no_sales', 'unlocked', 'unlocked_by'],
   Settings: ['team_id', 'working_days', 'edit_days', 'reminder'],
   Holidays: ['team_id', 'date', 'name', 'working'],
   Activity: ['at', 'by', 'action', 'kind', 'subject_id', 'name'],
   LoginLog: ['at', 'phone', 'success'],
 };
-const NUM_COLS = ['price', 'qty', 'subtotal', 'monthly', 'weekly', 'daily', 'edit_days', 'token_version', 'sell_in', 'actual'];
+const NUM_COLS = ['price', 'qty', 'subtotal', 'monthly', 'weekly', 'daily', 'edit_days', 'token_version', 'sell_in', 'sell_out'];
 const BOOL_COLS = ['active', 'must_change_password', 'deleted', 'no_sales', 'unlocked', 'working', 'success'];
 const TZ = 'Asia/Jakarta';
 

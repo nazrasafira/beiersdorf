@@ -33,7 +33,7 @@ Data.ready(function () {
   const lastStore = D.lastStoreId(owner.id);
   $('saleStore').innerHTML = '<option value=""></option>' + D.stores().slice()
     .sort((a, b) => (mine.includes(b.id) - mine.includes(a.id)) || a.name.localeCompare(b.name))
-    .map(st => `<option value="${st.id}" ${st.id === lastStore ? 'selected' : ''}>${App.esc([st.name, st.city].filter(Boolean).join(' · ') + (mine.includes(st.id) ? ' · toko kamu' : ''))}</option>`).join('');
+    .map(st => `<option value="${st.id}" ${st.id === lastStore ? 'selected' : ''} ${mine.includes(st.id) ? 'data-tag="Toko kamu"' : ''}>${App.esc([st.name, st.city].filter(Boolean).join(' · '))}</option>`).join('');
   App.combobox($('saleStore'));
 
   const MAX_QTY = 10000; // same limit as the server
@@ -130,35 +130,117 @@ Data.ready(function () {
     location.href = App.page('terima-kasih.html');
   });
 
-  $('list').addEventListener('click', async e => {
-    const b = e.target.closest('[data-del]');
+  /* ----- Change a sale: Ubah opens it; delete lives in there. A change is saved as the corrected sale plus removing the old one. ----- */
+  const txDlg = App.modal($('txDlg'));
+  let editing = null;
+  $('txProduct').innerHTML = $('product').innerHTML;
+  App.combobox($('txProduct'));
+  App.moneyInput($('txPrice'));
+  const txSubtotal = () => { $('txSubtotal').textContent = App.rp(Math.max(1, Math.floor(+$('txQty').value || 1)) * App.parseNum($('txPrice').value)); };
+  ['txQty', 'txPrice'].forEach(id => $(id).addEventListener('input', txSubtotal));
+  $('txProduct').addEventListener('change', () => { const p = D.product($('txProduct').value); if (p && editing && p.id !== editing.productId) App.setMoney($('txPrice'), p.price); txSubtotal(); });
+  $('list').addEventListener('click', e => {
+    const b = e.target.closest('[data-edit]');
     if (!b) return;
-    const t = D.getTransactions(D.getReport(owner.id, date)).find(x => x.id === b.dataset.del);
-    const what = t ? `${t.qty} × ${D.product(t.productId).name} (${App.rp(t.qty * t.price)})` : 'Transaksi ini';
+    editing = D.getTransactions(D.getReport(owner.id, date)).find(x => x.id === b.dataset.edit);
+    if (!editing) return;
+    const st = D.store(editing.storeId);
+    $('txWhen').textContent = [editing.time, st && st.name].filter(Boolean).join(' · ');
+    $('txProduct').value = editing.productId;
+    $('txProduct')._combo.sync();
+    $('txQty').value = editing.qty;
+    App.setMoney($('txPrice'), editing.price);
+    txSubtotal();
+    txDlg.open();
+  });
+  $('txForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const productId = $('txProduct').value, q = Number($('txQty').value), price = App.parseNum($('txPrice').value);
+    if (!productId) { App.toast('Pilih produk dulu.'); return; }
+    if (!Number.isInteger(q) || q < 1 || q > MAX_QTY) { App.toast(`Jumlah harus 1–${App.num(MAX_QTY)}.`); return; }
+    if (!(price > 0) || price > 1e9) { App.toast('Isi harga yang benar.'); return; }
+    if (productId !== editing.productId || q !== editing.qty || price !== editing.price) {
+      // The corrected sale goes first: if anything fails on the way, the sale is never lost
+      D.addSale(owner.id, date, { productId, qty: q, price, storeId: editing.storeId, time: editing.time }, user.id);
+      D.removeSale(owner.id, date, editing.id, user.id);
+      App.toast('Transaksi diubah.');
+    }
+    txDlg.close();
+    render();
+  });
+  $('txDelete').addEventListener('click', async () => {
+    const what = `${editing.qty} × ${D.product(editing.productId).name} (${App.rp(editing.qty * editing.price)})`;
     if (!await App.confirm(`${what} dihapus dari laporan.`, { title: 'Hapus transaksi?', ok: 'Hapus', danger: true })) return;
-    D.removeSale(owner.id, date, b.dataset.del, user.id);
+    D.removeSale(owner.id, date, editing.id, user.id);
+    txDlg.close();
+    App.toast('Transaksi dihapus.');
     render();
   });
 
+  /* ----- Sell out: a reminder for last month's store reports; they are entered on Sell out bulanan (sellout.html) ----- */
+  const soMonth = D.addMonths(D.monthKey(D.TODAY), -1);
+  // The bar follows the store of the shift: switching store shows (and opens) that store's sell out, and hides it at a store the
+  // SPG doesn't hold. Without a shift: all their stores together.
+  let soRows = null;
+  const linesOf = r => (Array.isArray(r.items) ? r.items : []);
+  function renderSellOut(shiftStore) {
+    if (!soRows || !soRows.length) return;
+    const one = soRows.find(r => r.storeId === shiftStore);
+    // A shift at a store that isn't theirs: no sell out to fill in there
+    $('soBanner').hidden = !!shiftStore && !one;
+    if (shiftStore && !one) return;
+    const list = one ? [one] : soRows;
+    const done = list.filter(r => linesOf(r).length), all = done.length === list.length;
+    const lines = done.flatMap(linesOf);
+    $('soBanner').hidden = false;
+    $('soBanner').href = `sellout.html?bulan=${soMonth}${one ? '&toko=' + encodeURIComponent(one.storeId) : ''}`;
+    $('soBanner').classList.toggle('done', all);
+    $('soTitle').textContent = `Sell out ${App.monthName(soMonth)}${one ? ' · ' + one.name : ''}`;
+    $('soText').textContent = all
+      ? `Sudah diisi · ${new Set(lines.map(l => l.productId)).size} produk · ${App.num(lines.reduce((a, l) => a + l.qty, 0))} unit`
+      : one ? 'Belum diisi untuk toko ini' : `Belum diisi untuk ${list.length - done.length} dari ${list.length} toko`;
+    $('soAction').textContent = all ? 'Lihat' : 'Isi';
+  }
+  async function loadSellOut() {
+    const res = await D.myActuals({ month: soMonth });
+    if (res.error) return;
+    soRows = res.rows;
+    const sh = D.getShift(owner.id, date);
+    renderSellOut(sh && sh.storeId);
+  }
+  if (isSpg) loadSellOut();
+
   /* ----- Render ----- */
-  const pagedTx = App.pagedList($('list'), { label: 'transaksi' });
+  const openStores = new Set(), seenStores = new Set();
+  $('list').addEventListener('click', e => {
+    const head = e.target.closest('.tx-store-head');
+    if (!head) return;
+    const rows = head.nextElementSibling, show = rows.hidden;
+    rows.hidden = !show;
+    head.setAttribute('aria-expanded', show);
+    if (show) openStores.add(head.dataset.store); else openStores.delete(head.dataset.store);
+  });
+  // A store whose sales are all on other pages is hidden too
+  const pagedTx = App.pagedList($('list'), { label: 'transaksi', rows: '.tx-row',
+    after: () => $('list').querySelectorAll('.tx-store').forEach(g => { g.hidden = !g.querySelector('.tx-row:not([hidden])'); }) });
   function render() {
     const shift = D.getShift(owner.id, date);
     const report = D.getReport(owner.id, date);
-    const tx = D.getTransactions(report).slice().reverse(); // newest first
-    const manyStores = new Set(tx.map(t => t.storeId)).size > 1; // show the store per sale only when the day had several
+    // Newest first by time; sales without a time (added afterwards) keep their order at the end
+    const tx = D.getTransactions(report).map((t, i) => [t, i]).sort((a, b) => (b[0].time || '').localeCompare(a[0].time || '') || b[1] - a[1]).map(x => x[0]);
     const canEdit = D.canEdit(user, owner.id, date);
     const needsShift = isSpg && isToday && !shift;
     const canAdd = canEdit && !needsShift;
 
     $('startWrap').hidden = !needsShift;
-    const shiftText = shift ? (shift.end ? `Shift ${shift.start}–${shift.end}` : `Shift berjalan sejak ${shift.start}`) : '';
-    $('shift').textContent = shiftText;
-    $('shift').hidden = !shiftText;
+    $('shift').textContent = shift ? (shift.end ? `Shift ${shift.start}–${shift.end} selesai` : `Shift berjalan sejak ${shift.start}`) : '';
     $('endShift').hidden = !(isSpg && isToday && shift && !shift.end);
     const curStore = shift && D.store(shift.storeId);
-    $('storeBar').hidden = !curStore;
-    if (curStore) $('storeName').textContent = curStore.name + ' · ' + curStore.city;
+    $('shiftCard').hidden = !shift;
+    $('storeName').textContent = curStore ? curStore.name : 'Toko tidak diketahui';
+    $('storeCity').textContent = curStore ? [curStore.chain, curStore.city].filter(Boolean).join(' · ') : '';
+    $('storePhoto').src = App.storeSrc(curStore);
+    renderSellOut(shift && shift.storeId);
     $('switchStore').hidden = !(isSpg && isToday && shift && !shift.end);
 
     $('entry').hidden = !canAdd;
@@ -172,14 +254,37 @@ Data.ready(function () {
     $('notePhotos').innerHTML = shiftPhotos.length ? App.notePhotos(shiftPhotos) : '';
 
     $('dayTitle').textContent = isToday ? 'Hari ini' : App.dateShort(date);
-    $('total').textContent = App.rp(report ? report.total : 0);
+    const total = report ? report.total : 0;
+    $('total').textContent = App.rp(total);
     $('count').textContent = report && report.noSales ? 'Tidak ada penjualan' : `${tx.length} transaksi`;
-    $('list').innerHTML = tx.map(t => `
-      <div>
-        ${App.productImg(D.product(t.productId))}
-        <div class="grow"><b>${App.esc(D.product(t.productId).name)}</b><span>${t.time ? t.time + ' · ' : ''}${t.qty} × ${App.rp(t.price)}${manyStores && D.store(t.storeId) ? ' · ' + App.esc(D.store(t.storeId).name) : ''}</span></div>
-        <div class="val">${App.rp(t.qty * t.price)}</div>${canEdit && report.transactions ? App.iconBtn('trash', 'Hapus transaksi', `data-del="${t.id}"`, 'danger') : ''}
-      </div>`).join('') || (needsShift ? '' : '<p class="empty">Belum ada penjualan.</p>');
+    // How far the day is from the target (the targets of the stores held that month)
+    const target = D.progress(owner.id, 'day', date).target;
+    $('dayTarget').innerHTML = target > 0
+      ? `${App.bar(total / target * 100)}<div class="day-target"><span>${App.pct(total / target * 100)} dari target <b>${App.rp(target)}</b></span><span>${total >= target ? 'Target tercapai' : `Kurang <b>${App.rp(target - total)}</b>`}</span></div>`
+      : '<div class="day-target"><span>Belum ada target untuk hari ini</span></div>';
+
+    // Sales grouped by store, the store with the most sales first; newest sale first inside each store
+    const byStore = new Map();
+    tx.forEach(t => { const k = t.storeId || ''; if (!byStore.has(k)) byStore.set(k, []); byStore.get(k).push(t); });
+    const groups = [...byStore].map(([storeId, list]) => ({ storeId, list, sum: list.reduce((a, t) => a + t.qty * t.price, 0) })).sort((a, b) => b.sum - a.sum);
+    // Each store folds open and shut. At first only the store of the running shift is open, or the only store of the day.
+    groups.forEach(g => {
+      if (seenStores.has(g.storeId)) return;
+      seenStores.add(g.storeId);
+      if (groups.length === 1 || (shift && g.storeId === shift.storeId)) openStores.add(g.storeId);
+    });
+    $('list').innerHTML = groups.map(g => {
+      const st = D.store(g.storeId), open = openStores.has(g.storeId);
+      return `<div class="tx-store">
+        <button type="button" class="tx-store-head" data-store="${App.esc(g.storeId)}" aria-expanded="${open}"><b>${App.icon('store')}${App.esc(st ? st.name : 'Toko tidak diketahui')}</b><span><b>${App.rp(g.sum)}</b><small>${g.list.length} transaksi</small></span>${App.icon('chevDown')}</button>
+        <div class="rows wrap" ${open ? '' : 'hidden'}>${g.list.map(t => `
+          <div class="tx-row">
+            ${App.productImg(D.product(t.productId))}
+            <div class="grow"><b>${App.esc(D.product(t.productId).name)}</b><span>${t.time ? t.time + ' · ' : ''}${t.qty} × ${App.rp(t.price)}</span></div>
+            <div class="val">${App.rp(t.qty * t.price)}</div>${canEdit && report.transactions ? App.iconBtn('pencil', 'Ubah transaksi', `data-edit="${t.id}"`) : ''}
+          </div>`).join('')}</div>
+      </div>`;
+    }).join('') || (needsShift ? '' : '<p class="empty">Belum ada penjualan.</p>');
     pagedTx.apply();
   }
 

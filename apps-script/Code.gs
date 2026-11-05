@@ -34,6 +34,7 @@ const actions_ = () => ({
   'report.dailyRecap': [actDailyRecap_, true, false],
   'actuals.report': [actActualsReport_, true, false],
   'report.achievement': [actAchievement_, true, false],
+  'report.sellOut': [actSellOutExport_, true, false],
   'actuals.sellIn': [actSellInSave_, true, true],
   'actuals.mine': [actActualsMine_, true, false],
   'actuals.save': [actActualSave_, true, true],

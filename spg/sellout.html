@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Sell out bulanan</title>
+<link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+<link rel="stylesheet" href="../assets/css/style.css?v=20261105123715">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261105123715","../")</script>
+</head>
+<body data-root="../">
+<main>
+  <div class="page-head">
+    <div class="head-back">
+      <a href="laporan.html" class="icon-btn" aria-label="Kembali ke Penjualan" title="Kembali ke Penjualan" data-icon="left"></a>
+      <div><h1>Sell out bulanan</h1><p class="sub">Dari laporan bulanan toko</p></div>
+    </div>
+  </div>
+
+  <div class="shift-card so-head">
+    <div class="shift-line">
+      <button type="button" class="btn ghost small" id="prev" aria-label="Bulan sebelumnya"><span data-icon="left"></span></button>
+      <b id="month"></b>
+      <button type="button" class="btn ghost small" id="next" aria-label="Bulan berikutnya"><span data-icon="right"></span></button>
+    </div>
+  </div>
+  <div class="tabs so-stores" id="stores" role="tablist" aria-label="Toko" hidden></div>
+  <p class="empty" id="status" role="status"></p>
+
+  <div id="page" hidden>
+    <form id="entry" class="entry" autocomplete="off">
+      <h2 class="entry-title">Catat sell out</h2>
+      <p class="note" style="margin:0 0 12px">Salin dari laporan bulanan toko: produk, jumlah unit dan harga. Terpisah dari penjualan harian.</p>
+      <div class="field"><label for="product">Produk</label><select id="product" data-placeholder="Cari produk..."></select></div>
+      <div id="preview" class="center" hidden style="margin:-4px 0 12px"></div>
+      <div class="entry-row">
+        <div class="field">
+          <label for="qty">Unit</label>
+          <div class="stepper">
+            <button type="button" id="minus" aria-label="Kurangi" data-icon="minus"></button>
+            <input class="input" id="qty" type="number" inputmode="numeric" min="1" max="1000000" step="1" value="1">
+            <button type="button" id="plus" aria-label="Tambah" data-icon="plus"></button>
+          </div>
+        </div>
+        <div class="field"><label for="price">Harga satuan</label><input class="input" id="price" type="text" inputmode="numeric" autocomplete="off"></div>
+      </div>
+      <div class="entry-foot"><span class="muted">Subtotal <b id="subtotal">Rp 0</b></span><button class="btn" type="submit">Simpan</button></div>
+    </form>
+
+    <section>
+      <div class="day-sum">
+        <div class="day-sum-top"><h2 id="listTitle">Sell out</h2><span class="muted small" id="count"></span></div>
+        <div class="day-total" id="total">Rp 0</div>
+        <div class="day-target"><span id="units"></span></div>
+      </div>
+      <div class="rows wrap" id="list"></div>
+    </section>
+  </div>
+
+  <dialog class="modal" id="txDlg" aria-labelledby="txDlgTitle">
+    <form id="txForm" autocomplete="off">
+      <div class="modal-head"><h3 id="txDlgTitle">Ubah sell out</h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
+      <div class="modal-body">
+        <div class="field"><label for="txProduct">Produk</label><select id="txProduct" data-placeholder="Cari produk..."></select></div>
+        <div class="entry-row">
+          <div class="field"><label for="txQty">Unit</label><input class="input" id="txQty" type="number" inputmode="numeric" min="1" max="1000000" step="1"></div>
+          <div class="field"><label for="txPrice">Harga satuan</label><input class="input" id="txPrice" type="text" inputmode="numeric"></div>
+        </div>
+        <p class="muted" style="margin:0">Subtotal <b id="txSubtotal">Rp 0</b></p>
+      </div>
+      <div class="modal-foot tx-foot">
+        <button type="button" class="btn ghost danger" id="txDelete">Hapus</button>
+        <span class="rp-gap"></span>
+        <button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+</main>
+<script src="../assets/js/config.js?v=20261105123715"></script>
+<script src="../assets/js/data.js?v=20261105123715"></script>
+<script src="../assets/js/common.js?v=20261105123715"></script>
+<script src="../assets/js/pages/spg-sellout.js?v=20261105123715"></script>
+</body>
+</html>

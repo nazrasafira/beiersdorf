@@ -50,7 +50,7 @@ function buildState_(me) {
 
 const userOut_ = (u, withPhone) => ({
   id: u.id, name: u.name, role: u.role, teamId: u.team_id || null, areaId: u.area_id || null, homeStoreId: u.home_store_id || null,
-  photo: u.photo, phone: withPhone ? u.phone : '', active: u.active, username: '',
+  photo: u.photo, phone: withPhone ? u.phone : '', active: u.active, username: '', nmaCode: u.nma_code || '',
   workDays: workDays_(u), workStart: u.work_start || '', workEnd: u.work_end || '',
   since: String(u.created_at || '').slice(0, 10), // days before the account existed are not "not reported"
 });
@@ -60,7 +60,7 @@ const productOut_ = p => ({
   createdBy: p.created_by || null, updatedBy: p.updated_by || null, updatedAt: p.updated_at,
 });
 const storeOut_ = s => ({
-  id: s.id, name: s.name, chain: s.chain, city: s.city, address: s.address, areaId: s.area_id || null, active: s.active, image: s.photo || '',
+  id: s.id, name: s.name, chain: s.chain, city: s.city, address: s.address, areaId: s.area_id || null, active: s.active, image: s.photo || '', code: s.code || '',
   createdBy: s.created_by || null, updatedBy: s.updated_by || null, updatedAt: s.updated_at,
 });
 

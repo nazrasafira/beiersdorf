@@ -1,4 +1,4 @@
-# Test steps: Sell In, Offtake and Pencapaian
+# Test steps: Sell In, Sell Out and Pencapaian
 
 These steps use the local server and its dummy data. Nothing here touches the real Google Sheet. Test dates are fixed: the local server treats **22 Oktober 2026** as today.
 
@@ -26,7 +26,7 @@ To switch accounts, tap the logout icon at the top right.
 
 ## 1. Team leader: see what's filled in
 
-Log in as **Team Leader**, then open **Laporan › Sell In & Offtake**.
+Log in as **Team Leader**, then open **Laporan › Sell In & Sell Out**.
 
 - [ ] Month shows **Oktober 2026**, and the progress bars show counts out of 8 stores.
 - [ ] Status buttons show counts: Semua, Belum isi sell in, Menunggu SPG, Lengkap.
@@ -42,37 +42,46 @@ Log in as **Team Leader**, then open **Laporan › Sell In & Offtake**.
 - [ ] Tap **‹** before saving. It warns about unsaved numbers. Tap **Batal**.
 - [ ] Tap **Simpan**. The Sell in count goes up, and the status changes to **Menunggu SPG** or **Lengkap**.
 - [ ] A saved store shows the amount with **Ubah**. Tap **Ubah**, change the number and save.
-- [ ] Offtake can't be typed here. It only shows the SPG's number or "Belum diisi SPG".
+- [ ] Sell out can't be typed here. It only shows the SPG's number or "Belum diisi SPG".
 
 ## 3. SPG: enter monthly sell out
 
-Log out, log in as **SPG**, then open **Riwayat**.
+Log out, log in as **SPG**, then open **Penjualan**. Start a shift if asked.
 
-- [ ] A **Sell out bulan ini** section shows "0 dari 1 toko sudah diisi", and Toko Kemang is **Belum diisi**.
-- [ ] It says the daily sales recorded for that store.
-- [ ] Type `25000000` and a note, then tap **Simpan sell out**.
-- [ ] The store changes to **Sudah diisi**, and the count becomes "1 dari 1".
-- [ ] Tap **Ubah**. The saved amount and note are there to edit. Leave without saving and it warns you.
-- [ ] Tap **‹** for September. It already has a number from the dummy data.
+- [ ] An orange **Sell out September 2026** bar says it hasn't been filled in. It's last month by default.
+- [ ] Tap it. The **Sell out bulanan** page opens, with **Penjualan** still highlighted in the bottom menu. The **‹** next to the title goes back to Penjualan.
+- [ ] Add a line like a daily sale: pick a product, then units and price, then **Simpan**. The price starts at the catalog price and can be changed.
+- [ ] The list shows each line, the month's total in rupiah, and the units and products.
+- [ ] Tap a line's pencil to change it, or to delete it with **Hapus** inside.
+- [ ] Use **‹ ›** in the blue bar to fill in another month. Nothing locks.
+- [ ] Go back to Penjualan. The bar is white and says how many products and units were filled in.
 
-Log back in as **Team Leader**, then open **Sell In & Offtake**.
+Log back in as **Team Leader**, then open **Sell In & Sell Out** for September.
 
-- [ ] Toko Kemang shows offtake **Rp 25.000.000**, your note, and the Selisih.
-- [ ] If the gap is over 10%, it says **Perlu dicek**.
+- [ ] Toko Kemang's sell out is the rupiah total of those lines.
 
-## 4. Team leader: Excel from Sell In & Offtake
+## 4b. Team leader: sell out per product (Form 201 SKU)
+
+- [ ] In **Sell In & Sell Out**, tap **Sell out per produk** and open the file in Excel.
+- [ ] It has one row per product, with No, Kode SKU, Nama SKU, Subbrand, Price and Barcode.
+- [ ] Each store has a block of **Qty** and **Val** under the SPG name, Kode NMA, store name and Kode toko. Val is the rupiah the SPG entered.
+- [ ] Below the products are **Total Selling Out (NIVEA + HANSA)**, the store's **Target** and **Achievement**, then the same three rows for each focus brand.
+- [ ] Total rows show numbers once Excel has calculated them.
+- [ ] As **Team Leader**, set an SPG's **Kode NMA** in **Tim › Ubah**, and a store's **Kode toko** in **Katalog › Toko**. Download again, and the codes appear in the header.
+
+## 4. Team leader: Excel from Sell In & Sell Out
 
 - [ ] Tap **Unduh Excel** and open the file in Excel.
 - [ ] Headers are blue with yellow text for Store and the % column, and green for the numbers with **Okt 26** on the second line.
-- [ ] Each row has a number on the left, and rows run from highest % to lowest. Stores with no offtake come last.
-- [ ] Each row with an offtake has a colored dot: blue when daily sales are within 10% of offtake, red when they aren't.
+- [ ] Each row has a number on the left, and rows run from highest % to lowest. Stores with no sell out come last.
+- [ ] Each row with a sell out has a colored dot: blue when daily sales are within 10% of sell out, red when they aren't.
 - [ ] The last row is a yellow **Total**.
 
 ## 5. Team leader: Pencapaian
 
 Open **Laporan › Pencapaian**.
 
-- [ ] It opens on 1 Januari to 22 Oktober, with Target, Offtake and Pencapaian totals.
+- [ ] It opens on 1 Januari to 22 Oktober, with Target, Sell out and Pencapaian totals.
 - [ ] Rows run from highest Ach% to lowest, with blue, pink or red dots.
 - [ ] Each row says its source: Laporan toko, Penjualan harian, or both.
 - [ ] Tap **Bulan ini**. Numbers and dates change. Try **3 bulan**, then pick your own dates.
@@ -121,6 +130,12 @@ Log in as **Team Leader**, then open **Laporan › Penjualan**. The dummy month 
 - [ ] Tap a bar in the chart. That day opens in **Per hari**.
 - [ ] Pick a store in **Toko**. Amounts only count that store, and "belum lapor" disappears.
 - [ ] Amounts are full numbers, such as `Rp 1.960.000`, not "Rp 2 jt".
+
+## 10. Loading and sessions
+
+- [ ] **Spinner:** start the local server with `--latency 1500` to make it slow, clear the site data, then log in. While a page loads, a spinner covers it instead of a blank or half-drawn page.
+- [ ] **Expired session:** log in, then in the browser console run `sessionStorage.setItem('lspg-token', 'x.y'); localStorage.setItem('lspg-token', 'x.y')` and reload or switch to another Laporan tab. You land on the login page with "Sesi kamu sudah berakhir. Silakan masuk lagi."
+- [ ] **Deactivated account:** as Team Leader, deactivate an SPG in **Tim**. On that SPG's phone, the next page opened goes to the login page with a message about the account not being active.
 
 ## If something looks wrong
 

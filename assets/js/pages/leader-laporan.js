@@ -169,7 +169,7 @@ Data.ready(function () {
   });
   ['spg', 'store', 'from', 'to'].forEach(id => $(id).addEventListener('change', () => { page = 1; render(); }));
 
-  /* ----- Tabs: Penjualan, Sell In & Offtake, Pencapaian ----- */
+  /* ----- Tabs: Penjualan, Sell In & Sell Out, Pencapaian ----- */
   const aktual = window.AktualTab(teamId, D.team(teamId).name);
   const pencapaian = window.PencapaianTab(teamId, D.team(teamId).name);
   let tab = 'sales';

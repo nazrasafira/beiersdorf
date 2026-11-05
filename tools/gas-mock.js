@@ -54,6 +54,7 @@ class Range {
 class Sheet {
   constructor(name) { Object.assign(this, { name, data: [], formats: {}, notes: {}, backgrounds: {}, protections: [] }); }
   getName() { return this.name; }
+  setName(n) { this.name = n; return this; }
   getLastRow() { return this.data.length; }
   getMaxRows() { return Math.max(1000, this.data.length); }
   getRange(row, col, nr = 1, nc = 1) {

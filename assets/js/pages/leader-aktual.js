@@ -1,5 +1,5 @@
-/* Laporan, tab Sell In & Offtake: the Team Leader enters what Nivea sold to each store and sees which stores are done.
- * Offtake is the monthly figure the SPG enters from the store's report (spg/riwayat.html, called actual in the code and Sheet).
+/* Laporan, tab Sell In & Sell Out: the Team Leader enters what Nivea sold to each store and sees which stores are done.
+ * Sell out is the monthly figure the SPG enters from the store's report (spg/sellout.html; actual in this page's data).
  * Numbers come from the server (apps-script/Actuals.gs). */
 window.AktualTab = function (teamId, teamName) {
   'use strict';
@@ -72,10 +72,10 @@ window.AktualTab = function (teamId, teamName) {
         </div>
         <div class="ax-state"><span class="pill ${cls}">${label}</span></div>
         <div class="ax-cell" data-cell><label for="in-${i}">Sell in</label>${has(r.sellIn) ? sellInSaved(r) : sellInInput(r, i)}</div>
-        <div class="ax-cell"><span class="ax-lbl">Offtake</span>${has(r.actual) ? `<b>${App.rp(r.actual)}</b>` : '<span class="muted small">Belum diisi SPG</span>'}</div>
+        <div class="ax-cell"><span class="ax-lbl">Sell out</span>${has(r.actual) ? `<b>${App.rp(r.actual)}</b>` : '<span class="muted small">Belum diisi SPG</span>'}</div>
         <div class="ax-cell"><span class="ax-lbl">Penjualan harian</span><b>${App.rp(r.sellOut)}</b></div>
         <div class="ax-cell"><span class="ax-lbl">Selisih</span>${r.actual
-          ? `<b class="${flagged(r) ? 'num-warn' : ''}">${signed(r.sellOut - r.actual)}</b><small class="ax-sub">${flagged(r) ? 'Perlu dicek · ' : ''}${App.pct(r.sellOut / r.actual * 100)} dari offtake</small>`
+          ? `<b class="${flagged(r) ? 'num-warn' : ''}">${signed(r.sellOut - r.actual)}</b><small class="ax-sub">${flagged(r) ? 'Perlu dicek · ' : ''}${App.pct(r.sellOut / r.actual * 100)} dari sell out</small>`
           : '<span class="muted small">–</span>'}</div>
       </div>`;
     }).join('');
@@ -103,7 +103,7 @@ window.AktualTab = function (teamId, teamName) {
       const pct = rows.length ? Math.round(n / rows.length * 100) : 0;
       return `<div class="ax-prog"><span>${label}</span><div class="ax-track"><i class="${n === rows.length && n ? 'full' : ''}" style="width:${pct}%"></i></div><b>${n} dari ${rows.length} toko</b></div>`;
     };
-    $('axProgress').innerHTML = line('Sell in', rows.filter(r => has(r.sellIn)).length) + line('Offtake', rows.filter(r => has(r.actual)).length);
+    $('axProgress').innerHTML = line('Sell in', rows.filter(r => has(r.sellIn)).length) + line('Sell out', rows.filter(r => has(r.actual)).length);
   }
   function renderTotals(rows) {
     const sum = (list, k) => list.reduce((a, r) => a + (r[k] || 0), 0);
@@ -111,7 +111,7 @@ window.AktualTab = function (teamId, teamName) {
     const flags = filled.filter(flagged).length;
     $('axTotals').innerHTML = [
       ['Sell in', App.rp(sum(rows, 'sellIn'))],
-      ['Offtake', App.rp(sum(filled, 'actual'))],
+      ['Sell out', App.rp(sum(filled, 'actual'))],
       ['Penjualan harian', App.rp(sum(rows, 'sellOut'))],
       ['Selisih', filled.length ? `${signed(sum(filled, 'sellOut') - sum(filled, 'actual'))}${flags ? ` · ${flags} perlu dicek` : ''}` : '–'],
     ].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
@@ -152,6 +152,14 @@ window.AktualTab = function (teamId, teamName) {
   $('axExcel').addEventListener('click', async () => {
     if (!data) return;
     try { await RecapExport.downloadSellIn(data.rows.filter(inScope).filter(inSearch).filter(inFilter), month, teamName); } catch (err) { App.toast('Export gagal. Periksa koneksi internet lalu coba lagi.'); }
+  });
+
+  // The SPGs' sell out per product in the company's form (Form 201 SKU)
+  $('axSellOut').addEventListener('click', async () => {
+    const res = await App.busy($('actualPane'), () => D.sellOutReport({ teamId, month }));
+    if (res.error) { App.toast(res.error); return; }
+    if (!res.stores.length) { App.toast('Belum ada toko tim di bulan ini.'); return; }
+    try { await RecapExport.downloadSellOutForm(res); } catch (err) { App.toast('Export gagal. Periksa koneksi internet lalu coba lagi.'); }
   });
 
   /* ----- Controls ----- */

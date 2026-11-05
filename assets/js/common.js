@@ -17,7 +17,7 @@
     admin: 'admin/pengguna.html',
   };
   const NAV = {
-    spg: [['spg/beranda.html', 'home', 'Beranda'], ['spg/laporan.html', 'edit', 'Penjualan'], ['spg/peringkat.html', 'trophy', 'Peringkat'], ['spg/riwayat.html', 'calendar', 'Riwayat']],
+    spg: [['spg/beranda.html', 'home', 'Beranda'], ['spg/laporan.html', 'edit', 'Penjualan', 'spg/sellout'], ['spg/peringkat.html', 'trophy', 'Peringkat'], ['spg/riwayat.html', 'calendar', 'Riwayat']],
     // [href, icon, label, optional folder that also marks the item active]
     leader: [['leader/dashboard.html', 'grid', 'Dashboard'], ['leader/laporan.html', 'file', 'Laporan'], ['leader/target.html', 'target', 'Target'], ['leader/tim.html', 'users', 'Tim'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/'], ['leader/pengaturan.html', 'settings', 'Pengaturan']],
     manager: [['manager/dashboard.html', 'map', 'Area'], ['leader/laporan.html', 'file', 'Laporan'], ['leader/target.html', 'target', 'Target'], ['leader/tim.html', 'users', 'Tim'], ['katalog/produk.html', 'box', 'Katalog', 'katalog/'], ['leader/pengaturan.html', 'settings', 'Pengaturan']],
@@ -306,8 +306,8 @@
       document.body.classList.add('spg');
       const nav = document.createElement('nav');
       nav.className = 'bottomnav';
-      nav.innerHTML = items.map(([href, ic, label]) =>
-        `<a href="${root + href}" class="${isOn(href) ? 'on' : ''}" ${isOn(href) ? 'aria-current="page"' : ''}>${icon(ic, { cls: 'ic' })}${label}</a>`).join('');
+      nav.innerHTML = items.map(([href, ic, label, folder]) =>
+        `<a href="${root + href}" class="${isOn(href, folder) ? 'on' : ''}" ${isOn(href, folder) ? 'aria-current="page"' : ''}>${icon(ic, { cls: 'ic' })}${label}</a>`).join('');
       document.body.append(nav);
     } else {
       // Phone: the navbar links fold into a dropdown behind the menu button
@@ -357,7 +357,7 @@
     let items = [], active = -1;
     const ph = select.dataset.placeholder; // optional: empty value shows as a placeholder and is not listed
     // By option position, not value: two options with the same value (e.g. stores sharing an id) are still told apart
-    const options = () => [...select.options].filter(o => !(ph && o.value === '')).map(o => ({ index: o.index, value: o.value, text: o.textContent.trim(), img: o.dataset.img }));
+    const options = () => [...select.options].filter(o => !(ph && o.value === '')).map(o => ({ index: o.index, value: o.value, text: o.textContent.trim(), img: o.dataset.img, tag: o.dataset.tag }));
     const sync = () => {
       const o = select.options[select.selectedIndex];
       input.value = o && !(ph && o.value === '') ? o.textContent.trim() : '';
@@ -370,7 +370,7 @@
       items = options().filter(o => !needle || o.text.toLowerCase().includes(needle));
       active = Math.max(0, items.findIndex(o => o.index === select.selectedIndex));
       list.innerHTML = items.length
-        ? items.map((o, i) => `<li role="option" id="${id}-${i}" data-i="${i}" aria-selected="${o.index === select.selectedIndex}" class="${i === active ? 'active' : ''}">${o.img ? `<img src="${esc(o.img)}" alt="">` : ''}<span>${esc(o.text)}</span></li>`).join('')
+        ? items.map((o, i) => `<li role="option" id="${id}-${i}" data-i="${i}" aria-selected="${o.index === select.selectedIndex}" class="${[i === active ? 'active' : '', o.tag ? 'tagged' : ''].join(' ').trim()}">${o.img ? `<img src="${esc(o.img)}" alt="">` : ''}<span>${esc(o.text)}</span>${o.tag ? `<em class="combo-tag">${esc(o.tag)}</em>` : ''}</li>`).join('')
         : '<li class="none">Tidak ditemukan</li>';
       highlight();
     }
@@ -430,7 +430,8 @@
    * Controls are created once per table and keep their search text and page across re-renders.
    * Rows with class "detail" belong to the row above them and follow its visibility. */
   /* Pages a list that is already drawn: only the rows of the current page stay visible, and the pager appears below the list when needed.
-   * const pg = App.pagedList(el, { label, size, rows }); after each (re)render: pg.apply(row => matches). pg.reset() goes back to page 1. */
+   * const pg = App.pagedList(el, { label, size, rows, after }); after each (re)render: pg.apply(row => matches). pg.reset() goes back to page 1.
+   * after(): called whenever the visible rows change (e.g. to hide a group heading whose rows are all on other pages). */
   const loadingText = '<span class="spinner" aria-hidden="true"></span>Memuat...';
 
   function pagedList(el, opts) {
@@ -448,6 +449,7 @@
       page = at;
       rows.forEach(r => { r.hidden = true; });
       on.slice(from, to).forEach(r => { r.hidden = false; });
+      if (opts.after) opts.after();
       if (jump) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
       return on.length;
     }
@@ -524,6 +526,19 @@
 
   /* ---------- Pop-up form (native <dialog>) ----------
    * Closes with [data-close] buttons, Esc, or a click on the backdrop. */
+  // iPhone: the keyboard covers the bottom of the screen without moving it, hiding sheets that sit there.
+  // --kb is how much it covers; sheets lift by that much (style.css).
+  if (window.visualViewport) {
+    const vv = window.visualViewport, root = document.documentElement;
+    const keyboard = () => {
+      const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      root.style.setProperty('--kb', kb + 'px');
+      root.classList.toggle('kb-open', kb > 80);
+    };
+    vv.addEventListener('resize', keyboard);
+    vv.addEventListener('scroll', keyboard);
+  }
+
   function modal(dlg) {
     if (!dlg._modal) {
       dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[data-close]')) dlg.close(); });
@@ -569,7 +584,8 @@
           <p class="error" hidden></p>
           <div class="field"><label for="epName">Nama</label><input class="input" id="epName" required value="${esc(u.name)}"></div>
           <div class="field"><label for="epPhone">No. HP (untuk login)</label><input class="input" id="epPhone" type="tel" inputmode="tel" required value="${esc(phoneFmt(u.phone))}"></div>
-          <p class="note" style="margin:0">Nomor HP dipakai untuk login. Password tidak berubah.</p>
+          ${u.role === 'spg' ? `<div class="field"><label for="epCode">Kode NMA (opsional)</label><input class="input" id="epCode" value="${esc(u.nmaCode || '')}" placeholder="mis. NBCMDN057"></div>` : ''}
+          <p class="note" style="margin:0">Nomor HP dipakai untuk login. Password tidak berubah.${u.role === 'spg' ? ' Kode NMA dipakai di Excel sell out.' : ''}</p>
         </div>
         <div class="modal-foot"><button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit">Simpan</button></div>
       </form>`;
@@ -578,7 +594,7 @@
       const form = dlg.querySelector('form'), err = dlg.querySelector('.error');
       form.addEventListener('submit', async e => {
         e.preventDefault();
-        const error = await busy(form, () => Data.updateUser(u.id, { name: form.epName.value, phone: form.epPhone.value }, by));
+        const error = await busy(form, () => Data.updateUser(u.id, Object.assign({ name: form.epName.value, phone: form.epPhone.value }, form.epCode ? { nmaCode: form.epCode.value.trim() } : {}), by));
         if (error) { err.textContent = error; err.hidden = false; return; }
         saved = true;
         dlg.close();
@@ -631,7 +647,7 @@
         <div class="modal-body">
           <div class="field"><label for="pickStoreSel">Toko</label>
             <select id="pickStoreSel" data-placeholder="Cari toko...">${'<option value=""></option>' + list.map(st =>
-              `<option value="${st.id}" ${st.id === opts.current ? 'selected' : ''}>${esc([st.name, st.city].filter(Boolean).join(' · ') + (mine.includes(st.id) ? ' · toko kamu' : ''))}</option>`).join('')}</select>
+              `<option value="${st.id}" ${st.id === opts.current ? 'selected' : ''} ${mine.includes(st.id) ? 'data-tag="Toko kamu"' : ''}>${esc([st.name, st.city].filter(Boolean).join(' · '))}</option>`).join('')}</select>
           </div>
           ${opts.note ? `<p class="note" style="margin:0">${esc(opts.note)}</p>` : ''}
         </div>
@@ -687,10 +703,11 @@
   document.addEventListener('input', e => { if (e.target.setCustomValidity) e.target.setCustomValidity(''); }, true);
 
   // Disables the form's submit button while a save is running (it may wait for the server)
+  // While fn waits for the server: the form's button is disabled and shows a spinner (login, saving, sending)
   async function busy(form, fn) {
     const btn = form.querySelector('[type=submit]');
-    if (btn) btn.disabled = true;
-    try { return await fn(); } finally { if (btn) btn.disabled = false; }
+    if (btn) { btn.disabled = true; btn.classList.add('is-busy'); btn.setAttribute('aria-busy', 'true'); }
+    try { return await fn(); } finally { if (btn) { btn.disabled = false; btn.classList.remove('is-busy'); btn.removeAttribute('aria-busy'); } }
   }
 
   /**

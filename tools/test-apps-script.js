@@ -186,9 +186,9 @@ test('sell in comes from the Team Leader, per month, next to the sell out of tha
 
   assert.equal(g.as('rina', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st1', sellIn: 5000000 }] }).data.rows.find(r => r.storeId === 'st1').sellIn, 5000000);
   assert.ok(g.as('rina', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st1', sellIn: 6000000 }] }).ok);
-  assert.equal(g.rows('StoreActuals').length, 1, 'saving again corrects the row');
-  assert.equal(g.rows('StoreActuals')[0].sell_in, 6000000);
-  assert.equal(g.rows('StoreActuals')[0].sell_in_by, 'u-rina');
+  assert.equal(g.rows('SellInSellOut').length, 1, 'saving again corrects the row');
+  assert.equal(g.rows('SellInSellOut')[0].sell_in, 6000000);
+  assert.equal(g.rows('SellInSellOut')[0].sell_in_by, 'u-rina');
   assert.ok(g.rows('Activity').some(a => a.kind === 'sell in' && a.name.includes('5000000 → 6000000')), 'change is logged');
 
   assert.equal(g.as('rina', 'actuals.report', { ...q, month: '2026-11' }).status, 422, 'not started yet');
@@ -196,27 +196,65 @@ test('sell in comes from the Team Leader, per month, next to the sell out of tha
   assert.equal(g.as('rina', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st2', sellIn: -5 }] }).status, 422);
 });
 
-test('actual comes from the SPG holding the store, per month, and the leader sees it', () => {
+test('sell out comes from the SPG holding the store: product lines with units and price, like daily sales', () => {
   const g = app();
   const month = '2026-10', store = heldBy(g, 'u-sari', month)[0], other = g.rows('Stores').find(s => !heldBy(g, 'u-sari', month).includes(s.id)).id;
   const mine = g.as('sari', 'actuals.mine', { month });
   assert.ok(mine.ok, mine.error);
   assert.deepEqual(Array.from(mine.data.rows, r => r.storeId).sort(), heldBy(g, 'u-sari', month).sort(), 'only their own stores');
 
-  const saved = g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, actual: 4000000, note: 'setelah diskon' }] });
+  const items = [{ id: 'a', productId: 'p1', qty: 10, price: 50000 }, { id: 'b', productId: 'p2', qty: 3, price: 20000 }];
+  const saved = g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, items, note: 'setelah diskon' }] });
   assert.ok(saved.ok, saved.error);
-  assert.deepEqual([saved.data.rows.find(r => r.storeId === store).actual, saved.data.rows.find(r => r.storeId === store).note], [4000000, 'setelah diskon']);
+  const back = saved.data.rows.find(r => r.storeId === store);
+  assert.equal(back.actual, 10 * 50000 + 3 * 20000, 'rupiah = units × the price entered');
+  assert.deepEqual(Array.from(back.items, l => [l.id, l.productId, l.qty, l.price]), [['a', 'p1', 10, 50000], ['b', 'p2', 3, 20000]]);
   const seen = g.as('rina', 'actuals.report', { teamId: 't1', month }).data.rows.find(r => r.storeId === store);
-  assert.deepEqual([seen.actual, seen.note, seen.actualBy], [4000000, 'setelah diskon', 'Sari Wulandari']);
+  assert.deepEqual([seen.actual, seen.note, seen.actualBy], [560000, 'setelah diskon', 'Sari Wulandari']);
 
-  // Sell in and actual sit on one row and don't overwrite each other
+  // Sell in and sell out sit on one row and don't overwrite each other; changing it later is allowed
   assert.ok(g.as('rina', 'actuals.sellIn', { teamId: 't1', month, rows: [{ storeId: store, sellIn: 9 }] }).ok);
-  assert.ok(g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, actual: 4500000, note: '' }] }).ok);
-  const row = g.rows('StoreActuals').find(e => e.store_id === store);
-  assert.deepEqual([row.sell_in, row.actual], [9, 4500000]);
+  assert.ok(g.as('sari', 'actuals.save', { month: '2026-09', rows: [{ storeId: heldBy(g, 'u-sari', '2026-09')[0], items: [{ productId: 'p1', qty: 1, price: 1 }] }] }).ok, 'an earlier month');
+  assert.ok(g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, items: [{ productId: 'p2', qty: 5, price: 1000 }], note: '' }] }).ok);
+  const row = g.rows('SellInSellOut').find(e => e.store_id === store && e.month === month);
+  assert.deepEqual([row.sell_in, row.sell_out], [9, 5000]);
+  assert.ok(g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, items: [] }] }).ok);
+  assert.equal(g.rows('SellInSellOut').find(e => e.store_id === store && e.month === month).sell_out, null, 'emptied again');
 
-  assert.equal(g.as('sari', 'actuals.save', { month, rows: [{ storeId: other, actual: 1 }] }).status, 403, 'not their store');
-  assert.equal(g.as('sari', 'actuals.save', { month: '2026-11', rows: [{ storeId: store, actual: 1 }] }).status, 422);
+  const one = qty => [{ productId: 'p1', qty, price: 1000 }];
+  assert.equal(g.as('sari', 'actuals.save', { month, rows: [{ storeId: other, items: one(1) }] }).status, 403, 'not their store');
+  assert.equal(g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, items: [{ productId: 'nope', qty: 1, price: 1 }] }] }).status, 422, 'unknown product');
+  assert.equal(g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, items: one(0) }] }).status, 422);
+  assert.equal(g.as('sari', 'actuals.save', { month: '2026-11', rows: [{ storeId: store, items: one(1) }] }).status, 422);
+});
+
+test('sell out export: the team stores of the month with their SPG, codes, target and units', () => {
+  const g = app();
+  const month = '2026-10', store = heldBy(g, 'u-sari', month)[0];
+  assert.ok(g.as('rina', 'user.update', { userId: 'u-sari', name: 'Sari Wulandari', phone: '0813 0000 0001', nmaCode: 'NBCJKT001' }).ok);
+  const st = g.rows('Stores').find(s => s.id === store);
+  assert.ok(g.as('rina', 'store.save', { id: store, name: st.name, chain: st.chain, city: st.city, address: st.address, code: 'JKT0001' }).ok);
+  assert.ok(g.as('sari', 'actuals.save', { month, rows: [{ storeId: store, items: [{ productId: 'p1', qty: 4, price: 1000 }, { productId: 'p1', qty: 3, price: 2000 }] }] }).ok);
+  const r = g.as('rina', 'report.sellOut', { teamId: 't1', month });
+  assert.ok(r.ok, r.error);
+  const mine = r.data.stores.find(s => s.storeId === store);
+  assert.deepEqual([mine.spg, mine.spgCode, mine.code, mine.submitted, mine.items.p1.qty, mine.items.p1.value], ['Sari Wulandari', 'NBCJKT001', 'JKT0001', true, 7, 10000], 'lines of one product add up');
+  assert.ok(mine.target > 0);
+  assert.ok(r.data.stores.every(s => g.rows('Users').find(u => u.name === s.spg).team_id === 't1'), 'only the team');
+  assert.ok(r.data.products.length > 0 && r.data.products[0].sku);
+  assert.equal(g.as('sari', 'report.sellOut', { teamId: 't1', month }).status, 403);
+  assert.equal(g.as('andi', 'report.sellOut', { teamId: 't1', month }).status, 403);
+});
+
+test('setupSheet renames an old StoreActuals tab and keeps its rows', () => {
+  const g = app();
+  const ss = g.ctx.spreadsheet_();
+  assert.ok(g.as('rina', 'actuals.sellIn', { teamId: 't1', month: '2026-10', rows: [{ storeId: 'st1', sellIn: 7 }] }).ok);
+  ss.getSheetByName('SellInSellOut').setName('StoreActuals');
+  g.ctx.setupSheet();
+  g.fresh();
+  assert.ok(!ss.getSheetByName('StoreActuals'), 'old tab gone');
+  assert.equal(g.rows('SellInSellOut').find(e => e.store_id === 'st1').sell_in, 7, 'row kept');
 });
 
 test('sell in and actual: each role only touches its own number', () => {
@@ -224,7 +262,7 @@ test('sell in and actual: each role only touches its own number', () => {
   const q = { teamId: 't1', month: '2026-10' };
   assert.equal(g.as('sari', 'actuals.report', q).status, 403);
   assert.equal(g.as('sari', 'actuals.sellIn', { ...q, rows: [{ storeId: 'st1', sellIn: 1 }] }).status, 403);
-  assert.equal(g.as('rina', 'actuals.save', { month: q.month, rows: [{ storeId: 'st1', actual: 1 }] }).status, 403);
+  assert.equal(g.as('rina', 'actuals.save', { month: q.month, rows: [{ storeId: 'st1', items: [{ productId: 'p1', qty: 1, price: 1 }] }] }).status, 403);
   assert.equal(g.as('rina', 'actuals.mine', { month: q.month }).status, 403);
   assert.equal(g.as('admin', 'actuals.report', q).status, 403);
   assert.equal(g.as('andi', 'actuals.report', q).status, 403, 'another team');
@@ -266,16 +304,17 @@ test('achievement: any date range, a partial month counts by working days, month
 test('achievement: an actual from the SPG replaces the sales of its month, other months keep the SPG sales', () => {
   const g = app();
   const store = heldBy(g, 'u-sari', '2026-09')[0];
-  assert.ok(g.as('sari', 'actuals.save', { month: '2026-09', rows: [{ storeId: store, actual: 30000000 }] }).ok);
+  const price = g.rows('Products').find(p => p.id === 'p1').price, total = 300 * price;
+  assert.ok(g.as('sari', 'actuals.save', { month: '2026-09', rows: [{ storeId: store, items: [{ productId: 'p1', qty: 300, price }] }] }).ok);
   const q = { teamId: 't1', from: '2026-09-01', to: '2026-10-22' };
   const data = g.as('rina', 'report.achievement', q).data;
   const row = data.stores.find(s => s.id === store);
-  assert.equal(row.fromActual, 30000000);
+  assert.equal(row.fromActual, total);
   assert.equal(row.fromSpg, salesOf(g, store, '2026-10-01', '2026-10-22'));
-  assert.equal(row.offtake, 30000000 + row.fromSpg);
-  assert.equal(data.spgs.find(s => s.id === 'u-sari').fromActual, 30000000, 'credited to the SPG holding the store');
+  assert.equal(row.offtake, total + row.fromSpg);
+  assert.equal(data.spgs.find(s => s.id === 'u-sari').fromActual, total, 'credited to the SPG holding the store');
   const part = g.as('rina', 'report.achievement', { ...q, from: '2026-09-01', to: '2026-09-03' }).data.stores.find(s => s.id === store);
-  assert.equal(part.fromActual, 3000000, 'part of the month, evenly per day');
+  assert.equal(part.fromActual, Math.round(total * 3 / 30), 'part of the month, evenly per day');
 });
 
 test('achievement: leaders and managers only, valid dates, not the future', () => {

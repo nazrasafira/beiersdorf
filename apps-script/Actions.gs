@@ -323,6 +323,7 @@ function actUserUpdate_(req, me) {
   if (!/^08\d{8,11}$/.test(phone)) fail_('Nomor HP tidak valid (contoh: 0812 3456 7890).');
   if (find_('Users', x => x.phone === phone && x.id !== u.id)) fail_('Nomor HP sudah terdaftar.');
   Object.assign(u, { name, phone });
+  if (req.nmaCode !== undefined && req.nmaCode !== null) u.nma_code = str_(req.nmaCode, 40); // the SPG's username in the company's sell out form
   save_('Users', u);
   log_(me, 'ubah', 'pengguna', u.id, u.name);
   return { user: userOut_(u, true) };
@@ -417,7 +418,7 @@ function actStoreSave_(req, me) {
   if (find_('Stores', x => x.name.trim().toLowerCase() === name.toLowerCase() && (!cur || x.id !== cur.id))) fail_('Nama toko ' + name + ' sudah ada. Pakai nama lain (mis. tambahkan cabang/kota).');
   const area = me.area_id || (byId_('Teams', me.team_id) || {}).area_id || (rows_('Areas')[0] || {}).id || '';
   const s = cur || { id: newId_('st'), created_by: me.id, area_id: area, photo: '' };
-  Object.assign(s, { name, chain: str_(req.chain, 100), city, address: str_(req.address, 255), active: req.active !== false, updated_by: me.id, updated_at: today_() });
+  Object.assign(s, { name, chain: str_(req.chain, 100), city, address: str_(req.address, 255), code: str_(req.code, 40), active: req.active !== false, updated_by: me.id, updated_at: today_() });
   if (/^data:image\//.test(String(req.image || ''))) s.photo = savePhoto_(req.image, 'toko-' + s.id);
   if (cur) save_('Stores', s);
   else append_('Stores', [s]);

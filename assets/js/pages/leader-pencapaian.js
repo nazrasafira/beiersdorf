@@ -1,4 +1,4 @@
-/* Laporan, tab Pencapaian: target and offtake of a date range per SPG and per store, best first.
+/* Laporan, tab Pencapaian: target and sell out (offtake in the data) of a date range per SPG and per store, best first.
  * Numbers come from the server (apps-script/Achievement.gs). */
 window.PencapaianTab = function (teamId, teamName) {
   'use strict';
@@ -17,12 +17,12 @@ window.PencapaianTab = function (teamId, teamName) {
     const fromActual = rows.filter(r => r.fromActual).length;
     $('achStats').innerHTML = [
       ['Target', App.rp(target), ''],
-      ['Offtake', App.rp(offtake), ''],
+      ['Sell out', App.rp(offtake), ''],
       ['Pencapaian', `${dot(ach)} ${achText(ach)}`, ach === null ? 'belum ada target' : ach >= 1 ? 'tercapai' : `kurang ${App.rp(target - offtake)}`],
       ['Pakai laporan toko', `${fromActual} dari ${rows.length}`, by === 'spgs' ? 'SPG' : 'toko'],
     ].map(([k, v, s]) => `<div><span>${k}</span><b>${v}</b>${s ? `<small>${App.esc(s)}</small>` : ''}</div>`).join('');
-    const figs = r => `<div class="ach-figs"><span class="ach-val"><small>Target</small>${App.num(r.target)}</span><span class="ach-val"><small>Offtake</small>${App.num(r.offtake)}</span></div>`;
-    $('achList').innerHTML = rows.length ? `<div class="ach-row ach-headrow" aria-hidden="true"><span class="ach-rank">#</span><span class="ach-name" style="font-weight:600">${by === 'spgs' ? 'SPG' : 'Toko'}</span><div class="ach-figs"><span class="ach-val">Target</span><span class="ach-val">Offtake</span></div><span class="ach-pct">Ach%</span></div>` +
+    const figs = r => `<div class="ach-figs"><span class="ach-val"><small>Target</small>${App.num(r.target)}</span><span class="ach-val"><small>Sell out</small>${App.num(r.offtake)}</span></div>`;
+    $('achList').innerHTML = rows.length ? `<div class="ach-row ach-headrow" aria-hidden="true"><span class="ach-rank">#</span><span class="ach-name" style="font-weight:600">${by === 'spgs' ? 'SPG' : 'Toko'}</span><div class="ach-figs"><span class="ach-val">Target</span><span class="ach-val">Sell out</span></div><span class="ach-pct">Ach%</span></div>` +
       rows.map((r, i) => `<div class="ach-row">
         <span class="ach-rank">${i + 1}</span>
         <span class="ach-name">${App.esc(r.name)}${source(r) ? `<small>${source(r)}</small>` : ''}</span>
@@ -31,7 +31,7 @@ window.PencapaianTab = function (teamId, teamName) {
       </div>`).join('') : '<p class="empty">Belum ada data di rentang ini.</p>';
     paged.apply();
     $('achExcel').hidden = !rows.length;
-    $('achNote').textContent = 'Offtake memakai laporan toko bulanan yang diisi SPG, dan penjualan harian bila belum diisi. Toko dan bulan tanpa target tidak dihitung.';
+    $('achNote').textContent = 'Sell out memakai laporan toko bulanan yang diisi SPG, dan penjualan harian bila belum diisi. Toko dan bulan tanpa target tidak dihitung.';
     $('achExcluded').hidden = !data.excluded;
     $('achExcluded').textContent = `${App.rp(data.excluded)} penjualan tim terjadi di toko dan bulan tanpa target.`;
   }

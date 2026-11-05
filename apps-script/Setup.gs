@@ -15,6 +15,11 @@ function onOpen() {
 
 function setupSheet() {
   const ss = spreadsheet_();
+  // Renamed tabs: keep their rows (the columns are in the same order, only the header row changes below)
+  [['StoreActuals', 'SellInSellOut']].forEach(([from, to]) => {
+    const old = ss.getSheetByName(from);
+    if (old && !ss.getSheetByName(to)) old.setName(to);
+  });
   Object.keys(TABLES).forEach(name => {
     const cols = TABLES[name];
     let sh = ss.getSheetByName(name);

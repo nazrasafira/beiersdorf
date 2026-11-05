@@ -835,11 +835,7 @@ body.login .login-box form { margin: 0; }
   .ach-row:not(.ach-headrow):hover { background: var(--soft); }
 }
 
-/* Riwayat: the SPG's monthly actual per store */
-.act-row { padding: 12px 0; border-top: 1px solid var(--line); }
-.act-row:first-child { border-top: 0; padding-top: 0; }
-.act-row b, .act-row small { display: block; }
-.act-row small { margin: 2px 0 10px; font-size: 12px; }
+
 #actualSave { margin-top: 4px; }
 
 /* Sell In & Offtake: what is entered and what is not. On a phone one card per store, on a wide screen one table row */
@@ -882,13 +878,6 @@ body.login .login-box form { margin: 0; }
   .ax-cell > label, .ax-lbl { display: none; }
   .ax-totals { grid-template-columns: repeat(4, 1fr); }
 }
-
-/* Riwayat: the SPG's monthly sell out per store */
-.act-count { margin: 0 0 12px; font-weight: 600; font-size: 14px; }
-.act-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.act-saved { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.act-saved b { font-size: 16px; font-variant-numeric: tabular-nums; }
-.act-note { display: block; margin-top: 4px; }
 
 /* Laporan on a phone: fewer lines above the list, compact store cards */
 @media (max-width: 759px) {
@@ -951,9 +940,116 @@ body.login .login-box form { margin: 0; }
 .sd-item .rep-detail { margin: 0 0 12px; }
 .sd-missing { margin: 8px 0 4px; font-size: 13px; color: var(--warn); }
 
-/* Loading: a spinner over the page until its data is in, and next to "Memuat..." */
+/* Loading: from the page's first moment until its scripts and data are in (data.js ready() adds .app-ready), a spinner
+   covers it. It fades in after a short delay, so a page that opens at once never flashes it. Also used next to "Memuat...". */
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes loading-in { from { opacity: 0; } to { opacity: 1; } }
 .spinner { display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px; border: 2px solid var(--line); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
-body.page-loading::before { content: ''; position: fixed; inset: 0; z-index: 90; background: rgba(255, 255, 255, .85); }
-body.page-loading::after { content: ''; position: fixed; z-index: 91; left: 50%; top: 45%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border: 3px solid var(--line); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .spinner, body.page-loading::after { animation-duration: 2s; } }
+body[data-root]:not(.app-ready)::before { content: ''; position: fixed; inset: 0; z-index: 90; background: #fff; animation: loading-in .15s ease-out .15s both; }
+body[data-root]:not(.app-ready)::after { content: ''; position: fixed; z-index: 91; left: 50%; top: 45%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border: 3px solid var(--line); border-top-color: var(--blue); border-radius: 50%; animation: loading-in .15s ease-out .15s both, spin .7s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spinner, body[data-root]:not(.app-ready)::after { animation-duration: .15s, 2s; } }
+
+/* SPG Penjualan: the shift in one card, a sell out reminder, then the entry */
+.shift-card { border: 1px solid var(--line); border-radius: 12px; padding: 4px 14px; margin-bottom: 12px; background: #fff; }
+.shift-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
+.shift-line + .shift-line { border-top: 1px solid var(--line); }
+.shift-line .store-now { min-width: 0; }
+.shift-line .store-now b { overflow-wrap: anywhere; }
+.so-banner { display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 16px; padding: 12px 14px; text-align: left; font: inherit; color: inherit; background: #FFF6E5; border: 1px solid #F3D9B1; border-radius: 12px; cursor: pointer; }
+.so-banner .grow { flex: 1; min-width: 0; }
+.so-banner b, .so-banner small { display: block; }
+.so-banner small { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.so-action { flex: none; font-weight: 600; font-size: 14px; color: var(--blue); }
+.so-banner.done { background: #fff; border-color: var(--line); }
+.entry-title { margin: 0 0 12px; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+
+/* SPG pages: a tinted page with white cards, the brand blue as the accent */
+body.spg { background: #EEF2FA; }
+body.spg .page-head h1 { color: var(--blue); }
+body.spg main > section, body.spg .entry, body.spg .tile, body.spg .podium .p, body.spg .so-banner.done {
+  background: #fff; border: 1px solid #E3E8F2; border-radius: 16px; box-shadow: 0 1px 2px rgba(0, 19, 111, .05), 0 4px 12px rgba(0, 19, 111, .04);
+}
+body.spg main > section { padding: 16px; margin-bottom: 16px; }
+body.spg main > section > h2 { display: flex; align-items: center; gap: 8px; color: var(--blue); }
+body.spg main > section > h2::before { content: ''; width: 4px; height: 14px; border-radius: 2px; background: #3B82F6; }
+body.spg main > section.rows > *:first-child, body.spg main > section .rows > *:first-child { border-top: 0; }
+body.spg main > section.rows > *:last-child, body.spg main > section .rows > *:last-child { border-bottom: 0; }
+body.spg .today { background: #fff; }
+body.spg .today .pct { color: var(--blue); }
+/* The running shift and the start-shift prompt: a blue card */
+body.spg .shift-card, body.spg #startWrap { background: var(--blue); color: #fff; border: 0; box-shadow: 0 6px 16px rgba(0, 19, 111, .18); }
+body.spg .shift-card .muted, body.spg #startWrap .muted { color: rgba(255, 255, 255, .78); }
+body.spg .shift-line + .shift-line { border-top-color: rgba(255, 255, 255, .18); }
+body.spg .shift-card .store-now .icon { color: #9DB8FF; }
+body.spg .shift-card .btn.ghost { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .3); color: #fff; }
+body.spg .shift-card .btn.ghost:hover { background: rgba(255, 255, 255, .2); }
+body.spg #startWrap .btn { background: #fff; color: var(--blue); }
+body.spg .entry-title { color: var(--blue); }
+body.spg #total { color: var(--blue); font-size: 16px; }
+body.spg .bottomnav a.on .icon { background: var(--blue); color: #fff; }
+
+/* SPG Penjualan: the day's total against the target, then the sales per store */
+.day-sum { margin-bottom: 4px; }
+.day-sum-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.day-sum h2 { margin: 0; }
+.day-total { font-size: 24px; font-weight: 700; color: var(--blue); margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.day-target { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); }
+.day-target b { color: var(--ink); }
+.day-sum .bar { height: 10px; margin: 8px 0 4px; }
+.tx-store { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tx-store-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 12px; background: var(--blue-soft); border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.tx-store-head > .icon { flex: none; width: 16px; height: 16px; color: var(--blue); transition: transform .15s; }
+.tx-store-head[aria-expanded="true"] > .icon { transform: rotate(180deg); }
+.tx-store-head > span { margin-left: auto; }
+.tx-store-head b { display: flex; align-items: center; gap: 6px; color: var(--blue); min-width: 0; }
+.tx-store-head b .icon { width: 16px; height: 16px; flex: none; }
+.tx-store-head span { flex: none; text-align: right; font-size: 13px; }
+.tx-store-head span small { display: block; color: var(--muted); font-size: 11px; }
+.tx-store .rows { padding: 0 12px; }
+.tx-store .rows > *:last-child { border-bottom: 0; }
+
+.day-target { flex-wrap: wrap; row-gap: 2px; }
+.day-target span { white-space: nowrap; }
+.tx-store .rows { padding: 0 10px; }
+.tx-store .tx-row { gap: 10px; }
+.tx-store .tx-row .pimg { width: 40px; height: 40px; flex: none; }
+.tx-store .tx-row .grow { min-width: 0; }
+.tx-store .tx-row .grow b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; font-size: 14px; line-height: 1.3; }
+.tx-store .tx-row .grow span { white-space: normal; font-size: 12px; }
+.tx-store .tx-row .val { flex: none; font-size: 14px; white-space: nowrap; }
+.tx-store .tx-row .icon-btn { width: 32px; height: 32px; flex: none; }
+.tx-foot { display: flex; align-items: center; gap: 8px; }
+.tx-foot .btn.danger { color: var(--bad); }
+
+/* Phones: a sheet sits on top of the keyboard instead of under it (--kb: common.js) */
+@media (max-width: 599px) {
+  dialog.modal { margin-bottom: var(--kb, 0px); max-height: calc(92vh - var(--kb, 0px)); transition: margin-bottom .15s ease-out; }
+  .kb-open dialog.modal .combo-list { max-height: min(180px, 28vh); }
+}
+
+/* Sell out bulanan: back button next to the title, the month in a blue bar */
+.head-back { display: flex; align-items: center; gap: 8px; }
+.head-back .icon-btn { margin-left: -8px; }
+.so-banner { text-decoration: none; }
+.so-banner:hover { text-decoration: none; }
+.so-head .shift-line b { flex: 1; text-align: center; font-size: 16px; }
+.so-stores { width: 100%; margin-bottom: 12px; }
+
+
+/* The running shift: the store's photo, name and shift time, "Ganti toko" beside them */
+.shift-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.shift-photo { width: 64px; height: 64px; flex: none; border-radius: 12px; object-fit: cover; background: rgba(255, 255, 255, .15); }
+.shift-info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.shift-info b { font-size: 16px; overflow-wrap: anywhere; }
+.shift-info .small { color: var(--muted); }
+body.spg .shift-info .small { color: rgba(255, 255, 255, .78); }
+.shift-card #switchStore { flex: none; align-self: center; }
+
+/* Dropdown options with a tag (the SPG's own stores): tinted and labelled */
+.combo-list li.tagged { background: #EEF3FF; color: var(--blue); font-weight: 600; }
+.combo-list li.tagged.active, .combo-list li.tagged:hover { background: #DDE6FF; }
+.combo-tag { flex: none; margin-left: auto; padding: 2px 8px; border-radius: 99px; background: var(--blue); color: #fff; font-size: 11px; font-style: normal; font-weight: 600; }
+
+/* A button waiting for the server: its label makes room for a small spinner */
+.btn.is-busy { position: relative; opacity: 1; cursor: progress; }
+.btn.is-busy::before { content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; }

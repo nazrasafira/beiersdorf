@@ -6,29 +6,41 @@
 <meta name="theme-color" content="#ffffff">
 <title>Penjualan</title>
 <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
-<link rel="stylesheet" href="../assets/css/style.css?v=20261104153248">
-<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261104153248","../")</script>
+<link rel="stylesheet" href="../assets/css/style.css?v=20261105123715">
+<script>/* version check */(function(v,r){try{fetch(r+"assets/version.json?t="+Date.now(),{cache:"no-store"}).then(function(x){return x.json()}).then(function(j){if(j.v&&j.v!==v){var u=new URL(location.href);if(u.searchParams.get("_v")!==j.v){u.searchParams.set("_v",j.v);location.replace(u.href)}}}).catch(function(){})}catch(e){}})("20261105123715","../")</script>
 </head>
 <body data-root="../">
 <main>
   <div class="page-head">
     <div><h1>Penjualan</h1><p class="sub" id="sub"></p></div>
-    <a href="laporan.html" id="back" class="icon-btn" aria-label="Ke hari ini" data-icon="calendar" hidden></a>
+    <div class="actions">
+      <a href="laporan.html" id="back" class="btn ghost small" hidden>Hari ini</a>
+      <button type="button" class="icon-btn" id="otherDate" aria-label="Input tanggal lain" title="Input tanggal lain" data-icon="calendar" hidden></button>
+    </div>
   </div>
 
   <section id="startWrap" class="center" hidden>
     <p class="muted">Mulai shift untuk mencatat penjualan.</p>
     <button type="button" class="btn block" id="startShift">Mulai shift</button>
   </section>
-  <button type="button" class="btn ghost block other-date" id="otherDate" hidden><span data-icon="calendar"></span>Input tanggal lain</button>
 
-  <p class="muted small" id="shift" hidden></p>
-  <div class="store-bar" id="storeBar" hidden>
-    <span class="store-now"><span data-icon="store"></span><b id="storeName"></b></span>
+  <div class="shift-card" id="shiftCard" hidden>
+    <img class="shift-photo" id="storePhoto" alt="">
+    <div class="shift-info">
+      <b id="storeName"></b>
+      <span class="small" id="storeCity"></span>
+      <span class="small" id="shift"></span>
+    </div>
     <button type="button" class="btn ghost small" id="switchStore">Ganti toko</button>
   </div>
 
+  <a href="sellout.html" class="so-banner" id="soBanner" hidden>
+    <span class="grow"><b id="soTitle"></b><small id="soText"></small></span>
+    <span class="so-action" id="soAction"></span>
+  </a>
+
   <form id="entry" class="entry" autocomplete="off" hidden>
+    <h2 class="entry-title">Catat penjualan</h2>
     <p class="note" id="late" hidden style="margin:0 0 12px">Tambah penjualan yang terlewat.</p>
     <div class="field" id="saleStoreField" hidden><label for="saleStore">Toko</label><select id="saleStore" data-placeholder="Cari toko..."></select></div>
     <div class="field"><label for="product">Produk</label><select id="product" data-placeholder="Cari produk..."></select></div>
@@ -48,11 +60,12 @@
   </form>
 
   <section>
-    <div class="actions" style="justify-content:space-between;margin-bottom:8px">
-      <h2 style="margin:0" id="dayTitle">Hari ini</h2>
-      <span><b id="total">Rp 0</b> <span class="muted small" id="count"></span></span>
+    <div class="day-sum">
+      <div class="day-sum-top"><h2 id="dayTitle">Hari ini</h2><span class="muted small" id="count"></span></div>
+      <div class="day-total" id="total">Rp 0</div>
+      <div id="dayTarget"></div>
     </div>
-    <div class="rows wrap" id="list"></div>
+    <div id="list"></div>
   </section>
 
   <section id="notes" hidden>
@@ -60,7 +73,28 @@
     <div id="notePhotos"></div>
   </section>
 
-  <button type="button" class="btn ghost block" id="endShift" hidden>Akhiri shift</button>
+  <button type="button" class="btn danger block" id="endShift" hidden>Akhiri shift</button>
+
+  <dialog class="modal" id="txDlg" aria-labelledby="txDlgTitle">
+    <form id="txForm" autocomplete="off">
+      <div class="modal-head"><h3 id="txDlgTitle">Ubah transaksi</h3><button type="button" class="icon-btn" data-close aria-label="Tutup" data-icon="x"></button></div>
+      <div class="modal-body">
+        <p class="note" id="txWhen" style="margin:0 0 12px"></p>
+        <div class="field"><label for="txProduct">Produk</label><select id="txProduct" data-placeholder="Cari produk..."></select></div>
+        <div class="entry-row">
+          <div class="field"><label for="txQty">Qty</label><input class="input" id="txQty" type="number" inputmode="numeric" min="1" max="10000" step="1"></div>
+          <div class="field"><label for="txPrice">Harga satuan</label><input class="input" id="txPrice" type="text" inputmode="numeric"></div>
+        </div>
+        <p class="muted" style="margin:0">Subtotal <b id="txSubtotal">Rp 0</b></p>
+      </div>
+      <div class="modal-foot tx-foot">
+        <button type="button" class="btn ghost danger" id="txDelete">Hapus</button>
+        <span class="rp-gap"></span>
+        <button type="button" class="btn ghost" data-close>Batal</button><button class="btn" type="submit">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
 
   <dialog class="modal" id="endDlg" aria-labelledby="endTitle">
     <form id="endForm">
@@ -74,9 +108,9 @@
     </form>
   </dialog>
 </main>
-<script src="../assets/js/config.js?v=20261104153248"></script>
-<script src="../assets/js/data.js?v=20261104153248"></script>
-<script src="../assets/js/common.js?v=20261104153248"></script>
-<script src="../assets/js/pages/spg-laporan.js?v=20261104153248"></script>
+<script src="../assets/js/config.js?v=20261105123715"></script>
+<script src="../assets/js/data.js?v=20261105123715"></script>
+<script src="../assets/js/common.js?v=20261105123715"></script>
+<script src="../assets/js/pages/spg-laporan.js?v=20261105123715"></script>
 </body>
 </html>

@@ -33,6 +33,8 @@ Data.ready(function () {
     form.password.focus();
   });
   const err = $('err');
+  const reason = Data.signedOutReason ? Data.signedOutReason() : '';
+  if (reason && !form.hidden) { err.textContent = reason; err.hidden = false; }
 
   // Local dev server only (tools/sheets-dev-server.js): buttons that fill in a test account
   const devLogins = Data.CONFIG.devLogins || [];

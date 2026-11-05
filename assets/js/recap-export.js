@@ -168,11 +168,11 @@
     await saveWorkbook(await buildAchievement(r), `Pencapaian Tim ${teamName} ${r.from} sd ${r.to}.xlsx`);
   }
 
-  // Laporan, tab Sell In & Offtake: stores of one month, closest match between daily sales and offtake first, not yet entered last
+  // Laporan, tab Sell In & Sell Out: stores of one month, closest match between daily sales and sell out first, not yet entered last
   async function buildSellIn(rows, month) {
     const ExcelJS = await loadExcelJs();
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Sell In & Offtake', { views: [{ showGridLines: false }] });
+    const ws = wb.addWorksheet('Sell In & Sell Out', { views: [{ showGridLines: false }] });
     const sub = `${MONTHS[+month.slice(5, 7) - 1]} ${month.slice(2, 4)}`;
     const pctOf = x => (x.actual ? x.sellOut / x.actual : null);
     const dotOf = p => (p === null ? null : Math.abs(p - 1) <= 0.1 ? 'hi' : 'lo');
@@ -182,16 +182,100 @@
     const totalPct = filled.length ? sum(filled, 'sellOut') / sum(filled, 'actual') : null;
     ws.getColumn(1).width = 3;
     rankTable(ws, 2, 2, {
-      nameHeader: 'Store', numbered: true, pctHeader: 'Harian / Offtake',
-      cols: [{ title: 'SELL IN', sub, key: 'sellIn' }, { title: 'OFFTAKE', sub, key: 'actual' }, { title: 'PENJUALAN HARIAN', sub, key: 'sellOut' }, { title: 'SELISIH', sub, key: 'gap' }],
+      nameHeader: 'Store', numbered: true, pctHeader: 'Harian / Sell out',
+      cols: [{ title: 'SELL IN', sub, key: 'sellIn' }, { title: 'SELL OUT', sub, key: 'actual' }, { title: 'PENJUALAN HARIAN', sub, key: 'sellOut' }, { title: 'SELISIH', sub, key: 'gap' }],
       rows: sorted.map(x => ({ name: x.name, sellIn: x.sellIn, actual: x.actual, sellOut: x.sellOut, gap: x.actual ? x.sellOut - x.actual : null, pct: pctOf(x), dot: dotOf(pctOf(x)) })),
       total: { name: 'Total', sellIn: sum(rows, 'sellIn'), actual: sum(filled, 'actual'), sellOut: sum(rows, 'sellOut'), gap: filled.length ? sum(filled, 'sellOut') - sum(filled, 'actual') : null, pct: totalPct, dot: dotOf(totalPct) },
     });
     return wb;
   }
   async function downloadSellIn(rows, month, teamName) {
-    await saveWorkbook(await buildSellIn(rows, month), `Sell In Offtake Tim ${teamName} ${month}.xlsx`);
+    await saveWorkbook(await buildSellIn(rows, month), `Sell In Sell Out Tim ${teamName} ${month}.xlsx`);
   }
 
-  window.RecapExport = { build, download, buildAchievement, downloadAchievement, buildSellIn, downloadSellIn };
+  /* Sell out of a month in the company's form (Form 201 SKU): one row per product, and per store a block of Qty and Val
+   * (the units and rupiah the SPG entered) under the SPG's name and code and the store's name and code; then the totals
+   * against the store's target and per focus brand. r: action report.sellOut (apps-script/Actuals.gs). */
+  const FOCUS = [
+    ['HANSAPLAST', p => /^hansaplast/i.test(p.brand)],
+    ['Nivea All Purpose Cream', p => /all purpose/i.test(p.brand)],
+    ['Nivea Body', p => /nivea body/i.test(p.brand)],
+    ['Nivea Deo', p => /nivea deo/i.test(p.brand)],
+    ['Nivea Female Face Care', p => /female face/i.test(p.brand)],
+    ['Nivea Lip Care', p => /lip care/i.test(p.brand)],
+    ['Nivea Men Face Care', p => /men face/i.test(p.brand)],
+    ['Nivea Sun', p => /nivea sun/i.test(p.brand)],
+    ['HIJAB Body & Deo', p => /hijab/i.test(p.name)],
+  ];
+  async function buildSellOutForm(r) {
+    const ExcelJS = await loadExcelJs();
+    const wb = new ExcelJS.Workbook();
+    wb.calcProperties.fullCalcOnLoad = true; // Excel works out the totals when the file is opened
+    const ws = wb.addWorksheet('Sell Out ' + r.month, { views: [{ state: 'frozen', xSplit: 6, ySplit: 11 }] });
+    const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + argb } });
+    const thin = { style: 'thin', color: { argb: 'FF000000' } }, border = { top: thin, left: thin, bottom: thin, right: thin };
+    const center = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    const col = n => { let s = ''; for (; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s; return s; };
+    const put = (row, c, value, style) => Object.assign(ws.getCell(row, c), { value }, style || {});
+    const first = 12, last = first + r.products.length - 1, sumRow = last + 1;
+
+    const monthName = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'][+r.month.slice(5, 7) - 1];
+    put(1, 1, `SELL OUT ${monthName} ${r.month.slice(0, 4)}`, { font: { bold: true, size: 14 } });
+    put(2, 1, 'Tim ' + r.team);
+    put(3, 1, 'Dari aplikasi Laporan SPG, diisi SPG dari laporan bulanan toko.', { font: { italic: true, color: { argb: 'FF6B7280' } } });
+    [['NO', 6], ['KODE SKU', 10], ['Nama SKU di HO', 44], ['Subbrand', 26], ['PRICE', 12], ['Barcode', 16]].forEach(([h, w], i) => {
+      ws.getColumn(i + 1).width = w;
+      put(7, i + 1, h, { font: { bold: true }, fill: fill('D9E1F2'), alignment: center, border });
+      ws.mergeCells(7, i + 1, 11, i + 1);
+    });
+
+    r.products.forEach((p, i) => {
+      const row = first + i;
+      [i + 1, p.sku, p.name, p.brand, p.price, p.barcode].forEach((v, k) => put(row, k + 1, v, { border, numFmt: k === 4 ? '#,##0' : undefined }));
+    });
+
+    // One block of two columns per store
+    r.stores.forEach((st, k) => {
+      const c = 7 + k * 2;
+      [st.spg, st.spgCode, st.name, st.code].forEach((v, i) => {
+        put(7 + i, c, v || '', { font: { bold: i === 0 || i === 2 }, fill: fill(i < 2 ? 'FFF2CC' : 'E2EFDA'), alignment: center, border });
+        ws.mergeCells(7 + i, c, 7 + i, c + 1);
+      });
+      ['Qty', 'Val'].forEach((h, i) => { ws.getColumn(c + i).width = i ? 14 : 9; put(11, c + i, h, { font: { bold: true }, fill: fill('D9E1F2'), alignment: center, border }); });
+      r.products.forEach((p, i) => {
+        const row = first + i, x = st.items[p.id] || {};
+        put(row, c, x.qty || null, { border });
+        put(row, c + 1, x.value || 0, { border, numFmt: '#,##0' });
+      });
+    });
+
+    // Totals: all products against the store's target, then each focus brand (its product rows can be apart)
+    const runs = test => {
+      const out = [];
+      r.products.forEach((p, i) => { if (!test(p)) return; const row = first + i; const last = out[out.length - 1]; if (last && last[1] === row - 1) last[1] = row; else out.push([row, row]); });
+      return out;
+    };
+    const sumOf = (c, rs) => (rs.length ? rs.map(([a, b]) => `SUM(${col(c)}${a}:${col(c)}${b})`).join('+') : '0');
+    const block = (row, label, rs, target, bold) => {
+      const lines = [`Total Selling Out ${label}`, label === '(NIVEA + HANSA)' ? 'Target NIVEA dan Hansaplast' : 'Target BRAND FOCUS', label === '(NIVEA + HANSA)' ? 'Achievment NIVEA dan Hansaplast' : 'Achievment BRAND FOCUS'];
+      lines.forEach((t, i) => { put(row + i, 1, t, { font: { bold: bold || i === 0 }, border }); ws.mergeCells(row + i, 1, row + i, 6); });
+      r.stores.forEach((st, k) => {
+        const c = 7 + k * 2;
+        [0, 1].forEach(i => put(row, c + i, { formula: sumOf(c + i, rs), result: 0 }, { font: { bold: true }, fill: fill('FFF2CC'), border, numFmt: '#,##0' }));
+        put(row + 1, c, target ? target(st) : null, { border, numFmt: '#,##0' });
+        ws.mergeCells(row + 1, c, row + 1, c + 1);
+        put(row + 2, c, { formula: `IFERROR(${col(c + 1)}${row}/${col(c)}${row + 1},"")`, result: '' }, { border, numFmt: '0%' });
+        ws.mergeCells(row + 2, c, row + 2, c + 1);
+      });
+      return row + 3;
+    };
+    let row = block(sumRow, '(NIVEA + HANSA)', [[first, last]], st => st.target || null, true);
+    FOCUS.forEach(([label, test]) => { row = block(row, `Brand Fokus (${label})`, runs(test)); });
+    return wb;
+  }
+  async function downloadSellOutForm(r) {
+    await saveWorkbook(await buildSellOutForm(r), `Sell Out Tim ${r.team} ${r.month}.xlsx`);
+  }
+
+  window.RecapExport = { build, download, buildAchievement, downloadAchievement, buildSellIn, downloadSellIn, buildSellOutForm, downloadSellOutForm };
 })();

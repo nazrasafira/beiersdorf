@@ -794,6 +794,7 @@
     if (!/^08\d{8,11}$/.test(phone)) return 'Nomor HP tidak valid (contoh: 0812 3456 7890).';
     if (state.users.some(x => x.id !== u.id && normalizePhone(x.phone) === phone)) return 'Nomor HP sudah terdaftar.';
     Object.assign(u, { name, phone });
+    if (data.nmaCode !== undefined) u.nmaCode = String(data.nmaCode || '').trim();
     log(by, 'ubah', 'pengguna', u.id, u.name);
     persist();
     return null;
@@ -849,6 +850,7 @@
 
   /* ---------- Live backend (Google Sheets + Apps Script, see apps-script/) ---------- */
   const CACHE_KEY = 'lspg-live-cache';   // last data from the server: pages open at once, also offline
+  const SIGNED_OUT_KEY = 'lspg-signed-out';
   const OUTBOX_KEY = 'lspg-outbox';      // writes not yet confirmed by the server
   const TOKEN_KEY = 'lspg-token';        // login token (localStorage with "Ingat saya", else this tab only)
   const CACHE_FRESH_MS = 5 * 60 * 1000;  // younger cache: show it at once and refresh in the background
@@ -890,6 +892,8 @@
     let body = null;
     try { body = await res.json(); } catch (e) { /* Google error page instead of JSON */ }
     if (!body) return { ok: false, status: 502, data: { message: 'Server sedang bermasalah, coba lagi.' } };
+    // Session expired, password reset or account deactivated: back to the login page, whichever call noticed it
+    if (!body.ok && body.status === 401 && action !== 'login') signedOut(body.error === 'Silakan login lagi.' ? '' : body.error);
     return body.ok ? { ok: true, status: 200, data: body.data } : { ok: false, status: body.status || 500, data: { message: body.error } };
   }
 
@@ -904,14 +908,21 @@
     const before = writes;
     return call('bootstrap').then(res => {
       if (res.ok && writes === before) saveCache(Object.assign(res.data, { _at: Date.now() }));
-      if (res.status === 401) signedOut();
       return res;
     });
   }
-  function signedOut() {
+  let leaving = false;
+  function signedOut(reason) {
+    if (leaving) return;
+    leaving = true;
     setToken('');
     lsDel(CACHE_KEY);
-    location.href = siteRoot() + page('index.html');
+    try { sessionStorage.setItem(SIGNED_OUT_KEY, reason || 'Sesi kamu sudah berakhir. Silakan masuk lagi.'); } catch (e) { /* storage blocked */ }
+    location.replace(siteRoot() + page('index.html'));
+  }
+  // Why the last session ended, shown once on the login page
+  function signedOutReason() {
+    try { const r = sessionStorage.getItem(SIGNED_OUT_KEY); sessionStorage.removeItem(SIGNED_OUT_KEY); return r || ''; } catch (e) { return ''; }
   }
 
   /* Outbox: queued writes are already applied to the page; they are sent in order, retried when offline. */
@@ -942,7 +953,7 @@
         retryDelay = Math.min(retryDelay * 2, 60000);
         return;
       }
-      if (res.status === 401) { signedOut(); return; } // kept until they log in again
+      if (res.status === 401) return; // signed out by call(); kept until they log in again
       saveOutbox(outbox().filter(x => x.id !== item.id));
       if (!res.ok) {
         // Refused (e.g. invalid qty): the page already shows the change, so take the server's data again and reload
@@ -1002,11 +1013,11 @@
   }
   // Pages start with Data.ready(() => { ... }): immediately in the demo, after loading in live mode
   function ready(cb) {
-    if (!LIVE) { cb(); return; }
+    // The page shows a spinner from its first moment until here (style.css, body without .app-ready)
+    const show = () => { document.body.classList.add('app-ready'); cb(); };
+    if (!LIVE) { show(); return; }
     if (!loading) loading = loadLive();
-    // A spinner when loading takes a moment (data on this phone is shown at once, without one)
-    const spinner = setTimeout(() => document.body.classList.add('page-loading'), 150);
-    loading.then(() => { clearTimeout(spinner); document.body.classList.remove('page-loading'); cb(); });
+    loading.then(show);
   }
 
   const upsert = (list, item) => { const i = list.findIndex(x => x.id === item.id); if (i >= 0) list[i] = item; else list.push(item); };
@@ -1111,7 +1122,7 @@
       return null;
     },
     async updateUser(userId, data) {
-      const res = await call('user.update', { userId, name: data.name, phone: data.phone });
+      const res = await call('user.update', { userId, name: data.name, phone: data.phone, nmaCode: data.nmaCode === undefined ? null : data.nmaCode });
       if (!res.ok) return res.data.message;
       upsert(state.users, res.data.user);
       changed();
@@ -1130,6 +1141,10 @@
       return null;
     },
     // Daily recap numbers for the Excel export (apps-script/Export.gs): { teams, days, offDays, rows } or { error }
+    async sellOutReport({ teamId, month }) {
+      const res = await call('report.sellOut', { teamId, month });
+      return res.ok ? res.data : { error: res.data.message };
+    },
     async achievementReport({ teamId, from, to }) {
       const res = await call('report.achievement', { teamId, from, to });
       return res.ok ? res.data : { error: res.data.message };
@@ -1155,7 +1170,7 @@
       return res.ok ? res.data : { error: res.data.message };
     },
     async saveStore(st) {
-      const res = await call('store.save', { id: st.id || null, name: st.name, chain: st.chain || '', city: st.city, address: st.address || '', active: st.active !== false, image: st.image || null });
+      const res = await call('store.save', { id: st.id || null, name: st.name, chain: st.chain || '', city: st.city, address: st.address || '', code: st.code || '', active: st.active !== false, image: st.image || null });
       if (!res.ok) return res.data.message;
       upsert(state.stores, res.data.store);
       changed();
@@ -1187,6 +1202,7 @@
     get DATA_START() { return DATA_START; },
     LIVE, CONFIG, LEVELS, ready, page,
     lastError: () => lastError,
+    signedOutReason,
     mustChangePassword: () => !!(state && state.mustChangePassword),
     pendingCount: () => (LIVE ? outbox().length : 0),
     changePassword: async () => null,
@@ -1202,10 +1218,11 @@
     addUser, updateUser, resetPassword, canManageUser, canAddCatalog, canEditCatalog, saveStore, stores, store, activity, storeTotals,
     allUsers, setUserPhoto, normalizePhone, exportState, areas,
     dailyRecap: async () => ({ error: 'Rekap harian hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    sellOutReport: async () => ({ error: 'Sell out hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
     achievementReport: async () => ({ error: 'Pencapaian hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
-    actualsReport: async () => ({ error: 'Sell In & Offtake hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
-    saveActuals: async () => ({ error: 'Sell In & Offtake hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
-    saveSellIn: async () => ({ error: 'Sell In & Offtake hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    actualsReport: async () => ({ error: 'Sell In & Sell Out hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    saveActuals: async () => ({ error: 'Sell In & Sell Out hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
+    saveSellIn: async () => ({ error: 'Sell In & Sell Out hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
     myActuals: async () => ({ error: 'Sell out hanya bisa saat aplikasi terhubung ke Google Sheets.' }),
   }, LIVE ? LIVE_API : {});
 })();

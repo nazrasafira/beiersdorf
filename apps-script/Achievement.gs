@@ -63,9 +63,9 @@ function actAchievement_(req, me) {
 
   // Days with an entered actual replace the SPGs' sales of those days. A period still running counts up to today.
   const covered = {};
-  rows_('StoreActuals').forEach(a => {
+  rows_('SellInSellOut').forEach(a => {
     const first = a.month + '-01', last = monthLastDay_(first);
-    if (a.actual === null || a.actual === undefined || first > to || last < from) return;
+    if (a.sell_out === null || a.sell_out === undefined || first > to || last < from) return;
     const end = last < today ? last : today;
     let days = 0;
     for (let d = first; d <= end; d = addDays_(d, 1)) days++;
@@ -75,8 +75,8 @@ function actAchievement_(req, me) {
       if (d < from || d > to) continue;
       const u = holder[a.store_id + '|' + d.slice(0, 7)];
       if (!u) continue;
-      shopRow(a.store_id).fromActual += a.actual / days;
-      spgRow(u).fromActual += a.actual / days;
+      shopRow(a.store_id).fromActual += a.sell_out / days;
+      spgRow(u).fromActual += a.sell_out / days;
     }
   });
 
